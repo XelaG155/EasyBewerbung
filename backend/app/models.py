@@ -12,6 +12,9 @@ class User(Base):
     hashed_password = Column(String, nullable=True)  # Nullable for OAuth users
     full_name = Column(String, nullable=True)
     preferred_language = Column(String, default="en")
+    mother_tongue = Column(String, default="en")
+    documentation_language = Column(String, default="en")
+    credits = Column(Integer, default=0)
 
     # OAuth fields
     oauth_provider = Column(String, nullable=True)  # "google", "email", etc.
@@ -62,6 +65,9 @@ class Application(Base):
     applied = Column(Boolean, default=False)
     applied_at = Column(DateTime, nullable=True)
     result = Column(String, nullable=True)
+    ui_language = Column(String, default="en")
+    documentation_language = Column(String, default="en")
+    company_profile_language = Column(String, default="en")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     owner = relationship("User", back_populates="applications")
