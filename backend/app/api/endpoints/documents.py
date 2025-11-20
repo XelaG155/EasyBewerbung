@@ -3,8 +3,9 @@ from sqlalchemy.orm import Session
 from typing import List
 import shutil
 import os
-from ...models import Document, User
-# from ...database import get_db # TODO: Implement database connection
+from app.models import Document, User
+# from app.database import get_db # TODO: Implement database connection
+
 
 router = APIRouter()
 
