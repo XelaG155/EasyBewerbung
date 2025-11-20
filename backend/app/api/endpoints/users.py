@@ -2,6 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 from typing import Optional
+import os
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 
 from app.database import get_db
 from app.models import User
@@ -44,6 +47,102 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 
+class GoogleLoginRequest(BaseModel):
+    credential: str  # Google ID token
+    preferred_language: str = "en"
+
+
+@router.post("/google", response_model=TokenResponse)
+async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
+    """Login or register with Google OAuth."""
+    try:
+        # Get Google Client ID from environment
+        google_client_id = os.getenv("GOOGLE_CLIENT_ID")
+        if not google_client_id:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Google OAuth not configured",
+            )
+
+        # Verify the Google ID token
+        idinfo = id_token.verify_oauth2_token(
+            request.credential,
+            google_requests.Request(),
+            google_client_id
+        )
+
+        # Extract user information from token
+        google_user_id = idinfo.get("sub")
+        email = idinfo.get("email")
+        full_name = idinfo.get("name")
+        profile_picture = idinfo.get("picture")
+
+        if not email or not google_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid Google token",
+            )
+
+        # Check if user exists by Google ID
+        user = db.query(User).filter(User.google_id == google_user_id).first()
+
+        # If not found by Google ID, check by email
+        if not user:
+            user = db.query(User).filter(User.email == email).first()
+            if user and user.oauth_provider != "google":
+                # User exists with email/password, update to link Google account
+                user.google_id = google_user_id
+                user.oauth_provider = "google"
+                if not user.full_name and full_name:
+                    user.full_name = full_name
+                if profile_picture:
+                    user.profile_picture = profile_picture
+                db.commit()
+                db.refresh(user)
+
+        # If still no user, create new one
+        if not user:
+            user = User(
+                email=email,
+                google_id=google_user_id,
+                full_name=full_name,
+                profile_picture=profile_picture,
+                oauth_provider="google",
+                preferred_language=request.preferred_language,
+                hashed_password=None,  # OAuth users don't have passwords
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+        # Create access token
+        access_token = create_access_token(data={"sub": user.id})
+
+        return TokenResponse(
+            access_token=access_token,
+            token_type="bearer",
+            user=UserResponse(
+                id=user.id,
+                email=user.email,
+                full_name=user.full_name,
+                preferred_language=user.preferred_language,
+                created_at=user.created_at.isoformat(),
+            ),
+        )
+
+    except ValueError as e:
+        # Invalid token
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid Google token: {str(e)}",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Google authentication failed: {str(e)}",
+        )
+
+
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserRegister, db: Session = Depends(get_db)):
     """Register a new user."""
@@ -62,6 +161,7 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
         hashed_password=hashed_password,
         full_name=user_data.full_name,
         preferred_language=user_data.preferred_language,
+        oauth_provider="email",  # Mark as email/password user
     )
 
     db.add(new_user)
@@ -95,8 +195,15 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
             detail="Incorrect email or password",
         )
 
+    # Check if user registered with OAuth (no password)
+    if user.oauth_provider == "google" and not user.hashed_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This account uses Google Sign-In. Please login with Google.",
+        )
+
     # Verify password
-    if not verify_password(user_data.password, user.hashed_password):
+    if not user.hashed_password or not verify_password(user_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",

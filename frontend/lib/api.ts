@@ -94,6 +94,20 @@ class ApiClient {
     return data;
   }
 
+  async googleLogin(credential: string, preferredLanguage = "en") {
+    const data = await this.request<{
+      access_token: string;
+      token_type: string;
+      user: any;
+    }>("/users/google", {
+      method: "POST",
+      body: JSON.stringify({ credential, preferred_language: preferredLanguage }),
+    });
+
+    this.setToken(data.access_token);
+    return data;
+  }
+
   async getCurrentUser() {
     return this.request<any>("/users/me");
   }
