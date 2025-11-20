@@ -6,6 +6,7 @@ import os
 
 from app.database import get_db
 from app.models import Document
+from app.document_catalog import DOCUMENT_CATALOG, DOCUMENT_PACKAGES
 
 router = APIRouter()
 
@@ -39,6 +40,15 @@ async def upload_document(
         "filename": document.filename,
         "location": document.file_path,
         "message": "File uploaded successfully",
+    }
+
+
+@router.get("/catalog")
+async def document_catalog():
+    """Expose the full catalog of documents and bundles the platform can generate."""
+    return {
+        "catalog": DOCUMENT_CATALOG,
+        "packages": DOCUMENT_PACKAGES,
     }
 
 
