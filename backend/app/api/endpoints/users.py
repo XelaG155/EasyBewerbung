@@ -33,6 +33,10 @@ def _safe_language(value: Optional[str], field_name: str) -> str:
     try:
         return normalize_language(value or DEFAULT_LANGUAGE, field_name=field_name) or DEFAULT_LANGUAGE
     except ValueError:
+        logger.warning(
+            "Invalid language value replaced with default",
+            extra={"field": field_name, "provided": value, "fallback": DEFAULT_LANGUAGE},
+        )
         return DEFAULT_LANGUAGE
 
 
@@ -98,6 +102,11 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str
     user: UserResponse
+
+
+LANGUAGE_OPTIONS_RESPONSE: List[LanguageOptionResponse] = [
+    LanguageOptionResponse(**option.__dict__) for option in get_language_options()
+]
 
 
 class GoogleLoginRequest(BaseModel):
@@ -311,7 +320,7 @@ async def update_user(
 @router.get("/languages", response_model=List[LanguageOptionResponse])
 async def list_supported_languages():
     """Expose the platform language list for UI and generation toggles."""
-    return [LanguageOptionResponse(**option.__dict__) for option in get_language_options()]
+    return LANGUAGE_OPTIONS_RESPONSE
 
 
 @router.post("/admin/credits", response_model=UserResponse)

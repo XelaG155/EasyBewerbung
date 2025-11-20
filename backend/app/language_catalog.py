@@ -5,7 +5,7 @@ and text direction metadata to support RTL locales.
 """
 
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import List, Optional
 
 
 @dataclass(frozen=True)
@@ -89,15 +89,16 @@ LANGUAGE_ALIASES = {
 LANGUAGE_ALIASES.update({option.label.lower(): option.label for option in LANGUAGE_OPTIONS})
 
 
-def normalize_language(value: Optional[str], field_name: str = "language") -> Optional[str]:
+def normalize_language(value: Optional[str], field_name: str = "language") -> str:
     """Normalize and validate a provided language value.
 
     - Maps ISO aliases to the canonical display form used across the UI.
     - Ensures the resulting value is in ``SUPPORTED_LANGUAGES``.
+    - Raises ``ValueError`` for ``None`` or invalid inputs to surface validation issues.
     """
 
     if value is None:
-        return None
+        raise ValueError(f"{field_name} cannot be empty")
 
     candidate = value.strip()
     alias_key = candidate.lower()
