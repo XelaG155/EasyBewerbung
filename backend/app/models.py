@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean
 from sqlalchemy.orm import relationship, declarative_base
-from datetime import datetime
+from datetime import datetime, timezone
 
 Base = declarative_base()
 
@@ -18,7 +18,7 @@ class User(Base):
     google_id = Column(String, unique=True, nullable=True, index=True)  # Google user ID
     profile_picture = Column(String, nullable=True)  # Profile picture URL
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     documents = relationship("Document", back_populates="owner")
     job_offers = relationship("JobOffer", back_populates="owner")
@@ -33,7 +33,7 @@ class Document(Base):
     file_path = Column(String)
     doc_type = Column(String) # "CV", "REFERENCE", "DIPLOMA"
     content_text = Column(Text, nullable=True) # Extracted text
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     owner = relationship("User", back_populates="documents")
 
@@ -46,7 +46,7 @@ class JobOffer(Base):
     title = Column(String, nullable=True)
     company = Column(String, nullable=True)
     description = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     owner = relationship("User", back_populates="job_offers")
 
@@ -62,7 +62,7 @@ class Application(Base):
     applied = Column(Boolean, default=False)
     applied_at = Column(DateTime, nullable=True)
     result = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     owner = relationship("User", back_populates="applications")
     generated_documents = relationship(
@@ -78,6 +78,6 @@ class GeneratedDocument(Base):
     doc_type = Column(String, nullable=False)
     format = Column(String, nullable=False, default="PDF")
     storage_path = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     application = relationship("Application", back_populates="generated_documents")

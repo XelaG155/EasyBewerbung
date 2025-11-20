@@ -4,6 +4,57 @@ interface ApiError {
   detail: string;
 }
 
+export interface User {
+  id: number;
+  email: string;
+  full_name: string | null;
+  preferred_language: string;
+  created_at: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+
+export interface Document {
+  id: number;
+  filename: string;
+  doc_type: string;
+  has_text: boolean;
+  created_at?: string;
+}
+
+export interface JobAnalysisResponse {
+  title: string | null;
+  company: string | null;
+  description: string | null;
+  requirements: string | null;
+  url: string;
+  saved_id: number | null;
+}
+
+export interface GeneratedDocument {
+  id: number;
+  doc_type: string;
+  format: string;
+  storage_path: string;
+  created_at: string;
+}
+
+export interface Application {
+  id: number;
+  job_title: string;
+  company: string;
+  job_offer_url: string | null;
+  applied: boolean;
+  applied_at: string | null;
+  result: string | null;
+  created_at: string;
+  generated_documents: GeneratedDocument[];
+}
+
 class ApiClient {
   private baseUrl: string;
   private token: string | null = null;
@@ -36,9 +87,9 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      ...options.headers,
+      ...(options.headers as Record<string, string>),
     };
 
     if (this.token) {
@@ -62,11 +113,7 @@ class ApiClient {
 
   // Authentication
   async register(email: string, password: string, fullName?: string, preferredLanguage = "en") {
-    const data = await this.request<{
-      access_token: string;
-      token_type: string;
-      user: any;
-    }>("/users/register", {
+    const data = await this.request<TokenResponse>("/users/register", {
       method: "POST",
       body: JSON.stringify({
         email,
@@ -81,11 +128,7 @@ class ApiClient {
   }
 
   async login(email: string, password: string) {
-    const data = await this.request<{
-      access_token: string;
-      token_type: string;
-      user: any;
-    }>("/users/login", {
+    const data = await this.request<TokenResponse>("/users/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
@@ -95,11 +138,7 @@ class ApiClient {
   }
 
   async googleLogin(credential: string, preferredLanguage = "en") {
-    const data = await this.request<{
-      access_token: string;
-      token_type: string;
-      user: any;
-    }>("/users/google", {
+    const data = await this.request<TokenResponse>("/users/google", {
       method: "POST",
       body: JSON.stringify({ credential, preferred_language: preferredLanguage }),
     });
@@ -109,11 +148,11 @@ class ApiClient {
   }
 
   async getCurrentUser() {
-    return this.request<any>("/users/me");
+    return this.request<User>("/users/me");
   }
 
   async updateUser(fullName?: string, preferredLanguage?: string) {
-    return this.request<any>("/users/me", {
+    return this.request<User>("/users/me", {
       method: "PATCH",
       body: JSON.stringify({
         full_name: fullName,
@@ -154,7 +193,7 @@ class ApiClient {
   }
 
   async listDocuments() {
-    return this.request<any[]>("/documents/");
+    return this.request<Document[]>("/documents/");
   }
 
   async deleteDocument(id: number) {
@@ -167,7 +206,7 @@ class ApiClient {
 
   // Jobs
   async analyzeJob(url: string) {
-    return this.request<any>("/jobs/analyze", {
+    return this.request<JobAnalysisResponse>("/jobs/analyze", {
       method: "POST",
       body: JSON.stringify({ url }),
     });
@@ -182,7 +221,7 @@ class ApiClient {
     applied_at?: string;
     result?: string;
   }) {
-    return this.request<any>("/applications/", {
+    return this.request<Application>("/applications/", {
       method: "POST",
       body: JSON.stringify(data),
     });
@@ -196,18 +235,18 @@ class ApiClient {
       result?: string;
     }
   ) {
-    return this.request<any>(`/applications/${id}`, {
+    return this.request<Application>(`/applications/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
     });
   }
 
   async getApplication(id: number) {
-    return this.request<any>(`/applications/${id}`);
+    return this.request<Application>(`/applications/${id}`);
   }
 
   async listApplications() {
-    return this.request<any[]>("/applications/history");
+    return this.request<Application[]>("/applications/history");
   }
 
   async getRAVReport() {
@@ -215,7 +254,7 @@ class ApiClient {
   }
 
   async attachDocuments(applicationId: number, documents: any[]) {
-    return this.request<any>(`/applications/${applicationId}/documents`, {
+    return this.request<Application>(`/applications/${applicationId}/documents`, {
       method: "POST",
       body: JSON.stringify({ documents }),
     });
