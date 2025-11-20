@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.endpoints import documents, jobs
+from app.api.endpoints import documents, jobs, applications
 from app.database import init_db
 
 app = FastAPI(title="EasyBewerbung API", version="0.1.0")
@@ -29,3 +29,4 @@ def read_root():
 
 app.include_router(documents.router, prefix="/documents", tags=["documents"])
 app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
+app.include_router(applications.router, prefix="/applications", tags=["applications"])

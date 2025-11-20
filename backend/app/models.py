@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean
 from sqlalchemy.orm import relationship, declarative_base
 from datetime import datetime
 
@@ -39,3 +39,34 @@ class JobOffer(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     owner = relationship("User", back_populates="job_offers")
+
+
+class Application(Base):
+    __tablename__ = "applications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    job_title = Column(String, nullable=False)
+    company = Column(String, nullable=False)
+    job_offer_url = Column(String, nullable=True)
+    applied = Column(Boolean, default=False)
+    applied_at = Column(DateTime, nullable=True)
+    result = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    generated_documents = relationship(
+        "GeneratedDocument", back_populates="application", cascade="all, delete-orphan"
+    )
+
+
+class GeneratedDocument(Base):
+    __tablename__ = "generated_documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("applications.id"))
+    doc_type = Column(String, nullable=False)
+    format = Column(String, nullable=False, default="PDF")
+    storage_path = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    application = relationship("Application", back_populates="generated_documents")
