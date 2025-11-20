@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean
 from sqlalchemy.orm import relationship, declarative_base
 from datetime import datetime, timezone
+from app.language_catalog import DEFAULT_LANGUAGE
 
 Base = declarative_base()
 
@@ -11,9 +12,9 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=True)  # Nullable for OAuth users
     full_name = Column(String, nullable=True)
-    preferred_language = Column(String, default="en")
-    mother_tongue = Column(String, default="en")
-    documentation_language = Column(String, default="en")
+    preferred_language = Column(String, default=DEFAULT_LANGUAGE)
+    mother_tongue = Column(String, default=DEFAULT_LANGUAGE)
+    documentation_language = Column(String, default=DEFAULT_LANGUAGE)
     credits = Column(Integer, default=0)
 
     # OAuth fields
@@ -65,9 +66,9 @@ class Application(Base):
     applied = Column(Boolean, default=False)
     applied_at = Column(DateTime, nullable=True)
     result = Column(String, nullable=True)
-    ui_language = Column(String, default="en")
-    documentation_language = Column(String, default="en")
-    company_profile_language = Column(String, default="en")
+    ui_language = Column(String, default=DEFAULT_LANGUAGE)
+    documentation_language = Column(String, default=DEFAULT_LANGUAGE)
+    company_profile_language = Column(String, default=DEFAULT_LANGUAGE)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     owner = relationship("User", back_populates="applications")

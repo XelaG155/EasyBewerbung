@@ -1,10 +1,16 @@
+import logging
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, validator, field_validator
 from sqlalchemy.orm import Session
 from typing import Optional, List
 import os
 
-from app.language_catalog import SUPPORTED_LANGUAGES
+from app.language_catalog import (
+    DEFAULT_LANGUAGE,
+    normalize_language,
+    get_language_options,
+)
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
@@ -16,8 +22,31 @@ from app.auth import (
     create_access_token,
     get_current_user,
 )
+from app.limiter import limiter
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _safe_language(value: Optional[str], field_name: str) -> str:
+    try:
+        return normalize_language(value or DEFAULT_LANGUAGE, field_name=field_name) or DEFAULT_LANGUAGE
+    except ValueError:
+        return DEFAULT_LANGUAGE
+
+
+def serialize_user(user: User) -> UserResponse:
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        preferred_language=_safe_language(user.preferred_language, "preferred_language"),
+        mother_tongue=_safe_language(user.mother_tongue, "mother_tongue"),
+        documentation_language=_safe_language(user.documentation_language, "documentation_language"),
+        credits=user.credits,
+        created_at=user.created_at.isoformat(),
+    )
 
 
 class UserRegister(BaseModel):
@@ -30,9 +59,14 @@ class UserRegister(BaseModel):
             raise ValueError('Password must be at least 8 characters')
         return v
     full_name: Optional[str] = None
-    preferred_language: str = "en"
-    mother_tongue: str = "en"
-    documentation_language: str = "en"
+    preferred_language: str = DEFAULT_LANGUAGE
+    mother_tongue: str = DEFAULT_LANGUAGE
+    documentation_language: str = DEFAULT_LANGUAGE
+
+    @field_validator("preferred_language", "mother_tongue", "documentation_language", mode="before")
+    @classmethod
+    def validate_language(cls, value: Optional[str], info):
+        return normalize_language(value, field_name=info.field_name)
 
 
 class UserLogin(BaseModel):
@@ -54,6 +88,12 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
+class LanguageOptionResponse(BaseModel):
+    code: str
+    label: str
+    direction: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
@@ -62,9 +102,14 @@ class TokenResponse(BaseModel):
 
 class GoogleLoginRequest(BaseModel):
     credential: str  # Google ID token
-    preferred_language: str = "en"
-    mother_tongue: str = "en"
-    documentation_language: str = "en"
+    preferred_language: str = DEFAULT_LANGUAGE
+    mother_tongue: str = DEFAULT_LANGUAGE
+    documentation_language: str = DEFAULT_LANGUAGE
+
+    @field_validator("preferred_language", "mother_tongue", "documentation_language", mode="before")
+    @classmethod
+    def validate_language(cls, value: Optional[str], info):
+        return normalize_language(value, field_name=info.field_name)
 
 
 @router.post("/google", response_model=TokenResponse)
@@ -135,20 +180,7 @@ async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db
         # Create access token
         access_token = create_access_token(data={"sub": user.id})
 
-        return TokenResponse(
-            access_token=access_token,
-            token_type="bearer",
-            user=UserResponse(
-                id=user.id,
-                email=user.email,
-                full_name=user.full_name,
-                preferred_language=user.preferred_language,
-                mother_tongue=user.mother_tongue,
-                documentation_language=user.documentation_language,
-                credits=user.credits,
-                created_at=user.created_at.isoformat(),
-            ),
-        )
+        return TokenResponse(access_token=access_token, token_type="bearer", user=serialize_user(user))
 
     except ValueError as e:
         # Invalid token
@@ -197,20 +229,7 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
     # Create access token
     access_token = create_access_token(data={"sub": new_user.id})
 
-    return TokenResponse(
-        access_token=access_token,
-        token_type="bearer",
-        user=UserResponse(
-            id=new_user.id,
-            email=new_user.email,
-            full_name=new_user.full_name,
-            preferred_language=new_user.preferred_language,
-            mother_tongue=new_user.mother_tongue,
-            documentation_language=new_user.documentation_language,
-            credits=new_user.credits,
-            created_at=new_user.created_at.isoformat(),
-        ),
-    )
+    return TokenResponse(access_token=access_token, token_type="bearer", user=serialize_user(new_user))
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -241,35 +260,13 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
     # Create access token
     access_token = create_access_token(data={"sub": user.id})
 
-    return TokenResponse(
-        access_token=access_token,
-        token_type="bearer",
-        user=UserResponse(
-            id=user.id,
-            email=user.email,
-            full_name=user.full_name,
-            preferred_language=user.preferred_language,
-            mother_tongue=user.mother_tongue,
-            documentation_language=user.documentation_language,
-            credits=user.credits,
-            created_at=user.created_at.isoformat(),
-        ),
-    )
+    return TokenResponse(access_token=access_token, token_type="bearer", user=serialize_user(user))
 
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user information."""
-    return UserResponse(
-        id=current_user.id,
-        email=current_user.email,
-        full_name=current_user.full_name,
-        preferred_language=current_user.preferred_language,
-        mother_tongue=current_user.mother_tongue,
-        documentation_language=current_user.documentation_language,
-        credits=current_user.credits,
-        created_at=current_user.created_at.isoformat(),
-    )
+    return serialize_user(current_user)
 
 
 class UserUpdate(BaseModel):
@@ -277,6 +274,11 @@ class UserUpdate(BaseModel):
     preferred_language: Optional[str] = None
     mother_tongue: Optional[str] = None
     documentation_language: Optional[str] = None
+
+    @field_validator("preferred_language", "mother_tongue", "documentation_language", mode="before")
+    @classmethod
+    def validate_language(cls, value: Optional[str], info):
+        return normalize_language(value, field_name=info.field_name) if value else value
 
 
 class AdminCreditUpdate(BaseModel):
@@ -303,25 +305,17 @@ async def update_user(
     db.commit()
     db.refresh(current_user)
 
-    return UserResponse(
-        id=current_user.id,
-        email=current_user.email,
-        full_name=current_user.full_name,
-        preferred_language=current_user.preferred_language,
-        mother_tongue=current_user.mother_tongue,
-        documentation_language=current_user.documentation_language,
-        credits=current_user.credits,
-        created_at=current_user.created_at.isoformat(),
-    )
+    return serialize_user(current_user)
 
 
-@router.get("/languages", response_model=List[str])
+@router.get("/languages", response_model=List[LanguageOptionResponse])
 async def list_supported_languages():
     """Expose the platform language list for UI and generation toggles."""
-    return SUPPORTED_LANGUAGES
+    return [LanguageOptionResponse(**option.__dict__) for option in get_language_options()]
 
 
 @router.post("/admin/credits", response_model=UserResponse)
+@limiter.limit("5/minute")
 async def grant_credits(
     payload: AdminCreditUpdate,
     request: Request,
@@ -332,7 +326,12 @@ async def grant_credits(
     """
     admin_token_header = request.headers.get("X-Admin-Token")
     admin_token_env = os.getenv("ADMIN_TOKEN")
+    client_ip = request.client.host if request.client else "unknown"
+    timestamp = datetime.now(timezone.utc).isoformat()
     if not admin_token_env or admin_token_header != admin_token_env:
+        logger.warning(
+            "Admin credit grant denied", extra={"ip": client_ip, "timestamp": timestamp, "user_id": payload.user_id}
+        )
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Admin token invalid")
 
     user = db.query(User).filter(User.id == payload.user_id).first()
@@ -343,13 +342,14 @@ async def grant_credits(
     db.commit()
     db.refresh(user)
 
-    return UserResponse(
-        id=user.id,
-        email=user.email,
-        full_name=user.full_name,
-        preferred_language=user.preferred_language,
-        mother_tongue=user.mother_tongue,
-        documentation_language=user.documentation_language,
-        credits=user.credits,
-        created_at=user.created_at.isoformat(),
+    logger.info(
+        "Admin credit grant succeeded",
+        extra={
+            "ip": client_ip,
+            "timestamp": timestamp,
+            "user_id": payload.user_id,
+            "credits_added": payload.credits_to_add,
+        },
     )
+
+    return serialize_user(user)

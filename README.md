@@ -11,6 +11,14 @@ Job application management platform for multilingual workers. Upload documents, 
 - **Multilingual**: Support for 33+ languages
 - **Secure**: JWT authentication, user-isolated data, file validation
 
+## Internationalization (i18n) and Localization (l10n)
+
+- **UTF-8 everywhere**: All services run with UTF-8 encoding to safely handle CJK, RTL, and emoji characters.
+- **ISO language codes**: The backend exposes language options with ISO 639-1/locale codes and text direction via `/users/languages` (see `backend/app/language_catalog.py`). Clients should send the code while displaying the human-friendly label.
+- **Content separation**: Keep UI copy in resource files (e.g., JSON for the frontend) instead of hardcoding strings to make adding new locales trivial.
+- **Locale-aware formatting**: Use browser/Intl APIs (or libraries like `i18next`/`react-intl`) for dates, numbers, and currency following CLDR rules.
+- **RTL & expansion ready**: Layouts should rely on logical CSS properties (e.g., `margin-inline-start`) and flexible sizing so RTL locales and longer translations render correctly.
+
 ## Tech Stack
 
 **Backend:**
@@ -47,14 +55,19 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Create environment file:
+4. Apply database migrations (uses Alembic):
+```bash
+alembic -c alembic.ini upgrade head
+```
+
+5. Create environment file:
 ```bash
 cp .env.example .env
 ```
 
 Then edit `.env` and set a secure SECRET_KEY (generate with `openssl rand -hex 32`).
 
-5. Start the backend server:
+6. Start the backend server:
 ```bash
 uvicorn app.main:app --reload
 ```
@@ -152,6 +165,7 @@ To enable Google Sign-In:
 - File upload validation (type, size)
 - PDF text extraction
 - CORS protection
+- Admin credit grants require the `X-Admin-Token` header, are rate limited, and should only be called over HTTPS
 
 ## File Structure
 

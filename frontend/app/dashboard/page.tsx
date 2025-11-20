@@ -8,14 +8,74 @@ import { Input } from "@/components/Input";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Modal } from "@/components/Modal";
 import { useAuth } from "@/lib/auth-context";
-import api from "@/lib/api";
+import api, { LanguageOption } from "@/lib/api";
+
+type DocumentRecord = {
+  id: number;
+  filename: string;
+  doc_type: string;
+  created_at: string;
+  has_text?: boolean;
+};
+
+type ApplicationRecord = {
+  id: number;
+  job_title: string;
+  company: string;
+  job_offer_url?: string;
+  applied: boolean;
+  applied_at?: string | null;
+  result?: string | null;
+  ui_language: string;
+  documentation_language: string;
+  company_profile_language: string;
+  created_at?: string;
+};
+
+const FALLBACK_LANGUAGE_OPTIONS: LanguageOption[] = [
+  { code: "en", label: "English", direction: "ltr" },
+  { code: "de", label: "Deutsch (German)", direction: "ltr" },
+  { code: "fr", label: "Français (French)", direction: "ltr" },
+  { code: "es", label: "Español (Spanish)", direction: "ltr" },
+  { code: "ar", label: "Arabic", direction: "rtl" },
+];
+
+const findLanguageOption = (value: string | undefined | null, options: LanguageOption[]) => {
+  if (!value) return undefined;
+  const normalized = value.toLowerCase();
+  return options.find(
+    (option) => option.code.toLowerCase() === normalized || option.label.toLowerCase() === normalized
+  );
+};
+
+const resolveLanguageCode = (
+  value: string | undefined | null,
+  options: LanguageOption[],
+  fallbackOptions: LanguageOption[] = FALLBACK_LANGUAGE_OPTIONS
+) => {
+  const option = findLanguageOption(value, options) || findLanguageOption(value, fallbackOptions);
+  return option?.code || options[0]?.code || fallbackOptions[0].code;
+};
+
+const ensureOptionList = (userLanguageValues: (string | undefined | null)[]): LanguageOption[] => {
+  const uniqueOptions: LanguageOption[] = [...FALLBACK_LANGUAGE_OPTIONS];
+  userLanguageValues
+    .filter((val): val is string => Boolean(val))
+    .forEach((val) => {
+      const existing = findLanguageOption(val, uniqueOptions);
+      if (!existing) {
+        uniqueOptions.push({ code: val, label: val, direction: "ltr" });
+      }
+    });
+  return uniqueOptions;
+};
 
 export default function DashboardPage() {
   const { user, loading: authLoading, logout, refreshUser } = useAuth();
   const router = useRouter();
 
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [applications, setApplications] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
+  const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [docType, setDocType] = useState("CV");
@@ -26,9 +86,9 @@ export default function DashboardPage() {
   const [jobUrl, setJobUrl] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState("");
-  const [documentationLanguage, setDocumentationLanguage] = useState("English");
-  const [companyProfileLanguage, setCompanyProfileLanguage] = useState("English");
-  const [languages, setLanguages] = useState<string[]>([]);
+  const [languageOptions, setLanguageOptions] = useState<LanguageOption[]>(FALLBACK_LANGUAGE_OPTIONS);
+  const [documentationLanguage, setDocumentationLanguage] = useState<string>(FALLBACK_LANGUAGE_OPTIONS[0].code);
+  const [companyProfileLanguage, setCompanyProfileLanguage] = useState<string>(FALLBACK_LANGUAGE_OPTIONS[0].code);
 
   // Status Modal
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -45,17 +105,40 @@ export default function DashboardPage() {
   // Load data
   useEffect(() => {
     if (user) {
-      setDocumentationLanguage(user.documentation_language || "English");
-      setCompanyProfileLanguage(user.mother_tongue || user.preferred_language || "English");
       api
         .listLanguages()
-        .then((res) => setLanguages(res))
-        .catch(() => {
-          // ignore lookup failure and keep defaults
+        .then((res) => setLanguageOptions(res))
+        .catch((error) => {
+          console.error("Failed to load languages", error);
+          setLanguageOptions(
+            ensureOptionList([
+              user.preferred_language,
+              user.mother_tongue,
+              user.documentation_language,
+            ])
+          );
         });
       loadData();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      const options = languageOptions.length
+        ? languageOptions
+        : ensureOptionList([
+            user.preferred_language,
+            user.mother_tongue,
+            user.documentation_language,
+          ]);
+      setDocumentationLanguage(
+        resolveLanguageCode(user.documentation_language || user.preferred_language, options)
+      );
+      setCompanyProfileLanguage(
+        resolveLanguageCode(user.mother_tongue || user.preferred_language, options)
+      );
+    }
+  }, [user, languageOptions]);
 
   const loadData = async () => {
     try {
@@ -109,12 +192,19 @@ export default function DashboardPage() {
 
     try {
       const result = await api.analyzeJob(jobUrl);
+      const options = languageOptions.length
+        ? languageOptions
+        : ensureOptionList([
+            user.preferred_language,
+            user.mother_tongue,
+            user.documentation_language,
+          ]);
       // Create application from analyzed job
       await api.createApplication({
         job_title: result.title || "Unknown Position",
         company: result.company || "Unknown Company",
         job_offer_url: jobUrl,
-        ui_language: user.mother_tongue || user.preferred_language,
+        ui_language: resolveLanguageCode(user.mother_tongue || user.preferred_language, options),
         documentation_language: documentationLanguage,
         company_profile_language: companyProfileLanguage,
       });
@@ -355,9 +445,9 @@ export default function DashboardPage() {
                       onChange={(e) => setDocumentationLanguage(e.target.value)}
                       className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white"
                     >
-                      {(languages.length ? languages : [user.documentation_language || "English"]).map((lang) => (
-                        <option key={lang} value={lang}>
-                          {lang}
+                      {languageOptions.map((lang) => (
+                        <option key={lang.code} value={lang.code}>
+                          {lang.label}
                         </option>
                       ))}
                     </select>
@@ -370,9 +460,9 @@ export default function DashboardPage() {
                       onChange={(e) => setCompanyProfileLanguage(e.target.value)}
                       className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white"
                     >
-                      {(languages.length ? languages : [user.mother_tongue || "English"]).map((lang) => (
-                        <option key={lang} value={lang}>
-                          {lang}
+                      {languageOptions.map((lang) => (
+                        <option key={lang.code} value={lang.code}>
+                          {lang.label}
                         </option>
                       ))}
                     </select>

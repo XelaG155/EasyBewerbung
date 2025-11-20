@@ -13,3 +13,4 @@ lxml==5.1.0
 google-auth==2.27.0
 slowapi==0.1.9
 python-magic==0.4.27
+alembic==1.13.2
