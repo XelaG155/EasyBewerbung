@@ -9,6 +9,9 @@ export interface User {
   email: string;
   full_name: string | null;
   preferred_language: string;
+  mother_tongue: string;
+  documentation_language: string;
+  credits: number;
   created_at: string;
 }
 
@@ -51,9 +54,14 @@ export interface Application {
   applied: boolean;
   applied_at: string | null;
   result: string | null;
+  ui_language: string;
+  documentation_language: string;
+  company_profile_language: string;
   created_at: string;
   generated_documents: GeneratedDocument[];
 }
+
+export type LanguageListResponse = string[];
 
 class ApiClient {
   private baseUrl: string;
@@ -112,7 +120,14 @@ class ApiClient {
   }
 
   // Authentication
-  async register(email: string, password: string, fullName?: string, preferredLanguage = "en") {
+  async register(
+    email: string,
+    password: string,
+    fullName?: string,
+    preferredLanguage = "en",
+    motherTongue = "en",
+    documentationLanguage = "en",
+  ) {
     const data = await this.request<TokenResponse>("/users/register", {
       method: "POST",
       body: JSON.stringify({
@@ -120,6 +135,8 @@ class ApiClient {
         password,
         full_name: fullName,
         preferred_language: preferredLanguage,
+        mother_tongue: motherTongue,
+        documentation_language: documentationLanguage,
       }),
     });
 
@@ -137,10 +154,20 @@ class ApiClient {
     return data;
   }
 
-  async googleLogin(credential: string, preferredLanguage = "en") {
+  async googleLogin(
+    credential: string,
+    preferredLanguage = "en",
+    motherTongue = "en",
+    documentationLanguage = "en",
+  ) {
     const data = await this.request<TokenResponse>("/users/google", {
       method: "POST",
-      body: JSON.stringify({ credential, preferred_language: preferredLanguage }),
+      body: JSON.stringify({
+        credential,
+        preferred_language: preferredLanguage,
+        mother_tongue: motherTongue,
+        documentation_language: documentationLanguage,
+      }),
     });
 
     this.setToken(data.access_token);
@@ -151,12 +178,23 @@ class ApiClient {
     return this.request<User>("/users/me");
   }
 
-  async updateUser(fullName?: string, preferredLanguage?: string) {
+  async listLanguages() {
+    return this.request<LanguageListResponse>("/users/languages");
+  }
+
+  async updateUser(
+    fullName?: string,
+    preferredLanguage?: string,
+    motherTongue?: string,
+    documentationLanguage?: string,
+  ) {
     return this.request<User>("/users/me", {
       method: "PATCH",
       body: JSON.stringify({
         full_name: fullName,
         preferred_language: preferredLanguage,
+        mother_tongue: motherTongue,
+        documentation_language: documentationLanguage,
       }),
     });
   }
@@ -220,6 +258,9 @@ class ApiClient {
     applied?: boolean;
     applied_at?: string;
     result?: string;
+    ui_language?: string;
+    documentation_language?: string;
+    company_profile_language?: string;
   }) {
     return this.request<Application>("/applications/", {
       method: "POST",
