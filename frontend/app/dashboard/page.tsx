@@ -11,7 +11,7 @@ import { useAuth } from "@/lib/auth-context";
 import api from "@/lib/api";
 
 export default function DashboardPage() {
-  const { user, loading: authLoading, logout } = useAuth();
+  const { user, loading: authLoading, logout, refreshUser } = useAuth();
   const router = useRouter();
 
   const [documents, setDocuments] = useState<any[]>([]);
@@ -26,6 +26,9 @@ export default function DashboardPage() {
   const [jobUrl, setJobUrl] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState("");
+  const [documentationLanguage, setDocumentationLanguage] = useState("English");
+  const [companyProfileLanguage, setCompanyProfileLanguage] = useState("English");
+  const [languages, setLanguages] = useState<string[]>([]);
 
   // Status Modal
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -42,6 +45,14 @@ export default function DashboardPage() {
   // Load data
   useEffect(() => {
     if (user) {
+      setDocumentationLanguage(user.documentation_language || "English");
+      setCompanyProfileLanguage(user.mother_tongue || user.preferred_language || "English");
+      api
+        .listLanguages()
+        .then((res) => setLanguages(res))
+        .catch(() => {
+          // ignore lookup failure and keep defaults
+        });
       loadData();
     }
   }, [user]);
@@ -103,11 +114,20 @@ export default function DashboardPage() {
         job_title: result.title || "Unknown Position",
         company: result.company || "Unknown Company",
         job_offer_url: jobUrl,
+        ui_language: user.mother_tongue || user.preferred_language,
+        documentation_language: documentationLanguage,
+        company_profile_language: companyProfileLanguage,
       });
       setJobUrl("");
       await loadData();
+      await refreshUser();
     } catch (error: any) {
-      setAnalysisError(error.message || "Analysis failed");
+      const message = error.message || "Analysis failed";
+      if (message.toLowerCase().includes("credit")) {
+        setAnalysisError("You do not have enough credits. Please ask an admin to top up your account.");
+      } else {
+        setAnalysisError(message);
+      }
     } finally {
       setAnalyzing(false);
     }
@@ -203,6 +223,9 @@ export default function DashboardPage() {
             <div className="flex items-center gap-4">
               <span className="text-slate-400">
                 {user.full_name || user.email}
+              </span>
+              <span className="px-3 py-1 rounded bg-slate-800 text-sm text-emerald-300 border border-emerald-700">
+                Credits: {user.credits}
               </span>
               <Button onClick={handleLogout} variant="outline">
                 Log Out
@@ -323,6 +346,38 @@ export default function DashboardPage() {
                   placeholder="https://example.com/job-posting"
                   required
                 />
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <label className="text-sm text-slate-200">
+                    <span className="block mb-2">Language for generated documents</span>
+                    <select
+                      value={documentationLanguage}
+                      onChange={(e) => setDocumentationLanguage(e.target.value)}
+                      className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white"
+                    >
+                      {(languages.length ? languages : [user.documentation_language || "English"]).map((lang) => (
+                        <option key={lang} value={lang}>
+                          {lang}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="text-sm text-slate-200">
+                    <span className="block mb-2">Language for company profile</span>
+                    <select
+                      value={companyProfileLanguage}
+                      onChange={(e) => setCompanyProfileLanguage(e.target.value)}
+                      className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white"
+                    >
+                      {(languages.length ? languages : [user.mother_tongue || "English"]).map((lang) => (
+                        <option key={lang} value={lang}>
+                          {lang}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
 
                 <Button
                   type="submit"

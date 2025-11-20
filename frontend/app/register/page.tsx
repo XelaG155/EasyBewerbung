@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Script from "next/script";
@@ -9,6 +9,7 @@ import { Input } from "@/components/Input";
 import { Card } from "@/components/Card";
 import { useAuth } from "@/lib/auth-context";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
+import api from "@/lib/api";
 
 declare global {
   interface Window {
@@ -20,18 +21,30 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [motherTongue, setMotherTongue] = useState("English");
+  const [documentationLanguage, setDocumentationLanguage] = useState("English");
+  const [languages, setLanguages] = useState<string[]>(["English", "Deutsch (German)", "Français (French)"]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const { register, googleLogin } = useAuth();
   const router = useRouter();
 
+  useEffect(() => {
+    api
+      .listLanguages()
+      .then((list) => setLanguages(list))
+      .catch(() => {
+        // keep defaults if the lookup fails
+      });
+  }, []);
+
   const handleGoogleSuccess = useCallback(async (credential: string) => {
     setError("");
     setLoading(true);
 
     try {
-      await googleLogin(credential);
+      await googleLogin(credential, motherTongue, motherTongue, documentationLanguage);
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Google sign-up failed");
@@ -59,7 +72,14 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await register(email, password, fullName);
+      await register(
+        email,
+        password,
+        fullName,
+        motherTongue,
+        motherTongue,
+        documentationLanguage,
+      );
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Registration failed. Please try again.");
@@ -142,6 +162,40 @@ export default function RegisterPage() {
                 placeholder="At least 8 characters"
                 required
               />
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <label className="text-sm text-slate-200">
+                  <span className="block mb-2">Mother tongue (UI language)</span>
+                  <select
+                    value={motherTongue}
+                    onChange={(e) => setMotherTongue(e.target.value)}
+                    className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white"
+                    aria-label="Select mother tongue"
+                  >
+                    {languages.map((lang) => (
+                      <option key={lang} value={lang}>
+                        {lang}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="text-sm text-slate-200">
+                  <span className="block mb-2">Language for generated documents</span>
+                  <select
+                    value={documentationLanguage}
+                    onChange={(e) => setDocumentationLanguage(e.target.value)}
+                    className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white"
+                    aria-label="Select documentation language"
+                  >
+                    {languages.map((lang) => (
+                      <option key={lang} value={lang}>
+                        {lang}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
               <Button
                 type="submit"

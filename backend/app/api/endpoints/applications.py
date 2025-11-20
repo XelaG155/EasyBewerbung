@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 
@@ -20,6 +20,9 @@ class ApplicationCreate(BaseModel):
     applied: bool = False
     applied_at: Optional[datetime] = None
     result: Optional[str] = Field(None, description="Outcome (e.g., pending, interview, rejected, offer)")
+    ui_language: Optional[str] = Field(None, description="Language used while navigating the platform")
+    documentation_language: Optional[str] = Field(None, description="Target language for generated documents")
+    company_profile_language: Optional[str] = Field(None, description="Language for the company profile brief")
 
 
 class ApplicationUpdate(BaseModel):
@@ -57,6 +60,9 @@ class ApplicationResponse(BaseModel):
     applied: bool
     applied_at: Optional[datetime]
     result: Optional[str]
+    ui_language: str
+    documentation_language: str
+    company_profile_language: str
     created_at: datetime
     generated_documents: List[GeneratedDocumentResponse]
 
@@ -83,6 +89,9 @@ def serialize_application(app: Application) -> dict:
         "applied": app.applied,
         "applied_at": app.applied_at,
         "result": app.result,
+        "ui_language": app.ui_language,
+        "documentation_language": app.documentation_language,
+        "company_profile_language": app.company_profile_language,
         "created_at": app.created_at,
         "generated_documents": [serialize_generated_document(doc) for doc in app.generated_documents],
     }
@@ -95,9 +104,16 @@ async def create_application(
     db: Session = Depends(get_db),
 ):
     """Record a new application intent so we can attach generated documents to it."""
+    if current_user.credits <= 0:
+        raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="Not enough credits to start a generation")
+
     applied_at = payload.applied_at
     if payload.applied and payload.applied_at is None:
         applied_at = datetime.utcnow()
+
+    ui_language = payload.ui_language or current_user.mother_tongue or current_user.preferred_language
+    documentation_language = payload.documentation_language or current_user.documentation_language or current_user.preferred_language
+    company_profile_language = payload.company_profile_language or ui_language
 
     application = Application(
         user_id=current_user.id,
@@ -107,8 +123,12 @@ async def create_application(
         applied=payload.applied,
         applied_at=applied_at,
         result=payload.result,
+        ui_language=ui_language,
+        documentation_language=documentation_language,
+        company_profile_language=company_profile_language,
     )
     db.add(application)
+    current_user.credits -= 1
     db.commit()
     db.refresh(application)
     return serialize_application(application)
