@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/lib/auth-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EasyBewerbung — Epic Application Forge",
+  title: "EasyBewerbung — Job Applications Made Simple",
   description:
-    "Transform uploads into cinematic, recruiter-ready applications with glowing dashboards, multilingual guidance, and tailored cover letters for every worker.",
+    "Upload your CV, analyze job offers, and track applications. Perfect for cleaning, factory, logistics, and hospitality workers. Available in 33+ languages.",
 };
 
 export default function RootLayout({
@@ -28,7 +29,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
