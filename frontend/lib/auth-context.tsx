@@ -15,6 +15,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  googleLogin: (credential: string, preferredLanguage?: string) => Promise<void>;
   register: (email: string, password: string, fullName?: string, preferredLanguage?: string) => Promise<void>;
   logout: () => void;
   updateUser: (fullName?: string, preferredLanguage?: string) => Promise<void>;
@@ -48,6 +49,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(response.user);
   };
 
+  const googleLogin = async (credential: string, preferredLanguage = "en") => {
+    const response = await api.googleLogin(credential, preferredLanguage);
+    setUser(response.user);
+  };
+
   const register = async (
     email: string,
     password: string,
@@ -70,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, register, logout, updateUser }}
+      value={{ user, loading, login, googleLogin, register, logout, updateUser }}
     >
       {children}
     </AuthContext.Provider>

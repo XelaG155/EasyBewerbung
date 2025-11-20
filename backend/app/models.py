@@ -9,9 +9,15 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
+    hashed_password = Column(String, nullable=True)  # Nullable for OAuth users
     full_name = Column(String, nullable=True)
     preferred_language = Column(String, default="en")
+
+    # OAuth fields
+    oauth_provider = Column(String, nullable=True)  # "google", "email", etc.
+    google_id = Column(String, unique=True, nullable=True, index=True)  # Google user ID
+    profile_picture = Column(String, nullable=True)  # Profile picture URL
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     documents = relationship("Document", back_populates="owner")

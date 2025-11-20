@@ -87,9 +87,33 @@ npm run dev
 
 The app will be available at `http://localhost:3000`
 
+## Google OAuth Setup (Optional)
+
+To enable Google Sign-In:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Enable the **Google+ API**
+4. Go to **Credentials** → **Create Credentials** → **OAuth 2.0 Client ID**
+5. Configure the OAuth consent screen
+6. Set **Authorized JavaScript origins**: `http://localhost:3000`
+7. Set **Authorized redirect URIs**: `http://localhost:3000`
+8. Copy the **Client ID**
+9. Add to backend `.env`:
+   ```
+   GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+   ```
+10. Add to frontend `.env.local`:
+    ```
+    NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+    ```
+11. Restart both servers
+
+**Note:** Google OAuth is optional. Users can still register/login with email and password.
+
 ## Usage
 
-1. **Register**: Create an account at `/register`
+1. **Register**: Create an account at `/register` (via email or Google)
 2. **Upload Documents**: Go to the dashboard and upload your CV
 3. **Add Jobs**: Paste job offer URLs to analyze and track
 4. **Track Applications**: View all applications in one place
@@ -100,6 +124,7 @@ The app will be available at `http://localhost:3000`
 ### Authentication
 - `POST /users/register` - Register new user
 - `POST /users/login` - Login user
+- `POST /users/google` - Login/register with Google OAuth
 - `GET /users/me` - Get current user
 - `PATCH /users/me` - Update user profile
 
