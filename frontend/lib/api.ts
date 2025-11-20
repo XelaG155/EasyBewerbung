@@ -61,7 +61,13 @@ export interface Application {
   generated_documents: GeneratedDocument[];
 }
 
-export type LanguageListResponse = string[];
+export interface LanguageOption {
+  code: string;
+  label: string;
+  direction: "ltr" | "rtl";
+}
+
+export type LanguageListResponse = LanguageOption[];
 
 class ApiClient {
   private baseUrl: string;

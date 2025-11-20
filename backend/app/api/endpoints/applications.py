@@ -1,14 +1,15 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.document_catalog import ALLOWED_GENERATED_DOC_TYPES
 from app.models import Application, GeneratedDocument, User
 from app.auth import get_current_user
+from app.language_catalog import DEFAULT_LANGUAGE, normalize_language
 
 router = APIRouter()
 
@@ -23,6 +24,11 @@ class ApplicationCreate(BaseModel):
     ui_language: Optional[str] = Field(None, description="Language used while navigating the platform")
     documentation_language: Optional[str] = Field(None, description="Target language for generated documents")
     company_profile_language: Optional[str] = Field(None, description="Language for the company profile brief")
+
+    @field_validator("ui_language", "documentation_language", "company_profile_language", mode="before")
+    @classmethod
+    def validate_language(cls, value: Optional[str], info):
+        return normalize_language(value, field_name=info.field_name) if value else value
 
 
 class ApplicationUpdate(BaseModel):
@@ -104,33 +110,55 @@ async def create_application(
     db: Session = Depends(get_db),
 ):
     """Record a new application intent so we can attach generated documents to it."""
-    if current_user.credits <= 0:
-        raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="Not enough credits to start a generation")
-
     applied_at = payload.applied_at
     if payload.applied and payload.applied_at is None:
-        applied_at = datetime.utcnow()
+        applied_at = datetime.now(timezone.utc)
 
-    ui_language = payload.ui_language or current_user.mother_tongue or current_user.preferred_language
-    documentation_language = payload.documentation_language or current_user.documentation_language or current_user.preferred_language
-    company_profile_language = payload.company_profile_language or ui_language
+    def resolve_language(value: Optional[str], fallback: Optional[str]) -> str:
+        normalized_value = normalize_language(value) if value else None
+        if normalized_value:
+            return normalized_value
+        normalized_fallback = normalize_language(fallback) if fallback else DEFAULT_LANGUAGE
+        return normalized_fallback or DEFAULT_LANGUAGE
 
-    application = Application(
-        user_id=current_user.id,
-        job_title=payload.job_title,
-        company=payload.company,
-        job_offer_url=payload.job_offer_url,
-        applied=payload.applied,
-        applied_at=applied_at,
-        result=payload.result,
-        ui_language=ui_language,
-        documentation_language=documentation_language,
-        company_profile_language=company_profile_language,
+    ui_language = resolve_language(payload.ui_language, current_user.mother_tongue or current_user.preferred_language)
+    documentation_language = resolve_language(
+        payload.documentation_language, current_user.documentation_language or current_user.preferred_language
     )
-    db.add(application)
-    current_user.credits -= 1
-    db.commit()
+    company_profile_language = resolve_language(payload.company_profile_language, ui_language)
+
+    try:
+        with db.begin():
+            updated = (
+                db.query(User)
+                .filter(User.id == current_user.id, User.credits > 0)
+                .update({User.credits: User.credits - 1}, synchronize_session=False)
+            )
+            if updated == 0:
+                raise HTTPException(
+                    status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                    detail="Not enough credits to start a generation",
+                )
+
+            application = Application(
+                user_id=current_user.id,
+                job_title=payload.job_title,
+                company=payload.company,
+                job_offer_url=payload.job_offer_url,
+                applied=payload.applied,
+                applied_at=applied_at,
+                result=payload.result,
+                ui_language=ui_language,
+                documentation_language=documentation_language,
+                company_profile_language=company_profile_language,
+            )
+            db.add(application)
+    except HTTPException:
+        db.rollback()
+        raise
+
     db.refresh(application)
+    db.refresh(current_user)
     return serialize_application(application)
 
 
@@ -255,7 +283,7 @@ async def rav_report(
     return {
         "report": report_body,
         "entries": len(lines),
-        "generated_at": datetime.utcnow(),
+        "generated_at": datetime.now(timezone.utc),
     }
 
 
