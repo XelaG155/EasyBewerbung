@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, HttpUrl
 from sqlalchemy.orm import Session
 import requests
+from urllib.parse import urlparse
+from app.limiter import limiter
 from bs4 import BeautifulSoup
 from typing import Optional
 
@@ -27,6 +29,13 @@ class JobAnalysisResponse(BaseModel):
 
 def scrape_job_offer(url: str) -> dict:
     """Scrape basic job information from a URL."""
+    # Validate URL
+    parsed = urlparse(url)
+    if parsed.scheme not in ['http', 'https']:
+        raise HTTPException(400, "Invalid URL scheme")
+    if parsed.hostname in ['localhost', '127.0.0.1', '0.0.0.0']:
+        raise HTTPException(400, "Local URLs not allowed")
+
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -78,8 +87,10 @@ def scrape_job_offer(url: str) -> dict:
 
 
 @router.post("/analyze", response_model=JobAnalysisResponse)
+@limiter.limit("5/minute")
 async def analyze_job_offer(
     request: JobAnalysisRequest,
+    request_obj: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):

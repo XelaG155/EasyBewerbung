@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Modal } from "@/components/Modal";
 import { useAuth } from "@/lib/auth-context";
 import api from "@/lib/api";
 
@@ -24,6 +26,11 @@ export default function DashboardPage() {
   const [jobUrl, setJobUrl] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState("");
+
+  // Status Modal
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [selectedAppId, setSelectedAppId] = useState<number | null>(null);
+  const [newStatus, setNewStatus] = useState("");
 
   // Redirect if not logged in
   useEffect(() => {
@@ -134,6 +141,19 @@ export default function DashboardPage() {
     }
   };
 
+  const openStatusModal = (appId: number, currentStatus: string | null) => {
+    setSelectedAppId(appId);
+    setNewStatus(currentStatus || "");
+    setStatusModalOpen(true);
+  };
+
+  const submitStatusUpdate = async () => {
+    if (selectedAppId) {
+      await handleUpdateApplicationStatus(selectedAppId, true, newStatus);
+      setStatusModalOpen(false);
+    }
+  };
+
   const handleDownloadRAV = async () => {
     try {
       const report = await api.getRAVReport();
@@ -169,248 +189,270 @@ export default function DashboardPage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      {/* Header */}
-      <header className="border-b border-slate-800">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
-              EB
+    <ErrorBoundary>
+      <div className="min-h-screen bg-slate-950 text-slate-100">
+        {/* Header */}
+        <header className="border-b border-slate-800">
+          <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
+                EB
+              </div>
+              <span className="text-xl font-bold">EasyBewerbung</span>
             </div>
-            <span className="text-xl font-bold">EasyBewerbung</span>
+            <div className="flex items-center gap-4">
+              <span className="text-slate-400">
+                {user.full_name || user.email}
+              </span>
+              <Button onClick={handleLogout} variant="outline">
+                Log Out
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-slate-400">
-              {user.full_name || user.email}
-            </span>
-            <Button onClick={handleLogout} variant="outline">
-              Log Out
-            </Button>
-          </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="container mx-auto px-6 py-8 space-y-8">
-        {/* Upload Section */}
-        <section>
-          <h2 className="text-2xl font-bold mb-4">Upload Documents</h2>
-          <Card>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-200 mb-2">
-                  Document Type
-                </label>
-                <select
-                  value={docType}
-                  onChange={(e) => setDocType(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="CV">CV / Resume</option>
-                  <option value="REFERENCE">Reference Letter</option>
-                  <option value="DIPLOMA">Diploma / Certificate</option>
-                  <option value="COVER_LETTER">Cover Letter</option>
-                  <option value="OTHER">Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-200 mb-2">
-                  Select File (PDF, DOC, DOCX, TXT - Max 10MB)
-                </label>
-                <input
-                  id="file-input"
-                  type="file"
-                  onChange={handleFileChange}
-                  accept=".pdf,.doc,.docx,.txt"
-                  className="block w-full text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 file:cursor-pointer"
-                />
-              </div>
-
-              {uploadFile && (
-                <div className="flex items-center gap-3">
-                  <span className="text-slate-300">📄 {uploadFile.name}</span>
-                  <Button
-                    onClick={handleUpload}
-                    disabled={uploading}
-                    variant="primary"
+        <main className="container mx-auto px-6 py-8 space-y-8">
+          {/* Upload Section */}
+          <section>
+            <h2 className="text-2xl font-bold mb-4">Upload Documents</h2>
+            <Card>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="doc-type" className="block text-sm font-medium text-slate-200 mb-2">
+                    Document Type
+                  </label>
+                  <select
+                    id="doc-type"
+                    value={docType}
+                    onChange={(e) => setDocType(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    aria-label="Select document type"
                   >
-                    {uploading ? "Uploading..." : "Upload"}
-                  </Button>
+                    <option value="CV">CV / Resume</option>
+                    <option value="REFERENCE">Reference Letter</option>
+                    <option value="DIPLOMA">Diploma / Certificate</option>
+                    <option value="COVER_LETTER">Cover Letter</option>
+                    <option value="OTHER">Other</option>
+                  </select>
                 </div>
-              )}
 
-              {uploadError && (
-                <p className="text-red-400 text-sm">{uploadError}</p>
-              )}
-            </div>
-          </Card>
-        </section>
+                <div>
+                  <label htmlFor="file-input" className="block text-sm font-medium text-slate-200 mb-2">
+                    Select File (PDF, DOC, DOCX, TXT - Max 10MB)
+                  </label>
+                  <input
+                    id="file-input"
+                    type="file"
+                    onChange={handleFileChange}
+                    accept=".pdf,.doc,.docx,.txt"
+                    className="block w-full text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 file:cursor-pointer"
+                    aria-label="Upload document file"
+                  />
+                </div>
 
-        {/* Documents List */}
-        <section>
-          <h2 className="text-2xl font-bold mb-4">Your Documents</h2>
-          {documents.length === 0 ? (
-            <Card>
-              <p className="text-slate-400 text-center py-8">
-                No documents uploaded yet. Upload your CV to get started!
-              </p>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {documents.map((doc) => (
-                <Card key={doc.id}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="font-semibold text-white">{doc.filename}</p>
-                      <p className="text-sm text-slate-400">{doc.doc_type}</p>
-                      {doc.has_text && (
-                        <p className="text-xs text-emerald-400 mt-1">
-                          ✓ Text extracted
-                        </p>
-                      )}
-                      <p className="text-xs text-slate-500 mt-1">
-                        {new Date(doc.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteDocument(doc.id)}
-                      className="text-red-400 hover:text-red-300 text-sm"
+                {uploadFile && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-slate-300">📄 {uploadFile.name}</span>
+                    <Button
+                      onClick={handleUpload}
+                      disabled={uploading}
+                      variant="primary"
                     >
-                      Delete
-                    </button>
+                      {uploading ? "Uploading..." : "Upload"}
+                    </Button>
                   </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </section>
+                )}
 
-        {/* Job Analysis */}
-        <section>
-          <h2 className="text-2xl font-bold mb-4">Add Job Offer</h2>
-          <Card>
-            <form onSubmit={handleAnalyzeJob} className="space-y-4">
-              <Input
-                type="url"
-                label="Job Offer URL"
-                value={jobUrl}
-                onChange={setJobUrl}
-                placeholder="https://example.com/job-posting"
-                required
-              />
-
-              <Button
-                type="submit"
-                disabled={analyzing || !jobUrl}
-                variant="primary"
-              >
-                {analyzing ? "Analyzing..." : "Analyze Job"}
-              </Button>
-
-              {analysisError && (
-                <p className="text-red-400 text-sm">{analysisError}</p>
-              )}
-            </form>
-          </Card>
-        </section>
-
-        {/* Applications */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold">Your Applications</h2>
-            {applications.length > 0 && (
-              <Button onClick={handleDownloadRAV} variant="outline">
-                🇨🇭 Download RAV Report
-              </Button>
-            )}
-          </div>
-
-          {applications.length === 0 ? (
-            <Card>
-              <p className="text-slate-400 text-center py-8">
-                No applications yet. Add a job offer to get started!
-              </p>
+                {uploadError && (
+                  <p className="text-red-400 text-sm">{uploadError}</p>
+                )}
+              </div>
             </Card>
-          ) : (
-            <div className="space-y-4">
-              {applications.map((app) => (
-                <Card key={app.id}>
-                  <div className="space-y-3">
+          </section>
+
+          {/* Documents List */}
+          <section>
+            <h2 className="text-2xl font-bold mb-4">Your Documents</h2>
+            {documents.length === 0 ? (
+              <Card>
+                <p className="text-slate-400 text-center py-8">
+                  No documents uploaded yet. Upload your CV to get started!
+                </p>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {documents.map((doc) => (
+                  <Card key={doc.id}>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-white text-lg">
-                          {app.job_title}
-                        </h3>
-                        <p className="text-slate-300">{app.company}</p>
-                        {app.job_offer_url && (
-                          <a
-                            href={app.job_offer_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-indigo-400 hover:text-indigo-300"
-                          >
-                            View Job Posting →
-                          </a>
+                        <p className="font-semibold text-white">{doc.filename}</p>
+                        <p className="text-sm text-slate-400">{doc.doc_type}</p>
+                        {doc.has_text && (
+                          <p className="text-xs text-emerald-400 mt-1">
+                            ✓ Text extracted
+                          </p>
                         )}
+                        <p className="text-xs text-slate-500 mt-1">
+                          {new Date(doc.created_at).toLocaleDateString()}
+                        </p>
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 text-sm flex-wrap">
-                      <span
-                        className={`px-3 py-1 rounded ${
-                          app.applied
-                            ? "bg-emerald-900/30 text-emerald-400"
-                            : "bg-slate-700 text-slate-300"
-                        }`}
-                      >
-                        {app.applied ? "✓ Applied" : "Not Applied"}
-                      </span>
-
-                      {app.result && (
-                        <span className="px-3 py-1 rounded bg-slate-700 text-slate-300">
-                          {app.result}
-                        </span>
-                      )}
-
-                      {app.created_at && (
-                        <span className="text-slate-500">
-                          Added {new Date(app.created_at).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Status Update Buttons */}
-                    <div className="flex gap-2 flex-wrap pt-2 border-t border-slate-700">
-                      {!app.applied && (
-                        <button
-                          onClick={() => handleUpdateApplicationStatus(app.id, true)}
-                          className="text-sm px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white"
-                        >
-                          Mark as Applied
-                        </button>
-                      )}
-
                       <button
-                        onClick={() => {
-                          const result = prompt(
-                            "Update status (e.g., Interview, Rejected, Offer, etc.):"
-                          );
-                          if (result) {
-                            handleUpdateApplicationStatus(app.id, app.applied, result);
-                          }
-                        }}
-                        className="text-sm px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white"
+                        onClick={() => handleDeleteDocument(doc.id)}
+                        className="text-red-400 hover:text-red-300 text-sm"
+                        aria-label={`Delete document ${doc.filename}`}
                       >
-                        Update Status
+                        Delete
                       </button>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Job Analysis */}
+          <section>
+            <h2 className="text-2xl font-bold mb-4">Add Job Offer</h2>
+            <Card>
+              <form onSubmit={handleAnalyzeJob} className="space-y-4">
+                <Input
+                  type="url"
+                  label="Job Offer URL"
+                  value={jobUrl}
+                  onChange={setJobUrl}
+                  placeholder="https://example.com/job-posting"
+                  required
+                />
+
+                <Button
+                  type="submit"
+                  disabled={analyzing || !jobUrl}
+                  variant="primary"
+                >
+                  {analyzing ? "Analyzing..." : "Analyze Job"}
+                </Button>
+
+                {analysisError && (
+                  <p className="text-red-400 text-sm">{analysisError}</p>
+                )}
+              </form>
+            </Card>
+          </section>
+
+          {/* Applications */}
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Your Applications</h2>
+              {applications.length > 0 && (
+                <Button onClick={handleDownloadRAV} variant="outline">
+                  🇨🇭 Download RAV Report
+                </Button>
+              )}
             </div>
-          )}
-        </section>
-      </main>
-    </div>
+
+            {applications.length === 0 ? (
+              <Card>
+                <p className="text-slate-400 text-center py-8">
+                  No applications yet. Add a job offer to get started!
+                </p>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {applications.map((app) => (
+                  <Card key={app.id}>
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white text-lg">
+                            {app.job_title}
+                          </h3>
+                          <p className="text-slate-300">{app.company}</p>
+                          {app.job_offer_url && (
+                            <a
+                              href={app.job_offer_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-indigo-400 hover:text-indigo-300"
+                            >
+                              View Job Posting →
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 text-sm flex-wrap">
+                        <span
+                          className={`px-3 py-1 rounded ${app.applied
+                            ? "bg-emerald-900/30 text-emerald-400"
+                            : "bg-slate-700 text-slate-300"
+                            }`}
+                        >
+                          {app.applied ? "✓ Applied" : "Not Applied"}
+                        </span>
+
+                        {app.result && (
+                          <span className="px-3 py-1 rounded bg-slate-700 text-slate-300">
+                            {app.result}
+                          </span>
+                        )}
+
+                        {app.created_at && (
+                          <span className="text-slate-500">
+                            Added {new Date(app.created_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Status Update Buttons */}
+                      <div className="flex gap-2 flex-wrap pt-2 border-t border-slate-700">
+                        {!app.applied && (
+                          <button
+                            onClick={() => handleUpdateApplicationStatus(app.id, true)}
+                            className="text-sm px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white"
+                          >
+                            Mark as Applied
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => openStatusModal(app.id, app.result)}
+                          className="text-sm px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white"
+                        >
+                          Update Status
+                        </button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
+        </main>
+
+        <Modal
+          isOpen={statusModalOpen}
+          onClose={() => setStatusModalOpen(false)}
+          title="Update Application Status"
+        >
+          <div className="space-y-4">
+            <Input
+              label="New Status"
+              value={newStatus}
+              onChange={setNewStatus}
+              placeholder="e.g. Interview, Rejected, Offer"
+            />
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setStatusModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={submitStatusUpdate}>
+                Update Status
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      </div>
+    </ErrorBoundary>
   );
 }
+

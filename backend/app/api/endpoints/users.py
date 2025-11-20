@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, validator
 from sqlalchemy.orm import Session
 from typing import Optional
 import os
@@ -20,7 +20,13 @@ router = APIRouter()
 
 class UserRegister(BaseModel):
     email: EmailStr
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=8, max_length=100)
+
+    @validator('password')
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        return v
     full_name: Optional[str] = None
     preferred_language: str = "en"
 
@@ -136,10 +142,14 @@ async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid Google token: {str(e)}",
         )
+    except HTTPException:
+        raise
     except Exception as e:
+        # In a real app, log this error
+        print(f"Google auth error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Google authentication failed: {str(e)}",
+            detail="Google authentication failed",
         )
 
 

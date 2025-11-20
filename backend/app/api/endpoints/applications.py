@@ -38,6 +38,32 @@ class ApplicationDocumentBatch(BaseModel):
     documents: List[GeneratedDocumentCreate]
 
 
+class GeneratedDocumentResponse(BaseModel):
+    id: int
+    doc_type: str
+    format: str
+    storage_path: str
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ApplicationResponse(BaseModel):
+    id: int
+    job_title: str
+    company: str
+    job_offer_url: Optional[str]
+    applied: bool
+    applied_at: Optional[datetime]
+    result: Optional[str]
+    created_at: datetime
+    generated_documents: List[GeneratedDocumentResponse]
+
+    class Config:
+        from_attributes = True
+
+
 def serialize_generated_document(doc: GeneratedDocument) -> dict:
     return {
         "id": doc.id,
@@ -62,7 +88,7 @@ def serialize_application(app: Application) -> dict:
     }
 
 
-@router.post("/", response_model=dict)
+@router.post("/", response_model=ApplicationResponse)
 async def create_application(
     payload: ApplicationCreate,
     current_user: User = Depends(get_current_user),
@@ -88,7 +114,7 @@ async def create_application(
     return serialize_application(application)
 
 
-@router.patch("/{application_id}", response_model=dict)
+@router.patch("/{application_id}", response_model=ApplicationResponse)
 async def update_application(
     application_id: int,
     payload: ApplicationUpdate,
@@ -116,7 +142,7 @@ async def update_application(
     return serialize_application(application)
 
 
-@router.post("/{application_id}/documents", response_model=dict)
+@router.post("/{application_id}/documents", response_model=ApplicationResponse)
 async def attach_generated_documents(
     application_id: int,
     payload: ApplicationDocumentBatch,
@@ -158,7 +184,7 @@ async def attach_generated_documents(
     return serialize_application(reloaded)
 
 
-@router.get("/history", response_model=List[dict])
+@router.get("/history", response_model=List[ApplicationResponse])
 async def list_application_history(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -213,7 +239,7 @@ async def rav_report(
     }
 
 
-@router.get("/{application_id}", response_model=dict)
+@router.get("/{application_id}", response_model=ApplicationResponse)
 async def get_application(
     application_id: int,
     current_user: User = Depends(get_current_user),

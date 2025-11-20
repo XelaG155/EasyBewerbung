@@ -5,6 +5,10 @@ import shutil
 import os
 from pathlib import Path
 from pypdf import PdfReader
+import magic
+import logging
+
+logger = logging.getLogger(__name__)
 
 from app.database import get_db
 from app.models import Document, User
@@ -18,7 +22,10 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # File validation constants
 ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx", ".txt"}
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx", ".txt"}
+MAX_FILE_SIZE_MB = 10
+MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024
+CHUNK_SIZE = 8192
 
 
 def extract_text_from_pdf(file_path: str) -> str:
@@ -48,6 +55,24 @@ async def upload_document(
             status_code=400,
             detail=f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}",
         )
+    
+    # Validate file type using magic numbers
+    # Read first 2048 bytes for magic number check
+    first_chunk = await file.read(2048)
+    await file.seek(0)
+    
+    mime = magic.from_buffer(first_chunk, mime=True)
+    allowed_mimes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain'
+    ]
+    if mime not in allowed_mimes:
+         raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type detected: {mime}",
+        )
 
     # Create user-specific directory
     user_dir = os.path.join(UPLOAD_DIR, str(current_user.id))
@@ -62,7 +87,9 @@ async def upload_document(
     try:
         file_size = 0
         with open(file_location, "wb") as buffer:
-            while chunk := await file.read(8192):  # Read in chunks
+        file_size = 0
+        with open(file_location, "wb") as buffer:
+            while chunk := await file.read(CHUNK_SIZE):  # Read in chunks
                 file_size += len(chunk)
                 if file_size > MAX_FILE_SIZE:
                     # Delete partially written file
@@ -158,7 +185,7 @@ async def delete_document(
             os.remove(document.file_path)
     except Exception as e:
         # Log error but don't fail the request
-        print(f"Error deleting file: {e}")
+        logger.error(f"Error deleting file {document.file_path}: {e}", exc_info=True)
 
     # Delete from database
     db.delete(document)

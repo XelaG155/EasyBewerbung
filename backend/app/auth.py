@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import os
 from dotenv import load_dotenv
@@ -14,8 +14,11 @@ from app.models import User
 load_dotenv()
 
 # Security configuration
+# Security configuration
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 if SECRET_KEY == "your-secret-key-change-this-in-production":
+    if os.getenv("ENVIRONMENT") == "production":
+        raise ValueError("SECRET_KEY must be set in production!")
     print("⚠️  WARNING: Using default SECRET_KEY. Set SECRET_KEY in .env file!")
 
 ALGORITHM = "HS256"
@@ -39,9 +42,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     """Create a JWT access token."""
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
