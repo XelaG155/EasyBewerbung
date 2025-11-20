@@ -1,0 +1,15 @@
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+uploads/
+
+# Node artifacts
+node_modules/
+.next/
+
+# Editor and OS files
+.DS_Store
+.vscode/
