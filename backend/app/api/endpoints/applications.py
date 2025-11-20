@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.document_catalog import ALLOWED_GENERATED_DOC_TYPES
-from app.models import Application, GeneratedDocument
+from app.models import Application, GeneratedDocument, User
+from app.auth import get_current_user
 
 router = APIRouter()
 
@@ -62,13 +63,18 @@ def serialize_application(app: Application) -> dict:
 
 
 @router.post("/", response_model=dict)
-async def create_application(payload: ApplicationCreate, db: Session = Depends(get_db)):
+async def create_application(
+    payload: ApplicationCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Record a new application intent so we can attach generated documents to it."""
     applied_at = payload.applied_at
     if payload.applied and payload.applied_at is None:
         applied_at = datetime.utcnow()
 
     application = Application(
+        user_id=current_user.id,
         job_title=payload.job_title,
         company=payload.company,
         job_offer_url=payload.job_offer_url,
@@ -84,9 +90,17 @@ async def create_application(payload: ApplicationCreate, db: Session = Depends(g
 
 @router.patch("/{application_id}", response_model=dict)
 async def update_application(
-    application_id: int, payload: ApplicationUpdate, db: Session = Depends(get_db)
+    application_id: int,
+    payload: ApplicationUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    application = db.query(Application).get(application_id)
+    """Update an application (only for the current user)."""
+    application = (
+        db.query(Application)
+        .filter(Application.id == application_id, Application.user_id == current_user.id)
+        .first()
+    )
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
 
@@ -106,10 +120,15 @@ async def update_application(
 async def attach_generated_documents(
     application_id: int,
     payload: ApplicationDocumentBatch,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    application = db.query(Application).options(joinedload(Application.generated_documents)).get(
-        application_id
+    """Attach generated documents to an application (only for the current user)."""
+    application = (
+        db.query(Application)
+        .options(joinedload(Application.generated_documents))
+        .filter(Application.id == application_id, Application.user_id == current_user.id)
+        .first()
     )
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -140,10 +159,15 @@ async def attach_generated_documents(
 
 
 @router.get("/history", response_model=List[dict])
-async def list_application_history(db: Session = Depends(get_db)):
+async def list_application_history(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List all applications for the current user."""
     applications = (
         db.query(Application)
         .options(joinedload(Application.generated_documents))
+        .filter(Application.user_id == current_user.id)
         .order_by(Application.created_at.desc())
         .all()
     )
@@ -151,11 +175,15 @@ async def list_application_history(db: Session = Depends(get_db)):
 
 
 @router.get("/rav-report", response_model=dict)
-async def rav_report(db: Session = Depends(get_db)):
+async def rav_report(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Produce a copy/paste friendly report for Swiss RAV offices (Nachweis der persönlichen Arbeitsbemühungen)."""
     applications = (
         db.query(Application)
         .options(joinedload(Application.generated_documents))
+        .filter(Application.user_id == current_user.id)
         .order_by(Application.applied_at.desc().nullslast(), Application.created_at.desc())
         .all()
     )
@@ -186,9 +214,17 @@ async def rav_report(db: Session = Depends(get_db)):
 
 
 @router.get("/{application_id}", response_model=dict)
-async def get_application(application_id: int, db: Session = Depends(get_db)):
-    application = db.query(Application).options(joinedload(Application.generated_documents)).get(
-        application_id
+async def get_application(
+    application_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get a specific application (only for the current user)."""
+    application = (
+        db.query(Application)
+        .options(joinedload(Application.generated_documents))
+        .filter(Application.id == application_id, Application.user_id == current_user.id)
+        .first()
     )
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
