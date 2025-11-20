@@ -127,38 +127,43 @@ async def create_application(
     )
     company_profile_language = resolve_language(payload.company_profile_language, ui_language)
 
-    try:
-        with db.begin():
-            updated = (
-                db.query(User)
-                .filter(User.id == current_user.id, User.credits > 0)
-                .update({User.credits: User.credits - 1}, synchronize_session=False)
-            )
-            if updated == 0:
-                raise HTTPException(
-                    status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                    detail="Not enough credits to start a generation",
-                )
+    supports_for_update = getattr(db.bind.dialect, "supports_for_update", False)
 
-            application = Application(
-                user_id=current_user.id,
-                job_title=payload.job_title,
-                company=payload.company,
-                job_offer_url=payload.job_offer_url,
-                applied=payload.applied,
-                applied_at=applied_at,
-                result=payload.result,
-                ui_language=ui_language,
-                documentation_language=documentation_language,
-                company_profile_language=company_profile_language,
+    transaction_ctx = db.begin_nested() if db.in_transaction() else db.begin()
+
+    with transaction_ctx:
+        user_query = db.query(User).filter(User.id == current_user.id)
+        if supports_for_update:
+            user_query = user_query.with_for_update()
+
+        user_for_update = user_query.first()
+        if not user_for_update:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        if user_for_update.credits <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="Not enough credits to start a generation",
             )
-            db.add(application)
-    except HTTPException:
-        db.rollback()
-        raise
+
+        user_for_update.credits -= 1
+
+        application = Application(
+            user_id=user_for_update.id,
+            job_title=payload.job_title,
+            company=payload.company,
+            job_offer_url=payload.job_offer_url,
+            applied=payload.applied,
+            applied_at=applied_at,
+            result=payload.result,
+            ui_language=ui_language,
+            documentation_language=documentation_language,
+            company_profile_language=company_profile_language,
+        )
+        db.add(application)
 
     db.refresh(application)
-    db.refresh(current_user)
+    db.refresh(user_for_update)
     return serialize_application(application)
 
 
