@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, EmailStr, Field, validator
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List
 import os
+
+from app.language_catalog import SUPPORTED_LANGUAGES
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
@@ -29,6 +31,8 @@ class UserRegister(BaseModel):
         return v
     full_name: Optional[str] = None
     preferred_language: str = "en"
+    mother_tongue: str = "en"
+    documentation_language: str = "en"
 
 
 class UserLogin(BaseModel):
@@ -41,6 +45,9 @@ class UserResponse(BaseModel):
     email: str
     full_name: Optional[str]
     preferred_language: str
+    mother_tongue: str
+    documentation_language: str
+    credits: int
     created_at: str
 
     class Config:
@@ -56,6 +63,8 @@ class TokenResponse(BaseModel):
 class GoogleLoginRequest(BaseModel):
     credential: str  # Google ID token
     preferred_language: str = "en"
+    mother_tongue: str = "en"
+    documentation_language: str = "en"
 
 
 @router.post("/google", response_model=TokenResponse)
@@ -115,6 +124,8 @@ async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db
                 profile_picture=profile_picture,
                 oauth_provider="google",
                 preferred_language=request.preferred_language,
+                mother_tongue=request.mother_tongue,
+                documentation_language=request.documentation_language,
                 hashed_password=None,  # OAuth users don't have passwords
             )
             db.add(user)
@@ -132,6 +143,9 @@ async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db
                 email=user.email,
                 full_name=user.full_name,
                 preferred_language=user.preferred_language,
+                mother_tongue=user.mother_tongue,
+                documentation_language=user.documentation_language,
+                credits=user.credits,
                 created_at=user.created_at.isoformat(),
             ),
         )
@@ -171,6 +185,8 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
         hashed_password=hashed_password,
         full_name=user_data.full_name,
         preferred_language=user_data.preferred_language,
+        mother_tongue=user_data.mother_tongue,
+        documentation_language=user_data.documentation_language,
         oauth_provider="email",  # Mark as email/password user
     )
 
@@ -189,6 +205,9 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
             email=new_user.email,
             full_name=new_user.full_name,
             preferred_language=new_user.preferred_language,
+            mother_tongue=new_user.mother_tongue,
+            documentation_language=new_user.documentation_language,
+            credits=new_user.credits,
             created_at=new_user.created_at.isoformat(),
         ),
     )
@@ -230,6 +249,9 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
             email=user.email,
             full_name=user.full_name,
             preferred_language=user.preferred_language,
+            mother_tongue=user.mother_tongue,
+            documentation_language=user.documentation_language,
+            credits=user.credits,
             created_at=user.created_at.isoformat(),
         ),
     )
@@ -243,6 +265,9 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
         email=current_user.email,
         full_name=current_user.full_name,
         preferred_language=current_user.preferred_language,
+        mother_tongue=current_user.mother_tongue,
+        documentation_language=current_user.documentation_language,
+        credits=current_user.credits,
         created_at=current_user.created_at.isoformat(),
     )
 
@@ -250,6 +275,13 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     preferred_language: Optional[str] = None
+    mother_tongue: Optional[str] = None
+    documentation_language: Optional[str] = None
+
+
+class AdminCreditUpdate(BaseModel):
+    user_id: int
+    credits_to_add: int = Field(..., gt=0, description="Number of credits to add for the user")
 
 
 @router.patch("/me", response_model=UserResponse)
@@ -263,6 +295,10 @@ async def update_user(
         current_user.full_name = user_update.full_name
     if user_update.preferred_language is not None:
         current_user.preferred_language = user_update.preferred_language
+    if user_update.mother_tongue is not None:
+        current_user.mother_tongue = user_update.mother_tongue
+    if user_update.documentation_language is not None:
+        current_user.documentation_language = user_update.documentation_language
 
     db.commit()
     db.refresh(current_user)
@@ -272,5 +308,48 @@ async def update_user(
         email=current_user.email,
         full_name=current_user.full_name,
         preferred_language=current_user.preferred_language,
+        mother_tongue=current_user.mother_tongue,
+        documentation_language=current_user.documentation_language,
+        credits=current_user.credits,
         created_at=current_user.created_at.isoformat(),
+    )
+
+
+@router.get("/languages", response_model=List[str])
+async def list_supported_languages():
+    """Expose the platform language list for UI and generation toggles."""
+    return SUPPORTED_LANGUAGES
+
+
+@router.post("/admin/credits", response_model=UserResponse)
+async def grant_credits(
+    payload: AdminCreditUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Admin-only endpoint to add credits. Protects with a static token header.
+    """
+    admin_token_header = request.headers.get("X-Admin-Token")
+    admin_token_env = os.getenv("ADMIN_TOKEN")
+    if not admin_token_env or admin_token_header != admin_token_env:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Admin token invalid")
+
+    user = db.query(User).filter(User.id == payload.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.credits += payload.credits_to_add
+    db.commit()
+    db.refresh(user)
+
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        preferred_language=user.preferred_language,
+        mother_tongue=user.mother_tongue,
+        documentation_language=user.documentation_language,
+        credits=user.credits,
+        created_at=user.created_at.isoformat(),
     )

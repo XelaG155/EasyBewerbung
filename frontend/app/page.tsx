@@ -27,9 +27,40 @@ export default function Home() {
   ];
 
   const languages = [
-    "English", "Deutsch", "Français", "Español", "Português", "Italiano",
-    "Albanian", "Croatian", "Serbian", "Arabic", "Turkish", "Chinese",
-    "Vietnamese", "Thai", "Filipino", "Hindi", "And 20+ more..."
+    "English",
+    "Deutsch",
+    "Français",
+    "Italiano",
+    "Español",
+    "Português",
+    "Svizzeru / Schweizerdeutsch",
+    "Rumantsch",
+    "Albanian",
+    "Croatian",
+    "Serbian",
+    "Bosnian",
+    "Bulgarian",
+    "Romanian",
+    "Russian",
+    "Ukrainian",
+    "Polish",
+    "Turkish",
+    "Arabic",
+    "Amharic",
+    "Tigrinya",
+    "Somali",
+    "Swahili",
+    "Yoruba",
+    "Hausa",
+    "Filipino (Tagalog)",
+    "Thai",
+    "Vietnamese",
+    "Malay / Indonesian",
+    "Hindi",
+    "Bengali",
+    "Chinese (Simplified)",
+    "Chinese (Traditional)",
+    "Plus 30+ more"
   ];
 
   return (

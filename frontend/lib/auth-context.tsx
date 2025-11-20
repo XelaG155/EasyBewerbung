@@ -7,10 +7,28 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  googleLogin: (credential: string, preferredLanguage?: string) => Promise<void>;
-  register: (email: string, password: string, fullName?: string, preferredLanguage?: string) => Promise<void>;
+  googleLogin: (
+    credential: string,
+    preferredLanguage?: string,
+    motherTongue?: string,
+    documentationLanguage?: string,
+  ) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    fullName?: string,
+    preferredLanguage?: string,
+    motherTongue?: string,
+    documentationLanguage?: string,
+  ) => Promise<void>;
   logout: () => void;
-  updateUser: (fullName?: string, preferredLanguage?: string) => Promise<void>;
+  updateUser: (
+    fullName?: string,
+    preferredLanguage?: string,
+    motherTongue?: string,
+    documentationLanguage?: string,
+  ) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,8 +59,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(response.user);
   };
 
-  const googleLogin = async (credential: string, preferredLanguage = "en") => {
-    const response = await api.googleLogin(credential, preferredLanguage);
+  const googleLogin = async (
+    credential: string,
+    preferredLanguage = "en",
+    motherTongue = "en",
+    documentationLanguage = "en",
+  ) => {
+    const response = await api.googleLogin(
+      credential,
+      preferredLanguage,
+      motherTongue,
+      documentationLanguage,
+    );
     setUser(response.user);
   };
 
@@ -50,9 +78,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string,
     fullName?: string,
-    preferredLanguage = "en"
+    preferredLanguage = "en",
+    motherTongue = "en",
+    documentationLanguage = "en",
   ) => {
-    const response = await api.register(email, password, fullName, preferredLanguage);
+    const response = await api.register(
+      email,
+      password,
+      fullName,
+      preferredLanguage,
+      motherTongue,
+      documentationLanguage,
+    );
     setUser(response.user);
   };
 
@@ -61,14 +98,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
-  const updateUser = async (fullName?: string, preferredLanguage?: string) => {
-    const updatedUser = await api.updateUser(fullName, preferredLanguage);
+  const updateUser = async (
+    fullName?: string,
+    preferredLanguage?: string,
+    motherTongue?: string,
+    documentationLanguage?: string,
+  ) => {
+    const updatedUser = await api.updateUser(
+      fullName,
+      preferredLanguage,
+      motherTongue,
+      documentationLanguage,
+    );
     setUser(updatedUser);
+  };
+
+  const refreshUser = async () => {
+    const me = await api.getCurrentUser();
+    setUser(me);
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, googleLogin, register, logout, updateUser }}
+      value={{ user, loading, login, googleLogin, register, logout, updateUser, refreshUser }}
     >
       {children}
     </AuthContext.Provider>
