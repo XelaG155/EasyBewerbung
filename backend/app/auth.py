@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
+import os
+from dotenv import load_dotenv
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
@@ -8,13 +10,19 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
 
+# Load environment variables
+load_dotenv()
+
 # Security configuration
-SECRET_KEY = "your-secret-key-change-this-in-production"  # TODO: Move to .env
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
+if SECRET_KEY == "your-secret-key-change-this-in-production":
+    print("⚠️  WARNING: Using default SECRET_KEY. Set SECRET_KEY in .env file!")
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)  # Don't auto-raise errors for optional auth
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -53,10 +61,17 @@ def decode_token(token: str) -> dict:
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db),
 ) -> User:
     """Get the current authenticated user from the JWT token."""
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     token = credentials.credentials
     payload = decode_token(token)
 

@@ -47,7 +47,12 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. The backend automatically creates the database on first run. You can customize the `.env` file if needed.
+4. Create environment file:
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` and set a secure SECRET_KEY (generate with `openssl rand -hex 32`).
 
 5. Start the backend server:
 ```bash
@@ -68,7 +73,12 @@ cd frontend
 npm install
 ```
 
-3. The `.env.local` file is already configured for local development.
+3. Create environment file:
+```bash
+cp .env.example .env.local
+```
+
+The default configuration points to `http://localhost:8000` for the API.
 
 4. Start the development server:
 ```bash
