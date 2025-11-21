@@ -105,9 +105,7 @@ export default function SettingsPage() {
               ← Back to Dashboard
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
-                EB
-              </div>
+              <img src="/logo.png" alt="EasyBewerbung" className="w-8 h-8 rounded-lg" />
               <span className="text-xl font-bold">EasyBewerbung</span>
             </div>
           </div>

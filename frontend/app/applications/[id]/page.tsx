@@ -34,6 +34,9 @@ export default function ApplicationDetailPage() {
   const [generatingScore, setGeneratingScore] = useState(false);
   const [generatingDocs, setGeneratingDocs] = useState(false);
   const [error, setError] = useState("");
+  const [availableDocs, setAvailableDocs] = useState<any[]>([]);
+  const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
+  const [showDocSelector, setShowDocSelector] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -44,12 +47,28 @@ export default function ApplicationDetailPage() {
   useEffect(() => {
     if (user && applicationId) {
       loadApplication();
+      loadMatchingScore(); // Also load matching score on mount
+      loadAvailableDocs();
     }
   }, [user, applicationId]);
+
+  const loadAvailableDocs = async () => {
+    try {
+      const docs = await api.getAvailableDocTypes();
+      setAvailableDocs(docs);
+    } catch (error) {
+      console.error("Failed to load document catalog:", error);
+    }
+  };
 
   const loadApplication = async () => {
     try {
       const app = await api.getApplication(applicationId);
+      console.log('Loaded application:', app);
+      console.log('Number of documents:', app.generated_documents?.length);
+      if (app.generated_documents?.length > 0) {
+        console.log('First document:', app.generated_documents[0]);
+      }
       setApplication(app);
     } catch (error: any) {
       setError(error.message || "Failed to load application");
@@ -58,11 +77,11 @@ export default function ApplicationDetailPage() {
     }
   };
 
-  const loadMatchingScore = async () => {
+  const loadMatchingScore = async (recalculate: boolean = false) => {
     setGeneratingScore(true);
     setError("");
     try {
-      const score = await api.getMatchingScore(applicationId);
+      const score = await api.getMatchingScore(applicationId, recalculate);
       setMatchingScore(score);
     } catch (error: any) {
       setError(error.message || "Failed to calculate matching score");
@@ -72,20 +91,40 @@ export default function ApplicationDetailPage() {
   };
 
   const handleGenerateDocuments = async () => {
+    if (selectedDocs.length === 0) {
+      setError("Please select at least one document type");
+      return;
+    }
+
     setGeneratingDocs(true);
     setError("");
     try {
-      await api.generateDocuments(applicationId, ["COVER_LETTER"]);
+      await api.generateDocuments(applicationId, selectedDocs);
+      // Reload application to show new documents
       await loadApplication();
-      await user && (await api.getCurrentUser()).then(u => {
-        // Refresh user to update credits
-        window.location.reload();
-      });
+      setSelectedDocs([]);
+      setShowDocSelector(false);
     } catch (error: any) {
       setError(error.message || "Failed to generate documents");
     } finally {
       setGeneratingDocs(false);
     }
+  };
+
+  const toggleDocSelection = (docKey: string) => {
+    setSelectedDocs(prev =>
+      prev.includes(docKey)
+        ? prev.filter(k => k !== docKey)
+        : [...prev, docKey]
+    );
+  };
+
+  const handleCheckAll = () => {
+    setSelectedDocs(availableDocs.map(doc => doc.key));
+  };
+
+  const handleUncheckAll = () => {
+    setSelectedDocs([]);
   };
 
   if (authLoading || loading) {
@@ -111,9 +150,7 @@ export default function ApplicationDetailPage() {
               ← Back
             </Button>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
-                EB
-              </div>
+              <img src="/logo.png" alt="EasyBewerbung" className="w-8 h-8 rounded-lg" />
               <span className="text-xl font-bold">EasyBewerbung</span>
             </div>
           </div>
@@ -221,7 +258,7 @@ export default function ApplicationDetailPage() {
                 </div>
 
                 <Button
-                  onClick={loadMatchingScore}
+                  onClick={() => loadMatchingScore(true)}
                   disabled={generatingScore}
                   variant="outline"
                   className="w-full mt-4"
@@ -246,38 +283,125 @@ export default function ApplicationDetailPage() {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="font-semibold">
-                        {doc.doc_type.replace("_", " ")}
+                        {doc.doc_type.replace(/_/g, " ").toUpperCase()}
                       </h3>
-                      <span className="text-sm text-slate-400">
-                        {new Date(doc.created_at).toLocaleDateString()}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const blob = new Blob([doc.content || ''], { type: 'text/plain' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `${doc.doc_type}_${application.company}_${application.job_title}.txt`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="px-3 py-1 text-sm rounded bg-indigo-600 hover:bg-indigo-700 text-white"
+                        >
+                          📥 Download
+                        </button>
+                        <span className="text-sm text-slate-400">
+                          {new Date(doc.created_at + 'Z').toLocaleString(undefined, {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                          })}
+                        </span>
+                      </div>
                     </div>
-                    <pre className="whitespace-pre-wrap text-sm text-slate-300 bg-slate-800 p-3 rounded max-h-96 overflow-y-auto">
-                      {doc.content}
-                    </pre>
+                    <details className="cursor-pointer">
+                      <summary className="text-sm text-indigo-400 hover:text-indigo-300 mb-2">
+                        📄 Show Preview
+                      </summary>
+                      <pre className="whitespace-pre-wrap text-sm text-slate-300 bg-slate-800 p-3 rounded max-h-96 overflow-y-auto">
+                        {doc.content || '(No content available)'}
+                      </pre>
+                    </details>
                   </div>
                 ))}
                 <Button
-                  onClick={handleGenerateDocuments}
-                  disabled={generatingDocs}
+                  onClick={() => setShowDocSelector(!showDocSelector)}
                   variant="outline"
                   className="w-full"
                 >
-                  {generatingDocs ? "Generating..." : "Regenerate Documents (1 credit)"}
+                  {showDocSelector ? "Hide Document Selection" : "Generate More Documents"}
                 </Button>
               </div>
             ) : (
               <div className="text-center py-8">
                 <p className="text-slate-400 mb-4">
-                  No documents generated yet. Generate a cover letter for this application.
+                  No documents generated yet. Select documents to generate for this application.
                 </p>
                 <Button
-                  onClick={handleGenerateDocuments}
-                  disabled={generatingDocs}
+                  onClick={() => setShowDocSelector(!showDocSelector)}
                   variant="primary"
                 >
-                  {generatingDocs ? "Generating..." : "Generate Cover Letter (1 credit)"}
+                  {showDocSelector ? "Hide Document Selection" : "Select Documents to Generate"}
                 </Button>
+              </div>
+            )}
+
+            {showDocSelector && (
+              <div className="mt-6 p-4 bg-slate-800 rounded-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Select Documents to Generate</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleCheckAll}
+                      className="px-3 py-1 text-sm rounded bg-slate-700 hover:bg-slate-600 text-white"
+                    >
+                      Check All
+                    </button>
+                    <button
+                      onClick={handleUncheckAll}
+                      className="px-3 py-1 text-sm rounded bg-slate-700 hover:bg-slate-600 text-white"
+                    >
+                      Uncheck All
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {availableDocs.map((doc) => (
+                    <label
+                      key={doc.key}
+                      className="flex items-start gap-3 p-3 rounded bg-slate-700 hover:bg-slate-600 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedDocs.includes(doc.key)}
+                        onChange={() => toggleDocSelection(doc.key)}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <div className="font-semibold text-white">{doc.title}</div>
+                        <div className="text-sm text-slate-300">{doc.description}</div>
+                        <div className="text-xs text-slate-400 mt-1">
+                          Output: {doc.outputs?.join(", ")}
+                        </div>
+                        {doc.notes && (
+                          <div className="text-xs text-indigo-400 mt-1">💡 {doc.notes}</div>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                <div className="mt-4 flex items-center justify-between">
+                  <span className="text-sm text-slate-400">
+                    {selectedDocs.length} document(s) selected • {selectedDocs.length} credit(s)
+                  </span>
+                  <Button
+                    onClick={handleGenerateDocuments}
+                    disabled={generatingDocs || selectedDocs.length === 0}
+                    variant="primary"
+                  >
+                    {generatingDocs ? "Generating..." : "Generate Selected Documents"}
+                  </Button>
+                </div>
               </div>
             )}
           </Card>

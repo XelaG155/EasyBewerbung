@@ -89,3 +89,18 @@ class GeneratedDocument(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     application = relationship("Application", back_populates="generated_documents")
+
+
+class MatchingScore(Base):
+    __tablename__ = "matching_scores"
+
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("applications.id"), unique=True)
+    overall_score = Column(Integer, nullable=False)
+    strengths = Column(Text, nullable=False)  # JSON array stored as text
+    gaps = Column(Text, nullable=False)  # JSON array stored as text
+    recommendations = Column(Text, nullable=False)  # JSON array stored as text
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    application = relationship("Application")
