@@ -90,9 +90,7 @@ export default function Home() {
       <header className="border-b border-slate-800">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
-              EB
-            </div>
+            <img src="/logo.png" alt="EasyBewerbung" className="w-8 h-8 rounded-lg" />
             <span className="text-xl font-bold">{t("common.appName")}</span>
           </div>
           <div className="flex gap-3 items-center">

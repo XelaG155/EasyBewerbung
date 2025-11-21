@@ -260,6 +260,16 @@ class ApiClient {
     return this.request<any>("/documents/catalog");
   }
 
+  async getAvailableDocTypes() {
+    const catalog = await this.getDocumentCatalog();
+    const allDocs = [
+      ...(catalog.catalog?.essential_pack || []),
+      ...(catalog.catalog?.high_impact_addons || []),
+      ...(catalog.catalog?.premium_documents || [])
+    ];
+    return allDocs;
+  }
+
   // Jobs
   async analyzeJob(url: string) {
     return this.request<JobAnalysisResponse>("/jobs/analyze", {
@@ -319,8 +329,9 @@ class ApiClient {
     });
   }
 
-  async getMatchingScore(applicationId: number) {
-    return this.request<any>(`/applications/${applicationId}/matching-score`);
+  async getMatchingScore(applicationId: number, recalculate: boolean = false) {
+    const params = recalculate ? "?recalculate=true" : "";
+    return this.request<any>(`/applications/${applicationId}/matching-score${params}`);
   }
 
   async generateDocuments(applicationId: number, docTypes: string[]) {
