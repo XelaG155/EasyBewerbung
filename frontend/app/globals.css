@@ -1,8 +1,52 @@
 @import "tailwindcss";
 
+
 :root {
   --background: #070a14;
-  --foreground: #f8fafc;
+  --foreground: #e2e8f0;
+  --muted-foreground: #cbd5e1;
+  --border: #1f2937;
+  --card-background: rgba(15, 23, 42, 0.7);
+  --card-border: #1e293b;
+  --chip-background: #1f2937;
+  --accent: #6366f1;
+  --accent-strong: #4f46e5;
+  --accent-faint: rgba(99, 102, 241, 0.12);
+  --success: #22c55e;
+  --nav-surface: rgba(7, 10, 20, 0.7);
+  --button-text-on-primary: #f8fafc;
+}
+
+.light-theme {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --muted-foreground: #475569;
+  --border: #e2e8f0;
+  --card-background: rgba(255, 255, 255, 0.85);
+  --card-border: #e2e8f0;
+  --chip-background: #e2e8f0;
+  --accent: #4f46e5;
+  --accent-strong: #4338ca;
+  --accent-faint: rgba(79, 70, 229, 0.12);
+  --success: #16a34a;
+  --nav-surface: rgba(255, 255, 255, 0.8);
+  --button-text-on-primary: #eef2ff;
+}
+
+.dark-theme {
+  --background: #070a14;
+  --foreground: #e2e8f0;
+  --muted-foreground: #cbd5e1;
+  --border: #1f2937;
+  --card-background: rgba(15, 23, 42, 0.7);
+  --card-border: #1e293b;
+  --chip-background: #1f2937;
+  --accent: #6366f1;
+  --accent-strong: #4f46e5;
+  --accent-faint: rgba(99, 102, 241, 0.12);
+  --success: #22c55e;
+  --nav-surface: rgba(7, 10, 20, 0.7);
+  --button-text-on-primary: #f8fafc;
 }
 
 @theme inline {
@@ -10,13 +54,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #050710;
-    --foreground: #e5e7eb;
-  }
 }
 
 body {
@@ -27,6 +64,93 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   min-height: 100vh;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.page-shell {
+  color: var(--foreground);
+}
+
+.nav-surface {
+  background-color: var(--nav-surface);
+  border-color: var(--border);
+}
+
+.card-surface {
+  background: var(--card-background);
+  border: 1px solid var(--card-border);
+  color: var(--foreground);
+}
+
+.border-muted {
+  border-color: var(--border);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.text-accent {
+  color: var(--accent);
+}
+
+.text-success {
+  color: var(--success);
+}
+
+.chip {
+  background: var(--chip-background);
+  color: var(--foreground);
+}
+
+.btn-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: all 200ms ease;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--button-text-on-primary);
+}
+
+.btn-primary:hover {
+  background: var(--accent-strong);
+}
+
+.btn-primary:disabled {
+  background: var(--accent-faint);
+  color: var(--muted-foreground);
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--card-background);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: var(--accent-faint);
+}
+
+.btn-outline {
+  border: 2px solid var(--accent);
+  color: var(--accent);
+}
+
+.btn-outline:hover {
+  background: var(--accent-faint);
+}
+
+.btn-outline:disabled {
+  border-color: var(--accent-faint);
+  color: var(--accent-faint);
+  cursor: not-allowed;
 }
 
 @keyframes marquee {
