@@ -129,9 +129,7 @@ async def create_application(
 
     supports_for_update = getattr(db.bind.dialect, "supports_for_update", False)
 
-    transaction_ctx = db.begin_nested() if db.in_transaction() else db.begin()
-
-    with transaction_ctx:
+    try:
         user_query = db.query(User).filter(User.id == current_user.id)
         if supports_for_update:
             user_query = user_query.with_for_update()
@@ -161,6 +159,13 @@ async def create_application(
             company_profile_language=company_profile_language,
         )
         db.add(application)
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise
 
     db.refresh(application)
     db.refresh(user_for_update)
