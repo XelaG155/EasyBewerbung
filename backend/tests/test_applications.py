@@ -3,6 +3,7 @@ import asyncio
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.api.endpoints.applications import ApplicationCreate, create_application
 from app.models import Base, User
@@ -10,7 +11,11 @@ from app.models import Base, User
 
 @pytest.fixture()
 def session_factory():
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
@@ -31,6 +36,11 @@ def seeded_user(session_factory):
         return user.id
 
 
+@pytest.fixture()
+def anyio_backend():
+    return "asyncio"
+
+
 async def _attempt_application(session_factory, user_id):
     Session = session_factory
     with Session() as session:
@@ -39,7 +49,7 @@ async def _attempt_application(session_factory, user_id):
         return await create_application(payload, current_user=user, db=session)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio("asyncio")
 async def test_credit_deduction_prevents_overuse(session_factory, seeded_user):
     first, second = await asyncio.gather(
         _attempt_application(session_factory, seeded_user),
