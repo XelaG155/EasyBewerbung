@@ -2,6 +2,8 @@
   "common": {
     "appName": "EasyBewerbung",
     "language": "Language",
+    "lightMode": "Light mode",
+    "darkMode": "Dark mode",
     "login": "Log In",
     "logout": "Log Out",
     "getStarted": "Get Started",
