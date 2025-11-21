@@ -1,27 +1,48 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import api, { LanguageOption } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n-context";
 
 export default function Home() {
+  const { t, locale, setLocale } = useTranslation();
+  const [languageOptions, setLanguageOptions] = useState<LanguageOption[]>([
+    { code: "en", label: "English", direction: "ltr" },
+    { code: "de", label: "Deutsch (German)", direction: "ltr" },
+    { code: "fr", label: "Français (French)", direction: "ltr" },
+    { code: "es", label: "Español (Spanish)", direction: "ltr" },
+  ]);
+
+  useEffect(() => {
+    // Load available languages from API
+    api
+      .listLanguages()
+      .then((list) => setLanguageOptions(list))
+      .catch((error) => {
+        console.error("Failed to load languages", error);
+      });
+  }, []);
+
+  const handleLanguageChange = (code: string) => {
+    setLocale(code);
+  };
   const features = [
     {
-      title: "Upload Your Documents",
-      description:
-        "Upload your CV, diplomas, and references. We extract and organize everything automatically.",
+      title: t("home.uploadDocuments"),
+      description: t("home.uploadDescription"),
       icon: "📄",
     },
     {
-      title: "Add Job Offers",
-      description:
-        "Paste a job URL and we'll analyze the requirements to match with your skills.",
+      title: t("home.addJobs"),
+      description: t("home.addJobsDescription"),
       icon: "🔍",
     },
     {
-      title: "Track Applications",
-      description:
-        "Keep track of all your applications in one place. Export reports for unemployment offices (RAV).",
+      title: t("home.trackApplications"),
+      description: t("home.trackDescription"),
       icon: "📊",
     },
   ];
@@ -72,14 +93,28 @@ export default function Home() {
             <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
               EB
             </div>
-            <span className="text-xl font-bold">EasyBewerbung</span>
+            <span className="text-xl font-bold">{t("common.appName")}</span>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 items-center">
+            <div className="relative">
+              <label className="text-sm text-slate-400 mr-2">{t("common.language")}:</label>
+              <select
+                value={locale}
+                onChange={(e) => handleLanguageChange(e.target.value)}
+                className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                {languageOptions.map((lang) => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <Button href="/login" variant="outline">
-              Log In
+              {t("common.login")}
             </Button>
             <Button href="/register" variant="primary">
-              Get Started
+              {t("common.getStarted")}
             </Button>
           </div>
         </div>
@@ -89,24 +124,23 @@ export default function Home() {
       <section className="container mx-auto px-6 py-20 text-center">
         <div className="max-w-3xl mx-auto space-y-6">
           <h1 className="text-5xl font-bold leading-tight">
-            Job Applications Made{" "}
+            {t("home.title")}{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">
-              Simple
+              {t("home.titleHighlight")}
             </span>
           </h1>
           <p className="text-xl text-slate-300">
-            Upload your CV, add job offers, and track your applications.
-            Perfect for cleaning, factory, logistics, and hospitality workers.
+            {t("home.subtitle")}
           </p>
           <p className="text-lg text-emerald-400">
-            Available in 33+ languages
+            {t("home.availableLanguages")}
           </p>
           <div className="flex gap-4 justify-center pt-4">
             <Button href="/register" variant="primary">
-              Start Free →
+              {t("home.startFree")} →
             </Button>
             <Button href="#features" variant="outline">
-              Learn More
+              {t("home.learnMore")}
             </Button>
           </div>
         </div>
@@ -115,7 +149,7 @@ export default function Home() {
       {/* Features */}
       <section id="features" className="container mx-auto px-6 py-16">
         <h2 className="text-3xl font-bold text-center mb-12">
-          How It Works
+          {t("home.howItWorks")}
         </h2>
         <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           {features.map((feature, index) => (
@@ -132,11 +166,11 @@ export default function Home() {
       <section className="container mx-auto px-6 py-16">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-8">
-            Your Language, Your Success
+            {t("home.languageSection")}
           </h2>
           <Card>
             <p className="text-slate-300 text-center mb-6">
-              Use the platform in your language, then create documents in the hiring company's language.
+              {t("home.languageDescription")}
             </p>
             <div className="flex flex-wrap gap-2 justify-center">
               {languages.map((lang, index) => (
@@ -157,11 +191,10 @@ export default function Home() {
         <div className="max-w-2xl mx-auto text-center">
           <Card className="bg-emerald-900/20 border-emerald-700">
             <h2 className="text-2xl font-bold mb-4 text-emerald-400">
-              🇨🇭 Swiss RAV Compatible
+              🇨🇭 {t("home.ravTitle")}
             </h2>
             <p className="text-slate-300">
-              Automatically generate job search reports (Nachweis der persönlichen Arbeitsbemühungen)
-              for Swiss unemployment offices in the required format.
+              {t("home.ravDescription")}
             </p>
           </Card>
         </div>
@@ -171,13 +204,13 @@ export default function Home() {
       <section className="container mx-auto px-6 py-20">
         <div className="max-w-2xl mx-auto text-center space-y-6">
           <h2 className="text-4xl font-bold">
-            Ready to Get Started?
+            {t("home.ctaTitle")}
           </h2>
           <p className="text-xl text-slate-300">
-            Create your free account and start managing your job applications today.
+            {t("home.ctaSubtitle")}
           </p>
           <Button href="/register" variant="primary" className="text-lg">
-            Create Free Account →
+            {t("home.createAccount")} →
           </Button>
         </div>
       </section>
@@ -185,7 +218,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-slate-800 py-8">
         <div className="container mx-auto px-6 text-center text-slate-400">
-          <p>© 2025 EasyBewerbung. Helping workers find their next opportunity.</p>
+          <p>© 2025 {t("common.appName")}. {t("home.footer")}</p>
         </div>
       </footer>
     </div>

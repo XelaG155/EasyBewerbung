@@ -9,7 +9,7 @@ import { Input } from "@/components/Input";
 import { Card } from "@/components/Card";
 import { useAuth } from "@/lib/auth-context";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
-import api from "@/lib/api";
+import api, { LanguageOption } from "@/lib/api";
 
 declare global {
   interface Window {
@@ -21,9 +21,13 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [motherTongue, setMotherTongue] = useState("English");
-  const [documentationLanguage, setDocumentationLanguage] = useState("English");
-  const [languages, setLanguages] = useState<string[]>(["English", "Deutsch (German)", "Français (French)"]);
+  const [motherTongue, setMotherTongue] = useState("en");
+  const [documentationLanguage, setDocumentationLanguage] = useState("en");
+  const [languages, setLanguages] = useState<LanguageOption[]>([
+    { code: "en", label: "English", direction: "ltr" },
+    { code: "de", label: "Deutsch (German)", direction: "ltr" },
+    { code: "fr", label: "Français (French)", direction: "ltr" },
+  ]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -31,6 +35,13 @@ export default function RegisterPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // Load preferred language from localStorage if available
+    const savedLanguage = localStorage.getItem("preferred_language");
+    if (savedLanguage) {
+      setMotherTongue(savedLanguage);
+      setDocumentationLanguage(savedLanguage);
+    }
+
     api
       .listLanguages()
       .then((list) => setLanguages(list))
@@ -80,10 +91,12 @@ export default function RegisterPage() {
         motherTongue,
         documentationLanguage,
       );
-      router.push("/dashboard");
+      // Explicit delay to ensure token is saved to localStorage
+      await new Promise(resolve => setTimeout(resolve, 200));
+      // Force full page reload to ensure token is properly loaded
+      window.location.href = "/dashboard";
     } catch (err: any) {
       setError(err.message || "Registration failed. Please try again.");
-    } finally {
       setLoading(false);
     }
   };
@@ -173,8 +186,8 @@ export default function RegisterPage() {
                     aria-label="Select mother tongue"
                   >
                     {languages.map((lang) => (
-                      <option key={lang} value={lang}>
-                        {lang}
+                      <option key={lang.code} value={lang.code}>
+                        {lang.label}
                       </option>
                     ))}
                   </select>
@@ -189,8 +202,8 @@ export default function RegisterPage() {
                     aria-label="Select documentation language"
                   >
                     {languages.map((lang) => (
-                      <option key={lang} value={lang}>
-                        {lang}
+                      <option key={lang.code} value={lang.code}>
+                        {lang.label}
                       </option>
                     ))}
                   </select>

@@ -31,6 +31,8 @@ export default function LoginPage() {
 
     try {
       await googleLogin(credential);
+      // Small delay to ensure token is set
+      await new Promise(resolve => setTimeout(resolve, 100));
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Google sign-in failed");
@@ -53,10 +55,12 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      router.push("/dashboard");
+      // Explicit delay to ensure token is saved to localStorage
+      await new Promise(resolve => setTimeout(resolve, 200));
+      // Force full page reload to ensure token is properly loaded
+      window.location.href = "/dashboard";
     } catch (err: any) {
       setError(err.message || "Login failed. Please check your credentials.");
-    } finally {
       setLoading(false);
     }
   };

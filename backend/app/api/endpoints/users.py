@@ -40,19 +40,6 @@ def _safe_language(value: Optional[str], field_name: str) -> str:
         return DEFAULT_LANGUAGE
 
 
-def serialize_user(user: User) -> UserResponse:
-    return UserResponse(
-        id=user.id,
-        email=user.email,
-        full_name=user.full_name,
-        preferred_language=_safe_language(user.preferred_language, "preferred_language"),
-        mother_tongue=_safe_language(user.mother_tongue, "mother_tongue"),
-        documentation_language=_safe_language(user.documentation_language, "documentation_language"),
-        credits=user.credits,
-        created_at=user.created_at.isoformat(),
-    )
-
-
 class UserRegister(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=100)
@@ -90,6 +77,19 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+def serialize_user(user: User) -> UserResponse:
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        preferred_language=_safe_language(user.preferred_language, "preferred_language"),
+        mother_tongue=_safe_language(user.mother_tongue, "mother_tongue"),
+        documentation_language=_safe_language(user.documentation_language, "documentation_language"),
+        credits=user.credits,
+        created_at=user.created_at.isoformat(),
+    )
 
 
 class LanguageOptionResponse(BaseModel):
@@ -187,7 +187,7 @@ async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db
             db.refresh(user)
 
         # Create access token
-        access_token = create_access_token(data={"sub": user.id})
+        access_token = create_access_token(data={"sub": str(user.id)})
 
         return TokenResponse(access_token=access_token, token_type="bearer", user=serialize_user(user))
 
@@ -236,7 +236,7 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
     db.refresh(new_user)
 
     # Create access token
-    access_token = create_access_token(data={"sub": new_user.id})
+    access_token = create_access_token(data={"sub": str(new_user.id)})
 
     return TokenResponse(access_token=access_token, token_type="bearer", user=serialize_user(new_user))
 
@@ -267,7 +267,7 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
         )
 
     # Create access token
-    access_token = create_access_token(data={"sub": user.id})
+    access_token = create_access_token(data={"sub": str(user.id)})
 
     return TokenResponse(access_token=access_token, token_type="bearer", user=serialize_user(user))
 

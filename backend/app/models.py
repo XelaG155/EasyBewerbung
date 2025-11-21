@@ -85,6 +85,7 @@ class GeneratedDocument(Base):
     doc_type = Column(String, nullable=False)
     format = Column(String, nullable=False, default="PDF")
     storage_path = Column(String, nullable=False)
+    content = Column(Text, nullable=True)  # Generated document content
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     application = relationship("Application", back_populates="generated_documents")
