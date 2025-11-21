@@ -1,13 +1,16 @@
 from datetime import datetime, timezone
 from typing import List, Optional
+import os
+import json
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session, joinedload
+from openai import OpenAI
 
 from app.database import get_db
 from app.document_catalog import ALLOWED_GENERATED_DOC_TYPES
-from app.models import Application, GeneratedDocument, User
+from app.models import Application, GeneratedDocument, User, Document, JobOffer
 from app.auth import get_current_user
 from app.language_catalog import DEFAULT_LANGUAGE, normalize_language
 
@@ -313,3 +316,203 @@ async def get_application(
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
     return serialize_application(application)
+
+@router.get("/{application_id}/matching-score")
+async def get_matching_score(
+    application_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Calculate matching score between user's CV and job requirements."""
+    # Get application
+    application = (
+        db.query(Application)
+        .filter(Application.id == application_id, Application.user_id == current_user.id)
+        .first()
+    )
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    # Get user's CV
+    cv_doc = (
+        db.query(Document)
+        .filter(Document.user_id == current_user.id, Document.doc_type == "CV")
+        .order_by(Document.created_at.desc())
+        .first()
+    )
+    if not cv_doc or not cv_doc.text_content:
+        raise HTTPException(status_code=400, detail="No CV found with text content")
+    
+    # Get job offer details
+    job_offer = (
+        db.query(JobOffer)
+        .filter(JobOffer.url == application.job_offer_url)
+        .first()
+    )
+    
+    job_description = ""
+    if job_offer:
+        job_description = f"Title: {job_offer.title}\nCompany: {job_offer.company}\nDescription: {job_offer.description}"
+    else:
+        job_description = f"Title: {application.job_title}\nCompany: {application.company}"
+    
+    # Use OpenAI to calculate matching score
+    try:
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        
+        prompt = f"""Analyze how well this CV matches the job requirements. Provide a detailed matching analysis.
+
+Job Details:
+{job_description}
+
+Candidate CV:
+{cv_doc.text_content[:3000]}
+
+Please provide a JSON response with:
+1. overall_score: A number from 0-100 representing the overall match
+2. strengths: Array of 3-5 key strengths/matches
+3. gaps: Array of 2-4 areas where the candidate may not fully meet requirements
+4. recommendations: Array of 2-3 recommendations for the application
+
+Format your response as valid JSON only, no additional text."""
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+        )
+        
+        result = json.loads(response.choices[0].message.content)
+        
+        return {
+            "application_id": application_id,
+            "job_title": application.job_title,
+            "company": application.company,
+            "overall_score": result.get("overall_score", 0),
+            "strengths": result.get("strengths", []),
+            "gaps": result.get("gaps", []),
+            "recommendations": result.get("recommendations", []),
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to calculate matching score: {str(e)}")
+
+
+@router.post("/{application_id}/generate")
+async def generate_documents(
+    application_id: int,
+    doc_types: List[str],
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate documents (cover letter, etc.) for an application using AI."""
+    # Get application
+    application = (
+        db.query(Application)
+        .filter(Application.id == application_id, Application.user_id == current_user.id)
+        .first()
+    )
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    # Check credits
+    cost_per_doc = 1
+    total_cost = len(doc_types) * cost_per_doc
+    if current_user.credits < total_cost:
+        raise HTTPException(status_code=402, detail=f"Insufficient credits. Need {total_cost}, have {current_user.credits}")
+    
+    # Get user's CV
+    cv_doc = (
+        db.query(Document)
+        .filter(Document.user_id == current_user.id, Document.doc_type == "CV")
+        .order_by(Document.created_at.desc())
+        .first()
+    )
+    if not cv_doc or not cv_doc.text_content:
+        raise HTTPException(status_code=400, detail="No CV found with text content")
+    
+    # Get job offer details
+    job_offer = (
+        db.query(JobOffer)
+        .filter(JobOffer.url == application.job_offer_url)
+        .first()
+    )
+    
+    job_description = ""
+    if job_offer:
+        job_description = f"Title: {job_offer.title}\nCompany: {job_offer.company}\nDescription: {job_offer.description}"
+    else:
+        job_description = f"Title: {application.job_title}\nCompany: {application.company}"
+    
+    generated_docs = []
+    
+    try:
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        
+        for doc_type in doc_types:
+            if doc_type == "COVER_LETTER":
+                prompt = f"""Write a professional cover letter for this job application.
+
+Job Details:
+{job_description}
+
+Candidate Background (from CV):
+{cv_doc.text_content[:2000]}
+
+Language: {application.documentation_language or 'English'}
+
+Write a compelling cover letter that:
+1. Highlights relevant experience from the CV
+2. Shows enthusiasm for the role and company
+3. Explains why the candidate is a good fit
+4. Is professional but personable
+5. Is written in the specified language
+
+Provide only the cover letter text, no additional commentary."""
+
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.7,
+                )
+                
+                content = response.choices[0].message.content
+                
+                # Save generated document
+                gen_doc = GeneratedDocument(
+                    application_id=application_id,
+                    doc_type=doc_type,
+                    format="TEXT",
+                    storage_path=f"generated/app_{application_id}_{doc_type}.txt",
+                    content=content,
+                )
+                db.add(gen_doc)
+                generated_docs.append(gen_doc)
+        
+        # Deduct credits
+        current_user.credits -= total_cost
+        db.commit()
+        
+        # Refresh to get IDs
+        for doc in generated_docs:
+            db.refresh(doc)
+        
+        return {
+            "application_id": application_id,
+            "generated_documents": [
+                {
+                    "id": doc.id,
+                    "doc_type": doc.doc_type,
+                    "format": doc.format,
+                    "created_at": doc.created_at.isoformat(),
+                    "content": doc.content,
+                }
+                for doc in generated_docs
+            ],
+            "credits_used": total_cost,
+            "remaining_credits": current_user.credits,
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to generate documents: {str(e)}")

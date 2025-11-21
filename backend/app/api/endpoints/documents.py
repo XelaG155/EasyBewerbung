@@ -23,7 +23,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # File validation constants
 ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx", ".txt"}
 ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx", ".txt"}
-MAX_FILE_SIZE_MB = 10
+MAX_FILE_SIZE_MB = 25
 MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024
 CHUNK_SIZE = 8192
 
@@ -85,8 +85,6 @@ async def upload_document(
 
     # Save file and check size
     try:
-        file_size = 0
-        with open(file_location, "wb") as buffer:
         file_size = 0
         with open(file_location, "wb") as buffer:
             while chunk := await file.read(CHUNK_SIZE):  # Read in chunks

@@ -317,6 +317,9 @@ export default function DashboardPage() {
               <span className="px-3 py-1 rounded bg-slate-800 text-sm text-emerald-300 border border-emerald-700">
                 Credits: {user.credits}
               </span>
+              <Button onClick={() => router.push("/settings")} variant="outline">
+                Settings
+              </Button>
               <Button onClick={handleLogout} variant="outline">
                 Log Out
               </Button>
@@ -351,7 +354,7 @@ export default function DashboardPage() {
 
                 <div>
                   <label htmlFor="file-input" className="block text-sm font-medium text-slate-200 mb-2">
-                    Select File (PDF, DOC, DOCX, TXT - Max 10MB)
+                    Select File (PDF, DOC, DOCX, TXT - Max 25MB)
                   </label>
                   <input
                     id="file-input"
@@ -548,8 +551,15 @@ export default function DashboardPage() {
                         )}
                       </div>
 
-                      {/* Status Update Buttons */}
+                      {/* Action Buttons */}
                       <div className="flex gap-2 flex-wrap pt-2 border-t border-slate-700">
+                        <button
+                          onClick={() => router.push(`/applications/${app.id}`)}
+                          className="text-sm px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white"
+                        >
+                          View Details →
+                        </button>
+
                         {!app.applied && (
                           <button
                             onClick={() => handleUpdateApplicationStatus(app.id, true)}

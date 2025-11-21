@@ -56,6 +56,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const response = await api.login(email, password);
+    // Ensure token is set before setting user
+    await new Promise(resolve => setTimeout(resolve, 50));
     setUser(response.user);
   };
 
@@ -90,6 +92,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       motherTongue,
       documentationLanguage,
     );
+    // Ensure token is set before setting user
+    await new Promise(resolve => setTimeout(resolve, 50));
     setUser(response.user);
   };
 

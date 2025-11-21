@@ -89,8 +89,8 @@ def scrape_job_offer(url: str) -> dict:
 @router.post("/analyze", response_model=JobAnalysisResponse)
 @limiter.limit("5/minute")
 async def analyze_job_offer(
-    request: JobAnalysisRequest,
-    request_obj: Request,
+    request: Request,
+    job_data: JobAnalysisRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -98,18 +98,18 @@ async def analyze_job_offer(
     Analyze a job offer from a URL by scraping the page content.
     Saves the job offer to the database for the current user.
     """
-    url = str(request.url)
+    url = str(job_data.url)
 
     # Scrape job information
-    job_data = scrape_job_offer(url)
+    scraped_data = scrape_job_offer(url)
 
     # Save to database
     job_offer = JobOffer(
         user_id=current_user.id,
         url=url,
-        title=job_data.get("title"),
-        company=job_data.get("company"),
-        description=job_data.get("description"),
+        title=scraped_data.get("title"),
+        company=scraped_data.get("company"),
+        description=scraped_data.get("description"),
     )
 
     db.add(job_offer)
