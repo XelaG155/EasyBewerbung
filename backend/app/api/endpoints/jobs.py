@@ -66,7 +66,7 @@ def scrape_job_offer(url: str) -> dict:
         # Extract description (all paragraph text)
         description = ""
         paragraphs = soup.find_all("p")
-        description = "\n".join([p.get_text(strip=True) for p in paragraphs[:10]])  # First 10 paragraphs
+        description = "\n".join([p.get_text(separator=" ", strip=True) for p in paragraphs[:10]])  # First 10 paragraphs
 
         return {
             "title": title,
