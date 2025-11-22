@@ -55,6 +55,8 @@ export interface Application {
   job_title: string;
   company: string;
   job_offer_url: string | null;
+  is_spontaneous: boolean;
+  opportunity_context: string | null;
   job_description: string | null;
   applied: boolean;
   applied_at: string | null;
@@ -335,6 +337,8 @@ class ApiClient {
     job_title: string;
     company: string;
     job_offer_url?: string;
+    is_spontaneous?: boolean;
+    opportunity_context?: string;
     applied?: boolean;
     applied_at?: string;
     result?: string;
@@ -345,6 +349,20 @@ class ApiClient {
     return this.request<Application>("/applications/", {
       method: "POST",
       body: JSON.stringify(data),
+    });
+  }
+
+  async createSpontaneousApplication(data: {
+    job_title: string;
+    company: string;
+    opportunity_context?: string;
+    ui_language?: string;
+    documentation_language?: string;
+    company_profile_language?: string;
+  }) {
+    return this.createApplication({
+      ...data,
+      is_spontaneous: true,
     });
   }
 

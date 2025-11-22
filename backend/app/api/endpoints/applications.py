@@ -208,6 +208,12 @@ def generate_documents_background(task_id: int, application_id: int, doc_types: 
         else:
             job_description = f"Title: {application.job_title}\nCompany: {application.company}"
 
+        if application.opportunity_context:
+            job_description += f"\nOpportunity Context: {application.opportunity_context}"
+
+        if application.is_spontaneous:
+            job_description += "\nThis is a spontaneous application without a specific posting."
+
         # Generate documents
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -266,6 +272,10 @@ class ApplicationCreate(BaseModel):
     job_title: str = Field(..., description="Role the candidate is targeting")
     company: str = Field(..., description="Company name for the application")
     job_offer_url: Optional[str] = Field(None, description="URL to the job offer or image link")
+    is_spontaneous: bool = Field(False, description="Flag to mark spontaneous applications")
+    opportunity_context: Optional[str] = Field(
+        None, description="Context for spontaneous applications (e.g., target team, value proposition)"
+    )
     applied: bool = False
     applied_at: Optional[datetime] = None
     result: Optional[str] = Field(None, description="Outcome (e.g., pending, interview, rejected, offer)")
@@ -312,6 +322,8 @@ class ApplicationResponse(BaseModel):
     job_title: str
     company: str
     job_offer_url: Optional[str]
+    is_spontaneous: bool
+    opportunity_context: Optional[str]
     job_description: Optional[str]
     applied: bool
     applied_at: Optional[datetime]
@@ -348,16 +360,21 @@ def serialize_application(app: Application, db: Session = None, include_job_desc
                                  Set to False for list views to improve performance
     """
     job_description = None
-    if include_job_description and db and app.job_offer_url:
-        job_offer = db.query(JobOffer).filter(JobOffer.url == app.job_offer_url).first()
-        if job_offer:
-            job_description = job_offer.description
+    if include_job_description:
+        if db and app.job_offer_url:
+            job_offer = db.query(JobOffer).filter(JobOffer.url == app.job_offer_url).first()
+            if job_offer:
+                job_description = job_offer.description
+        if not job_description and app.opportunity_context:
+            job_description = app.opportunity_context
 
     return {
         "id": app.id,
         "job_title": app.job_title,
         "company": app.company,
         "job_offer_url": app.job_offer_url,
+        "is_spontaneous": app.is_spontaneous,
+        "opportunity_context": app.opportunity_context,
         "job_description": job_description,
         "applied": app.applied,
         "applied_at": app.applied_at,
@@ -418,6 +435,8 @@ async def create_application(
             job_title=payload.job_title,
             company=payload.company,
             job_offer_url=payload.job_offer_url,
+            is_spontaneous=payload.is_spontaneous,
+            opportunity_context=payload.opportunity_context,
             applied=payload.applied,
             applied_at=applied_at,
             result=payload.result,
@@ -539,7 +558,11 @@ async def list_application_history(
             "job_title": app.job_title,
             "company": app.company,
             "job_offer_url": app.job_offer_url,
-            "job_description": job_offers_map.get(app.job_offer_url) if app.job_offer_url else None,
+            "is_spontaneous": app.is_spontaneous,
+            "opportunity_context": app.opportunity_context,
+            "job_description": job_offers_map.get(app.job_offer_url)
+            if app.job_offer_url
+            else app.opportunity_context,
             "applied": app.applied,
             "applied_at": app.applied_at,
             "result": app.result,
@@ -580,9 +603,12 @@ async def rav_report(
         result = app.result or "pending"
         applied_label = "Yes" if app.applied else "No"
 
+        context_label = "Spontaneous" if app.is_spontaneous else "Targeted"
+        context_note = app.opportunity_context or "n/a"
+
         lines.append(
-            f"{idx}. {app.company} – {app.job_title} | URL: {app.job_offer_url or 'n/a'} | "
-            f"Applied: {applied_label} on {applied_date or 'n/a'} | Result: {result} | Documents: {documents}"
+            f"{idx}. {app.company} – {app.job_title} | Type: {context_label} | URL: {app.job_offer_url or 'n/a'} | "
+            f"Context: {context_note} | Applied: {applied_label} on {applied_date or 'n/a'} | Result: {result} | Documents: {documents}"
         )
 
     report_body = "\n".join(lines)
@@ -667,6 +693,12 @@ async def get_matching_score(
         job_description = f"Title: {job_offer.title}\nCompany: {job_offer.company}\nDescription: {job_offer.description}"
     else:
         job_description = f"Title: {application.job_title}\nCompany: {application.company}"
+
+    if application.opportunity_context:
+        job_description += f"\nOpportunity Context: {application.opportunity_context}"
+
+    if application.is_spontaneous:
+        job_description += "\nThis is a spontaneous application without a specific posting."
 
     # Use OpenAI to calculate matching score
     try:

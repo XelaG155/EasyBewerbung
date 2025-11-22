@@ -71,6 +71,8 @@ class Application(Base):
     job_title = Column(String, nullable=False)
     company = Column(String, nullable=False)
     job_offer_url = Column(String, nullable=True)
+    is_spontaneous = Column(Boolean, default=False)
+    opportunity_context = Column(Text, nullable=True)
     applied = Column(Boolean, default=False)
     applied_at = Column(DateTime, nullable=True)
     result = Column(String, nullable=True)
