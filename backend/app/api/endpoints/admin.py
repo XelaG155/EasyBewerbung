@@ -236,7 +236,7 @@ async def get_user_detail(
             {
                 "action": log.action,
                 "ip_address": log.ip_address,
-                "metadata": log.metadata,
+                "metadata": log.metadata_,
                 "created_at": log.created_at.isoformat(),
             }
             for log in activity

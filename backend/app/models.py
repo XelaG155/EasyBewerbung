@@ -139,7 +139,7 @@ class UserActivityLog(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     action = Column(String, nullable=False, index=True)
     ip_address = Column(String, nullable=True)
-    metadata = Column(Text, nullable=True)
+    metadata_ = Column("metadata", Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
     user = relationship("User", back_populates="activity_logs")
