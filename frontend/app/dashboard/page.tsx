@@ -365,6 +365,11 @@ export default function DashboardPage() {
               <span className="px-3 py-1 rounded bg-slate-800 text-sm text-emerald-300 border border-emerald-700">
                 Credits: {user.credits}
               </span>
+              {user.is_admin && (
+                <Button onClick={() => router.push("/admin")} variant="outline">
+                  Admin
+                </Button>
+              )}
               <Button onClick={() => router.push("/settings")} variant="outline">
                 Settings
               </Button>
