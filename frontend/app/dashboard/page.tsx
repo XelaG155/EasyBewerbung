@@ -642,8 +642,18 @@ export default function DashboardPage() {
                       {/* Job Description Preview */}
                       {app.job_description && (
                         <div className="mt-2 p-3 bg-slate-800 rounded-lg">
-                          <p className="text-sm text-slate-400 line-clamp-5 whitespace-pre-wrap">
-                            {app.job_description?.split(/\n/).slice(0, 5).join('\n').trim() || 'No description available'}
+                          <p className="text-sm text-slate-400 line-clamp-3">
+                            {(() => {
+                              // Convert newlines and tabs to spaces, then limit length
+                              const cleanText = app.job_description
+                                .replace(/[\n\r\t]+/g, ' ')
+                                .replace(/\s+/g, ' ')
+                                .trim();
+                              // Limit to ~300 characters for preview
+                              return cleanText.length > 300
+                                ? cleanText.substring(0, 300) + '...'
+                                : cleanText;
+                            })()}
                           </p>
                         </div>
                       )}
