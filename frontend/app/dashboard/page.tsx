@@ -642,8 +642,8 @@ export default function DashboardPage() {
                       {/* Job Description Preview */}
                       {app.job_description && (
                         <div className="mt-2 p-3 bg-slate-800 rounded-lg">
-                          <p className="text-sm text-slate-400 line-clamp-2">
-                            {app.job_description}
+                          <p className="text-sm text-slate-400 line-clamp-5 whitespace-pre-wrap">
+                            {app.job_description.split(/\n/).slice(0, 5).join('\n').trim()}
                           </p>
                         </div>
                       )}
@@ -702,13 +702,17 @@ export default function DashboardPage() {
                           Update Status
                         </button>
 
-                        <button
-                          onClick={() => handleDownloadJobPDF(app.id, app.job_title, app.company)}
-                          className="text-sm px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white"
-                          title="Download job description as PDF"
-                        >
-                          📄 Download PDF
-                        </button>
+                        {app.job_offer_url && (
+                          <a
+                            href={app.job_offer_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white inline-block"
+                            title="View original job posting"
+                          >
+                            📄 Download PDF
+                          </a>
+                        )}
                       </div>
                     </div>
                   </Card>
