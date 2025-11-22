@@ -45,16 +45,28 @@ export default function AdminPage() {
   );
 
   const loadLanguages = async () => {
-    const data = await api.adminListLanguages();
-    setLanguages(data);
+    try {
+      const data = await api.adminListLanguages();
+      setLanguages(data);
+    } catch (error) {
+      console.error("Failed to load languages:", error);
+      setStatus("Fehler beim Laden der Sprachen.");
+    }
   };
 
   const updateLanguages = async (next: AdminLanguageSetting[]) => {
-    setLanguages(next);
-    await api.adminUpdateLanguages(
-      next.map((lang) => ({ code: lang.code, is_active: lang.is_active, sort_order: lang.sort_order })),
-    );
-    setStatus("Sprachoptionen gespeichert.");
+    try {
+      setLanguages(next);
+      await api.adminUpdateLanguages(
+        next.map((lang) => ({ code: lang.code, is_active: lang.is_active, sort_order: lang.sort_order })),
+      );
+      setStatus("Sprachoptionen gespeichert.");
+    } catch (error) {
+      console.error("Failed to update languages:", error);
+      setStatus("Fehler beim Speichern der Sprachoptionen.");
+      // Reload languages to revert changes
+      await loadLanguages();
+    }
   };
 
   const toggleLanguage = (code: string) => {
@@ -76,43 +88,80 @@ export default function AdminPage() {
   };
 
   const searchUsers = async (value: string) => {
-    const data = await api.adminSearchUsers(value);
-    setUsers(data);
+    try {
+      const data = await api.adminSearchUsers(value);
+      setUsers(data);
+    } catch (error) {
+      console.error("Failed to search users:", error);
+      setStatus("Fehler bei der Benutzersuche.");
+    }
   };
 
   const selectUser = async (userId: number) => {
-    const detail = await api.adminGetUserDetail(userId);
-    setSelectedUser(detail);
+    try {
+      const detail = await api.adminGetUserDetail(userId);
+      setSelectedUser(detail);
+    } catch (error) {
+      console.error("Failed to load user details:", error);
+      setStatus("Fehler beim Laden der Benutzerdetails.");
+    }
   };
 
   const changeCredits = async (delta: number) => {
     if (!selectedUser) return;
-    const detail = await api.adminUpdateCredits(selectedUser.user.id, delta);
-    setSelectedUser(detail);
-    setStatus("Credits aktualisiert.");
+    try {
+      const detail = await api.adminUpdateCredits(selectedUser.user.id, delta);
+      setSelectedUser(detail);
+      setStatus("Credits aktualisiert.");
+    } catch (error) {
+      console.error("Failed to update credits:", error);
+      setStatus("Fehler beim Aktualisieren der Credits.");
+    }
   };
 
   const toggleUserActive = async (desired: boolean) => {
     if (!selectedUser) return;
-    const detail = await api.adminToggleActive(selectedUser.user.id, desired);
-    setSelectedUser(detail);
+    try {
+      const detail = await api.adminToggleActive(selectedUser.user.id, desired);
+      setSelectedUser(detail);
+      setStatus(desired ? "Benutzer entsperrt." : "Benutzer gesperrt.");
+    } catch (error) {
+      console.error("Failed to toggle user active status:", error);
+      setStatus("Fehler beim Ändern des Benutzerstatus.");
+    }
   };
 
   const toggleUserAdmin = async (desired: boolean) => {
     if (!selectedUser) return;
-    const detail = await api.adminToggleAdmin(selectedUser.user.id, desired);
-    setSelectedUser(detail);
+    try {
+      const detail = await api.adminToggleAdmin(selectedUser.user.id, desired);
+      setSelectedUser(detail);
+      setStatus(desired ? "Admin-Rechte erteilt." : "Admin-Rechte entzogen.");
+    } catch (error) {
+      console.error("Failed to toggle user admin status:", error);
+      setStatus("Fehler beim Ändern der Admin-Rechte.");
+    }
   };
 
   const loadPrompts = async () => {
-    const data = await api.adminListPrompts();
-    setPrompts(data);
+    try {
+      const data = await api.adminListPrompts();
+      setPrompts(data);
+    } catch (error) {
+      console.error("Failed to load prompts:", error);
+      setStatus("Fehler beim Laden der Prompts.");
+    }
   };
 
   const updatePrompt = async (prompt: PromptTemplate, content: string) => {
-    const updated = await api.adminUpdatePrompt(prompt.id, prompt.name, content);
-    setPrompts((prev) => prev.map((p) => (p.id === prompt.id ? updated : p)));
-    setStatus("Prompt gespeichert.");
+    try {
+      const updated = await api.adminUpdatePrompt(prompt.id, prompt.name, content);
+      setPrompts((prev) => prev.map((p) => (p.id === prompt.id ? updated : p)));
+      setStatus("Prompt gespeichert.");
+    } catch (error) {
+      console.error("Failed to update prompt:", error);
+      setStatus("Fehler beim Speichern des Prompts.");
+    }
   };
 
   if (loading) {

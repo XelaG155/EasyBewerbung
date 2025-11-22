@@ -2,7 +2,7 @@ import logging
 from typing import List, Optional
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,7 @@ from app.models import (
     UserActivityLog,
 )
 from app.api.endpoints.users import serialize_user, record_activity, UserResponse
+from app.limiter import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ class UserDetailResponse(BaseModel):
 
 
 class CreditUpdateRequest(BaseModel):
-    amount: int
+    amount: int = Field(..., ge=-1000000, le=1000000, description="Credit adjustment amount (can be negative)")
     reason: Optional[str] = None
 
 
@@ -98,8 +99,8 @@ class PromptResponse(BaseModel):
 
 
 class PromptUpdateRequest(BaseModel):
-    name: Optional[str] = None
-    content: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    content: Optional[str] = Field(None, min_length=1, max_length=50000)
 
 
 class ToggleActiveRequest(BaseModel):
@@ -144,15 +145,18 @@ def ensure_prompts(db: Session) -> None:
 
 
 @router.get("/admin/languages", response_model=List[LanguageSettingResponse])
-async def list_languages(db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
+@limiter.limit("30/minute")
+async def list_languages(request: Request, db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
     ensure_language_settings(db)
     languages = db.query(LanguageSetting).order_by(LanguageSetting.sort_order).all()
     return languages
 
 
 @router.put("/admin/languages", response_model=List[LanguageSettingResponse])
+@limiter.limit("20/minute")
 async def update_languages(
     payload: List[LanguageSettingUpdate],
+    request: Request,
     db: Session = Depends(get_db),
     admin: User = Depends(get_admin_user),
 ):
@@ -180,14 +184,18 @@ async def update_languages(
 
 
 @router.get("/admin/users", response_model=List[AdminUserSummary])
+@limiter.limit("30/minute")
 async def search_users(
+    request: Request,
     query: Optional[str] = None,
     db: Session = Depends(get_db),
     admin: User = Depends(get_admin_user),
 ):
     q = db.query(User)
     if query:
-        like_query = f"%{query}%"
+        # Escape SQL wildcards to prevent SQL injection
+        escaped_query = query.replace("%", "\\%").replace("_", "\\_")
+        like_query = f"%{escaped_query}%"
         q = q.filter((User.email.ilike(like_query)) | (User.full_name.ilike(like_query)))
     users = q.order_by(User.created_at.desc()).limit(MAX_SEARCH_RESULTS).all()
     return [
@@ -205,8 +213,10 @@ async def search_users(
 
 
 @router.get("/admin/users/{user_id}", response_model=UserDetailResponse)
+@limiter.limit("30/minute")
 async def get_user_detail(
     user_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     admin: User = Depends(get_admin_user),
 ):
@@ -235,9 +245,11 @@ async def get_user_detail(
 
 
 @router.post("/admin/users/{user_id}/credits", response_model=UserDetailResponse)
+@limiter.limit("20/minute")
 async def adjust_credits(
     user_id: int,
     payload: CreditUpdateRequest,
+    request: Request,
     db: Session = Depends(get_db),
     admin: User = Depends(get_admin_user),
 ):
@@ -245,17 +257,27 @@ async def adjust_credits(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    user.credits += payload.amount
+    # Validate that credits won't go negative
+    new_credits = user.credits + payload.amount
+    if new_credits < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Credit adjustment would result in negative balance ({new_credits})"
+        )
+
+    user.credits = new_credits
     db.commit()
     db.refresh(user)
-    record_activity(db, user, "credit_update", metadata=payload.reason)
-    return await get_user_detail(user_id, db, admin)
+    record_activity(db, user, "credit_update", request=request, metadata=payload.reason)
+    return await get_user_detail(user_id, request, db, admin)
 
 
 @router.post("/admin/users/{user_id}/active", response_model=UserDetailResponse)
+@limiter.limit("20/minute")
 async def toggle_active(
     user_id: int,
     payload: ToggleActiveRequest,
+    request: Request,
     db: Session = Depends(get_db),
     admin: User = Depends(get_admin_user),
 ):
@@ -269,14 +291,16 @@ async def toggle_active(
         raise HTTPException(status_code=404, detail="User not found")
     user.is_active = payload.is_active
     db.commit()
-    record_activity(db, user, "unlock" if user.is_active else "lock")
-    return await get_user_detail(user_id, db, admin)
+    record_activity(db, user, "unlock" if user.is_active else "lock", request=request)
+    return await get_user_detail(user_id, request, db, admin)
 
 
 @router.post("/admin/users/{user_id}/admin", response_model=UserDetailResponse)
+@limiter.limit("20/minute")
 async def toggle_admin(
     user_id: int,
     payload: ToggleAdminRequest,
+    request: Request,
     db: Session = Depends(get_db),
     admin: User = Depends(get_admin_user),
 ):
@@ -290,12 +314,13 @@ async def toggle_admin(
         raise HTTPException(status_code=404, detail="User not found")
     user.is_admin = payload.is_admin
     db.commit()
-    record_activity(db, user, "grant_admin" if user.is_admin else "revoke_admin")
-    return await get_user_detail(user_id, db, admin)
+    record_activity(db, user, "grant_admin" if user.is_admin else "revoke_admin", request=request)
+    return await get_user_detail(user_id, request, db, admin)
 
 
 @router.get("/admin/prompts", response_model=List[PromptResponse])
-async def list_prompts(db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
+@limiter.limit("30/minute")
+async def list_prompts(request: Request, db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
     ensure_prompts(db)
     prompts = db.query(PromptTemplate).order_by(PromptTemplate.id).all()
     return [
@@ -311,23 +336,49 @@ async def list_prompts(db: Session = Depends(get_db), admin: User = Depends(get_
 
 
 @router.put("/admin/prompts/{prompt_id}", response_model=PromptResponse)
+@limiter.limit("20/minute")
 async def update_prompt(
     prompt_id: int,
     payload: PromptUpdateRequest,
+    request: Request,
     db: Session = Depends(get_db),
     admin: User = Depends(get_admin_user),
 ):
     prompt = db.query(PromptTemplate).filter(PromptTemplate.id == prompt_id).first()
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt not found")
+
+    # Validate that at least one field is being updated
+    if payload.name is None and payload.content is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one field (name or content) must be provided"
+        )
+
     if payload.name is not None:
-        prompt.name = payload.name
+        # Basic sanitization: strip whitespace
+        sanitized_name = payload.name.strip()
+        if not sanitized_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Name cannot be empty or whitespace only"
+            )
+        prompt.name = sanitized_name
+
     if payload.content is not None:
-        prompt.content = payload.content
+        # Basic sanitization: strip leading/trailing whitespace but preserve internal formatting
+        sanitized_content = payload.content.strip()
+        if not sanitized_content:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Content cannot be empty or whitespace only"
+            )
+        prompt.content = sanitized_content
+
     prompt.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(prompt)
-    record_activity(db, admin, "update_prompt", metadata=f"prompt:{prompt_id}")
+    record_activity(db, admin, "update_prompt", request=request, metadata=f"prompt:{prompt_id}")
     return PromptResponse(
         id=prompt.id,
         doc_type=prompt.doc_type,
