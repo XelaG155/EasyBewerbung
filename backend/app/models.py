@@ -16,6 +16,10 @@ class User(Base):
     mother_tongue = Column(String, default=DEFAULT_LANGUAGE)
     documentation_language = Column(String, default=DEFAULT_LANGUAGE)
     credits = Column(Integer, default=0)
+    is_admin = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
+    last_login_at = Column(DateTime, nullable=True)
+    password_changed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # OAuth fields
     oauth_provider = Column(String, nullable=True)  # "google", "email", etc.
@@ -27,6 +31,8 @@ class User(Base):
     documents = relationship("Document", back_populates="owner")
     job_offers = relationship("JobOffer", back_populates="owner")
     applications = relationship("Application", back_populates="owner")
+
+    activity_logs = relationship("UserActivityLog", back_populates="user")
 
 class Document(Base):
     __tablename__ = "documents"
@@ -122,3 +128,37 @@ class GenerationTask(Base):
 
     application = relationship("Application")
     user = relationship("User")
+
+
+class UserActivityLog(Base):
+    __tablename__ = "user_activity_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action = Column(String, nullable=False)
+    ip_address = Column(String, nullable=True)
+    metadata = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    user = relationship("User", back_populates="activity_logs")
+
+
+class LanguageSetting(Base):
+    __tablename__ = "language_settings"
+
+    id = Column(Integer, primary_key=True)
+    code = Column(String, unique=True, nullable=False)
+    label = Column(String, nullable=False)
+    direction = Column(String, default="ltr")
+    is_active = Column(Boolean, default=True)
+    sort_order = Column(Integer, default=0)
+
+
+class PromptTemplate(Base):
+    __tablename__ = "prompt_templates"
+
+    id = Column(Integer, primary_key=True)
+    doc_type = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

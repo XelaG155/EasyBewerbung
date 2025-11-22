@@ -15,7 +15,7 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
 from app.database import get_db
-from app.models import User
+from app.models import User, UserActivityLog
 from app.auth import (
     get_password_hash,
     verify_password,
@@ -27,6 +27,18 @@ from app.limiter import limiter
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def record_activity(db: Session, user: User, action: str, request: Optional[Request] = None, metadata: Optional[str] = None):
+    ip_address = request.client.host if request and request.client else None
+    log_entry = UserActivityLog(
+        user_id=user.id,
+        action=action,
+        ip_address=ip_address,
+        metadata=metadata,
+    )
+    db.add(log_entry)
+    db.commit()
 
 
 def _safe_language(value: Optional[str], field_name: str) -> str:
@@ -74,6 +86,10 @@ class UserResponse(BaseModel):
     documentation_language: str
     credits: int
     created_at: str
+    is_admin: bool
+    is_active: bool
+    last_login_at: Optional[str]
+    password_changed_at: Optional[str]
 
     class Config:
         from_attributes = True
@@ -89,6 +105,12 @@ def serialize_user(user: User) -> UserResponse:
         documentation_language=_safe_language(user.documentation_language, "documentation_language"),
         credits=user.credits,
         created_at=user.created_at.isoformat(),
+        is_admin=bool(getattr(user, "is_admin", False)),
+        is_active=bool(getattr(user, "is_active", True)),
+        last_login_at=user.last_login_at.isoformat() if getattr(user, "last_login_at", None) else None,
+        password_changed_at=user.password_changed_at.isoformat()
+        if getattr(user, "password_changed_at", None)
+        else None,
     )
 
 
@@ -186,6 +208,12 @@ async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db
             db.commit()
             db.refresh(user)
 
+        user.last_login_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(user)
+
+        record_activity(db, user, "login", metadata="google")
+
         # Create access token
         access_token = create_access_token(data={"sub": str(user.id)})
 
@@ -229,6 +257,7 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
         mother_tongue=user_data.mother_tongue,
         documentation_language=user_data.documentation_language,
         oauth_provider="email",  # Mark as email/password user
+        password_changed_at=datetime.now(timezone.utc),
     )
 
     db.add(new_user)
@@ -265,6 +294,18 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
+
+    if getattr(user, "is_active", True) is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is locked",
+        )
+
+    user.last_login_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(user)
+
+    record_activity(db, user, "login")
 
     # Create access token
     access_token = create_access_token(data={"sub": str(user.id)})
