@@ -23,6 +23,8 @@ type ApplicationRecord = {
   job_title: string;
   company: string;
   job_offer_url?: string | null;
+  is_spontaneous?: boolean;
+  opportunity_context?: string | null;
   job_description?: string | null;
   applied: boolean;
   applied_at?: string | null;
@@ -90,6 +92,13 @@ export default function DashboardPage() {
   const [languageOptions, setLanguageOptions] = useState<LanguageOption[]>(FALLBACK_LANGUAGE_OPTIONS);
   const [documentationLanguage, setDocumentationLanguage] = useState<string>(FALLBACK_LANGUAGE_OPTIONS[0].code);
   const [companyProfileLanguage, setCompanyProfileLanguage] = useState<string>(FALLBACK_LANGUAGE_OPTIONS[0].code);
+
+  // Spontaneous applications
+  const [targetCompany, setTargetCompany] = useState("");
+  const [targetRole, setTargetRole] = useState("");
+  const [opportunityContext, setOpportunityContext] = useState("");
+  const [creatingSpontaneous, setCreatingSpontaneous] = useState(false);
+  const [spontaneousError, setSpontaneousError] = useState("");
 
   // Status Modal
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -226,6 +235,50 @@ export default function DashboardPage() {
       }
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const handleCreateSpontaneous = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetCompany || !targetRole || !user) return;
+
+    setCreatingSpontaneous(true);
+    setSpontaneousError("");
+
+    try {
+      const options = languageOptions.length
+        ? languageOptions
+        : ensureOptionList([
+            user.preferred_language,
+            user.mother_tongue,
+            user.documentation_language,
+          ]);
+
+      await api.createSpontaneousApplication({
+        job_title: targetRole,
+        company: targetCompany,
+        opportunity_context: opportunityContext || undefined,
+        ui_language: resolveLanguageCode(user.mother_tongue || user.preferred_language, options),
+        documentation_language: documentationLanguage,
+        company_profile_language: companyProfileLanguage,
+      });
+
+      setTargetCompany("");
+      setTargetRole("");
+      setOpportunityContext("");
+      await loadData();
+      await refreshUser();
+    } catch (error: any) {
+      const message = error.message || "Could not save spontaneous application";
+      if (message.toLowerCase().includes("credit")) {
+        setSpontaneousError(
+          "You do not have enough credits. Please ask an admin to top up your account."
+        );
+      } else {
+        setSpontaneousError(message);
+      }
+    } finally {
+      setCreatingSpontaneous(false);
     }
   };
 
@@ -479,6 +532,91 @@ export default function DashboardPage() {
             )}
           </section>
 
+          {/* Spontaneous Applications */}
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-2xl font-bold">Spontaneous Outreach</h2>
+              <span className="text-sm text-slate-400">Apply proactively without a job posting</span>
+            </div>
+            <Card>
+              <form onSubmit={handleCreateSpontaneous} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    label="Target company"
+                    value={targetCompany}
+                    onChange={setTargetCompany}
+                    placeholder="ACME AG"
+                    required
+                  />
+
+                  <Input
+                    label="Role or team you want"
+                    value={targetRole}
+                    onChange={setTargetRole}
+                    placeholder="Product Manager, Zurich"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    Context & value proposition
+                    <span className="block text-xs text-slate-500">
+                      What makes you relevant? Mention business unit, pain points you solve, or projects to pitch.
+                    </span>
+                  </label>
+                  <textarea
+                    value={opportunityContext}
+                    onChange={(e) => setOpportunityContext(e.target.value)}
+                    className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    rows={4}
+                    placeholder="I can help the data platform team modernize analytics pipelines and lead stakeholder workshops."
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <label className="text-sm text-slate-200">
+                    <span className="block mb-2">Language for generated documents</span>
+                    <select
+                      value={documentationLanguage}
+                      onChange={(e) => setDocumentationLanguage(e.target.value)}
+                      className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white"
+                    >
+                      {languageOptions.map((lang) => (
+                        <option key={lang.code} value={lang.code}>
+                          {lang.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="text-sm text-slate-200">
+                    <span className="block mb-2">Language for company profile</span>
+                    <select
+                      value={companyProfileLanguage}
+                      onChange={(e) => setCompanyProfileLanguage(e.target.value)}
+                      className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white"
+                    >
+                      {languageOptions.map((lang) => (
+                        <option key={lang.code} value={lang.code}>
+                          {lang.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <Button type="submit" disabled={creatingSpontaneous || !targetCompany || !targetRole} variant="primary">
+                  {creatingSpontaneous ? "Saving..." : "Save Spontaneous Application"}
+                </Button>
+
+                {spontaneousError && (
+                  <p className="text-red-400 text-sm">{spontaneousError}</p>
+                )}
+              </form>
+            </Card>
+          </section>
+
           {/* Job Analysis */}
           <section>
             <h2 className="text-2xl font-bold mb-4">Add Job Offer</h2>
@@ -631,6 +769,11 @@ export default function DashboardPage() {
                             {app.job_title}
                           </h3>
                           <p className="text-slate-300">{app.company}</p>
+                          {app.is_spontaneous && (
+                            <span className="inline-block mt-2 px-2 py-1 text-xs rounded bg-amber-900/50 text-amber-200 border border-amber-700">
+                              Spontaneous outreach
+                            </span>
+                          )}
                           {app.job_offer_url && (
                             <a
                               href={app.job_offer_url}
@@ -645,12 +788,13 @@ export default function DashboardPage() {
                       </div>
 
                       {/* Job Description Preview */}
-                      {app.job_description && (
+                      {(app.job_description || app.opportunity_context) && (
                         <div className="mt-2 p-3 bg-slate-800 rounded-lg">
                           <p className="text-sm text-slate-400 line-clamp-3">
                             {(() => {
                               // Convert newlines and tabs to spaces, then limit length
-                              const cleanText = app.job_description
+                              const previewSource = app.job_description || app.opportunity_context || "";
+                              const cleanText = previewSource
                                 .replace(/[\n\r\t]+/g, ' ')
                                 .replace(/\s+/g, ' ')
                                 .trim();
