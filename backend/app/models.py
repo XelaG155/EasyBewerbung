@@ -104,3 +104,21 @@ class MatchingScore(Base):
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     application = relationship("Application")
+
+
+class GenerationTask(Base):
+    __tablename__ = "generation_tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("applications.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status = Column(String, nullable=False, default="pending")  # pending, processing, completed, failed
+    progress = Column(Integer, nullable=False, default=0)  # 0-100
+    total_docs = Column(Integer, nullable=False, default=0)
+    completed_docs = Column(Integer, nullable=False, default=0)
+    error_message = Column(Text, nullable=True)  # Error details if failed
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    application = relationship("Application")
+    user = relationship("User")
