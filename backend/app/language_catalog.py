@@ -18,6 +18,7 @@ class LanguageOption:
 LANGUAGE_OPTIONS: List[LanguageOption] = [
     LanguageOption("en", "English"),
     LanguageOption("de", "Deutsch (German)"),
+    LanguageOption("de-CH", "Deutsch (Schweiz)"),
     LanguageOption("fr", "Français (French)"),
     LanguageOption("it", "Italiano (Italian)"),
     LanguageOption("es", "Español (Spanish)"),

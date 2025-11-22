@@ -29,13 +29,17 @@ security = HTTPBearer(auto_error=False)  # Don't auto-raise errors for optional 
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against a hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a password against a hash. Truncate to 72 bytes for bcrypt compatibility."""
+    # bcrypt has a maximum password length of 72 bytes
+    password_bytes = plain_password.encode('utf-8')[:72]
+    return pwd_context.verify(password_bytes.decode('utf-8', errors='ignore'), hashed_password)
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password."""
-    return pwd_context.hash(password)
+    """Hash a password. Truncate to 72 bytes for bcrypt compatibility."""
+    # bcrypt has a maximum password length of 72 bytes
+    password_bytes = password.encode('utf-8')[:72]
+    return pwd_context.hash(password_bytes.decode('utf-8', errors='ignore'))
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
