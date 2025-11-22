@@ -2,11 +2,18 @@ from datetime import datetime, timezone
 from typing import List, Optional
 import os
 import json
+from io import BytesIO
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session, joinedload
 from openai import OpenAI
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
 from app.database import get_db
 from app.document_catalog import ALLOWED_GENERATED_DOC_TYPES
@@ -256,6 +263,7 @@ class ApplicationResponse(BaseModel):
     job_title: str
     company: str
     job_offer_url: Optional[str]
+    job_description: Optional[str]
     applied: bool
     applied_at: Optional[datetime]
     result: Optional[str]
@@ -280,12 +288,19 @@ def serialize_generated_document(doc: GeneratedDocument) -> dict:
     }
 
 
-def serialize_application(app: Application) -> dict:
+def serialize_application(app: Application, db: Session = None) -> dict:
+    job_description = None
+    if db and app.job_offer_url:
+        job_offer = db.query(JobOffer).filter(JobOffer.url == app.job_offer_url).first()
+        if job_offer:
+            job_description = job_offer.description
+
     return {
         "id": app.id,
         "job_title": app.job_title,
         "company": app.company,
         "job_offer_url": app.job_offer_url,
+        "job_description": job_description,
         "applied": app.applied,
         "applied_at": app.applied_at,
         "result": app.result,
@@ -363,7 +378,7 @@ async def create_application(
 
     db.refresh(application)
     db.refresh(user_for_update)
-    return serialize_application(application)
+    return serialize_application(application, db)
 
 
 @router.patch("/{application_id}", response_model=ApplicationResponse)
@@ -391,7 +406,7 @@ async def update_application(
 
     db.commit()
     db.refresh(application)
-    return serialize_application(application)
+    return serialize_application(application, db)
 
 
 @router.post("/{application_id}/documents", response_model=ApplicationResponse)
@@ -433,7 +448,7 @@ async def attach_generated_documents(
         .options(joinedload(Application.generated_documents))
         .get(application.id)
     )
-    return serialize_application(reloaded)
+    return serialize_application(reloaded, db)
 
 
 @router.get("/history", response_model=List[ApplicationResponse])
@@ -449,7 +464,7 @@ async def list_application_history(
         .order_by(Application.created_at.desc())
         .all()
     )
-    return [serialize_application(app) for app in applications]
+    return [serialize_application(app, db) for app in applications]
 
 
 @router.get("/rav-report", response_model=dict)
@@ -506,7 +521,7 @@ async def get_application(
     )
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
-    return serialize_application(application)
+    return serialize_application(application, db)
 
 @router.get("/{application_id}/matching-score")
 async def get_matching_score(
@@ -770,6 +785,113 @@ async def get_generation_status(
             ]
 
     return response
+
+
+@router.get("/{application_id}/job-description-pdf")
+async def download_job_description_pdf(
+    application_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate and download a PDF of the job description for archival purposes."""
+    # Get application
+    application = (
+        db.query(Application)
+        .filter(Application.id == application_id, Application.user_id == current_user.id)
+        .first()
+    )
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    # Get job offer details
+    job_offer = None
+    if application.job_offer_url:
+        job_offer = (
+            db.query(JobOffer)
+            .filter(JobOffer.url == application.job_offer_url)
+            .first()
+        )
+
+    # Create PDF in memory
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+
+    # Container for the 'Flowable' objects
+    elements = []
+
+    # Define styles
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        textColor='#1a1a1a',
+        spaceAfter=12,
+        alignment=TA_CENTER
+    )
+    company_style = ParagraphStyle(
+        'CompanyStyle',
+        parent=styles['Heading2'],
+        fontSize=14,
+        textColor='#4a4a4a',
+        spaceAfter=20,
+        alignment=TA_CENTER
+    )
+    normal_style = ParagraphStyle(
+        'CustomNormal',
+        parent=styles['Normal'],
+        fontSize=11,
+        leading=14,
+        textColor='#2a2a2a',
+    )
+    meta_style = ParagraphStyle(
+        'MetaStyle',
+        parent=styles['Normal'],
+        fontSize=9,
+        textColor='#666666',
+        spaceAfter=6,
+    )
+
+    # Add content
+    elements.append(Paragraph(application.job_title or "Job Posting", title_style))
+    elements.append(Paragraph(application.company or "Company", company_style))
+    elements.append(Spacer(1, 0.2*inch))
+
+    # Add metadata
+    if application.job_offer_url:
+        elements.append(Paragraph(f"<b>URL:</b> {application.job_offer_url}", meta_style))
+
+    saved_date = application.created_at.strftime("%Y-%m-%d %H:%M:%S UTC") if application.created_at else "N/A"
+    elements.append(Paragraph(f"<b>Saved on:</b> {saved_date}", meta_style))
+    elements.append(Spacer(1, 0.3*inch))
+
+    # Add job description
+    if job_offer and job_offer.description:
+        elements.append(Paragraph("<b>Job Description:</b>", styles['Heading3']))
+        elements.append(Spacer(1, 0.1*inch))
+
+        # Split description into paragraphs and add each
+        for para in job_offer.description.split('\n'):
+            if para.strip():
+                # Escape HTML special characters
+                para_text = para.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                elements.append(Paragraph(para_text, normal_style))
+                elements.append(Spacer(1, 0.1*inch))
+    else:
+        elements.append(Paragraph("<i>No job description available</i>", normal_style))
+
+    # Build PDF
+    doc.build(elements)
+
+    # Prepare response
+    buffer.seek(0)
+    filename = f"job_{application.company}_{application.job_title}.pdf".replace(" ", "_").replace("/", "-")
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 @router.get("/{application_id}/generation-tasks")
