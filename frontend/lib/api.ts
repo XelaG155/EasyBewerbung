@@ -13,6 +13,10 @@ export interface User {
   documentation_language: string;
   credits: number;
   created_at: string;
+  is_admin: boolean;
+  is_active: boolean;
+  last_login_at?: string | null;
+  password_changed_at?: string | null;
 }
 
 export interface TokenResponse {
@@ -69,6 +73,45 @@ export interface LanguageOption {
 }
 
 export type LanguageListResponse = LanguageOption[];
+
+export interface AdminLanguageSetting {
+  id: number;
+  code: string;
+  label: string;
+  direction: "ltr" | "rtl";
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface AdminUserSummary {
+  id: number;
+  email: string;
+  full_name?: string | null;
+  is_admin: boolean;
+  is_active: boolean;
+  credits: number;
+  last_login_at?: string | null;
+}
+
+export interface ActivityEntry {
+  action: string;
+  ip_address?: string | null;
+  metadata?: string | null;
+  created_at: string;
+}
+
+export interface AdminUserDetail {
+  user: User;
+  activity: ActivityEntry[];
+}
+
+export interface PromptTemplate {
+  id: number;
+  doc_type: string;
+  name: string;
+  content: string;
+  updated_at: string;
+}
 
 class ApiClient {
   private baseUrl: string;
@@ -146,6 +189,7 @@ class ApiClient {
     preferredLanguage = "en",
     motherTongue = "en",
     documentationLanguage = "en",
+    privacyPolicyAccepted = false,
   ) {
     const data = await this.request<TokenResponse>("/users/register", {
       method: "POST",
@@ -156,6 +200,7 @@ class ApiClient {
         preferred_language: preferredLanguage,
         mother_tongue: motherTongue,
         documentation_language: documentationLanguage,
+        privacy_policy_accepted: privacyPolicyAccepted,
       }),
     });
 
@@ -178,6 +223,7 @@ class ApiClient {
     preferredLanguage = "en",
     motherTongue = "en",
     documentationLanguage = "en",
+    privacyPolicyAccepted = false,
   ) {
     const data = await this.request<TokenResponse>("/users/google", {
       method: "POST",
@@ -186,11 +232,16 @@ class ApiClient {
         preferred_language: preferredLanguage,
         mother_tongue: motherTongue,
         documentation_language: documentationLanguage,
+        privacy_policy_accepted: privacyPolicyAccepted,
       }),
     });
 
     this.setToken(data.access_token);
     return data;
+  }
+
+  async getPrivacyPolicy() {
+    return this.request<{ policy: string }>("/users/privacy-policy");
   }
 
   async getCurrentUser() {
@@ -339,6 +390,59 @@ class ApiClient {
     return this.request<any>(`/applications/${applicationId}/generate`, {
       method: "POST",
       body: JSON.stringify(docTypes),
+    });
+  }
+
+  // Admin endpoints
+  async adminListLanguages() {
+    return this.request<AdminLanguageSetting[]>("/admin/languages");
+  }
+
+  async adminUpdateLanguages(payload: Pick<AdminLanguageSetting, "code" | "is_active" | "sort_order">[]) {
+    return this.request<AdminLanguageSetting[]>("/admin/languages", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async adminSearchUsers(query?: string) {
+    const suffix = query ? `?query=${encodeURIComponent(query)}` : "";
+    return this.request<AdminUserSummary[]>(`/admin/users${suffix}`);
+  }
+
+  async adminGetUserDetail(userId: number) {
+    return this.request<AdminUserDetail>(`/admin/users/${userId}`);
+  }
+
+  async adminUpdateCredits(userId: number, amount: number, reason?: string) {
+    return this.request<AdminUserDetail>(`/admin/users/${userId}/credits`, {
+      method: "POST",
+      body: JSON.stringify({ amount, reason }),
+    });
+  }
+
+  async adminToggleActive(userId: number, isActive: boolean) {
+    return this.request<AdminUserDetail>(`/admin/users/${userId}/active`, {
+      method: "POST",
+      body: JSON.stringify({ is_active: isActive }),
+    });
+  }
+
+  async adminToggleAdmin(userId: number, isAdmin: boolean) {
+    return this.request<AdminUserDetail>(`/admin/users/${userId}/admin`, {
+      method: "POST",
+      body: JSON.stringify({ is_admin: isAdmin }),
+    });
+  }
+
+  async adminListPrompts() {
+    return this.request<PromptTemplate[]>("/admin/prompts");
+  }
+
+  async adminUpdatePrompt(promptId: number, name?: string, content?: string) {
+    return this.request<PromptTemplate>(`/admin/prompts/${promptId}`, {
+      method: "PUT",
+      body: JSON.stringify({ name, content }),
     });
   }
 
