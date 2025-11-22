@@ -44,32 +44,81 @@ Language: {lang_instruction}
 
 Create a compelling cover letter with proper greeting, body, and closing.""",
 
-        "motivational_letter_pdf": f"""Write a motivational letter for this job application.
-Job: {job_description}
-CV: {cv_text}
+        "motivational_letter_pdf": f"""You are a professional career counselor. Write a motivational letter for this job application.
+
+Job Details:
+{job_description}
+
+Candidate CV:
+{cv_text}
+
 Language: {lang_instruction}
 
-Write a formal motivational letter explaining why the candidate is motivated for this role.""",
+IMPORTANT INSTRUCTIONS:
+1. Output ONLY the motivational letter content - NO conversational text, NO introductions like "Here is..." or "Gerne..."
+2. Start directly with the letter (e.g., greeting and opening paragraph)
+3. Use facts from the candidate's CV - DO NOT invent experiences or qualifications
+4. Write a formal, compelling letter explaining why the candidate is motivated and qualified for this role
+5. Include proper letter formatting (greeting, body paragraphs, closing)
+6. Keep it concise (typically 1 page)
 
-        "tailored_cv_pdf": f"""Create a tailored CV summary for this specific job application.
-Job: {job_description}
-Original CV: {cv_text}
+Begin the motivational letter now:""",
+
+        "tailored_cv_pdf": f"""You are a professional CV writer. Create a tailored CV for this specific job application.
+
+Job Details:
+{job_description}
+
+Original CV:
+{cv_text}
+
 Language: {lang_instruction}
 
-Rewrite the CV to emphasize experiences and skills most relevant to this job.""",
+IMPORTANT INSTRUCTIONS:
+1. Output ONLY the tailored CV content - NO conversational text, NO introductions like "Here is..." or "Gerne..."
+2. Start directly with the CV content (e.g., candidate name or professional profile)
+3. Preserve ALL factual information from the original CV - DO NOT invent or change facts
+4. Only include travel willingness/percentage if explicitly mentioned in the original CV - DO NOT add or infer it
+5. Emphasize experiences and skills most relevant to this specific job posting
+6. Maintain professional CV formatting with clear sections
+7. Keep the same level of detail as the original CV
+
+Begin the tailored CV now:""",
 
         "email_formal": f"""Write a formal email to submit a job application.
-Job: {job_description}
+
+Job Details:
+{job_description}
+
 Language: {lang_instruction}
 
-Write a concise, professional email introducing the attached application documents.""",
+IMPORTANT INSTRUCTIONS:
+1. Output ONLY the email content - NO conversational text, NO introductions like "Here is..."
+2. Start directly with the email greeting
+3. Write a concise, professional email (3-5 sentences) introducing the attached application documents
+4. Include: greeting, brief introduction, mention of attached documents, expression of interest, closing
+5. Keep it professional and to the point
+
+Begin the email now:""",
 
         "email_linkedin": f"""Write a LinkedIn direct message to a recruiter for this position.
-Job: {job_description}
-CV Summary: {cv_text[:500]}
+
+Job Details:
+{job_description}
+
+CV Summary:
+{cv_text[:500]}
+
 Language: {lang_instruction}
 
-Write a brief, engaging LinkedIn message (max 200 words).""",
+IMPORTANT INSTRUCTIONS:
+1. Output ONLY the LinkedIn message content - NO conversational text, NO meta-commentary
+2. Start directly with the message greeting
+3. Write a brief, engaging message (max 200 words)
+4. Include: greeting, brief introduction, expression of interest, call to action
+5. Keep it professional but conversational (appropriate for LinkedIn)
+
+Begin the LinkedIn message now:""",
 
         "match_score_report": f"""Create a detailed match score report analyzing how well the candidate fits this job.
 Job: {job_description}
@@ -288,9 +337,18 @@ def serialize_generated_document(doc: GeneratedDocument) -> dict:
     }
 
 
-def serialize_application(app: Application, db: Session = None) -> dict:
+def serialize_application(app: Application, db: Session = None, include_job_description: bool = True) -> dict:
+    """
+    Serialize an application to a dictionary.
+
+    Args:
+        app: The application to serialize
+        db: Database session (optional, required if include_job_description is True)
+        include_job_description: Whether to include the full job description (default: True)
+                                 Set to False for list views to improve performance
+    """
     job_description = None
-    if db and app.job_offer_url:
+    if include_job_description and db and app.job_offer_url:
         job_offer = db.query(JobOffer).filter(JobOffer.url == app.job_offer_url).first()
         if job_offer:
             job_description = job_offer.description
@@ -464,7 +522,36 @@ async def list_application_history(
         .order_by(Application.created_at.desc())
         .all()
     )
-    return [serialize_application(app, db) for app in applications]
+
+    # Efficiently load job descriptions using a single query
+    # This prevents N+1 query problem
+    job_urls = [app.job_offer_url for app in applications if app.job_offer_url]
+    job_offers_map = {}
+    if job_urls:
+        job_offers = db.query(JobOffer).filter(JobOffer.url.in_(job_urls)).all()
+        job_offers_map = {jo.url: jo.description for jo in job_offers}
+
+    # Serialize applications with pre-loaded job descriptions
+    result = []
+    for app in applications:
+        serialized = {
+            "id": app.id,
+            "job_title": app.job_title,
+            "company": app.company,
+            "job_offer_url": app.job_offer_url,
+            "job_description": job_offers_map.get(app.job_offer_url) if app.job_offer_url else None,
+            "applied": app.applied,
+            "applied_at": app.applied_at,
+            "result": app.result,
+            "ui_language": app.ui_language,
+            "documentation_language": app.documentation_language,
+            "company_profile_language": app.company_profile_language,
+            "created_at": app.created_at,
+            "generated_documents": [serialize_generated_document(doc) for doc in app.generated_documents],
+        }
+        result.append(serialized)
+
+    return result
 
 
 @router.get("/rav-report", response_model=dict)
