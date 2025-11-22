@@ -12,6 +12,7 @@ interface AuthContextType {
     preferredLanguage?: string,
     motherTongue?: string,
     documentationLanguage?: string,
+    privacyPolicyAccepted?: boolean,
   ) => Promise<void>;
   register: (
     email: string,
@@ -20,6 +21,7 @@ interface AuthContextType {
     preferredLanguage?: string,
     motherTongue?: string,
     documentationLanguage?: string,
+    privacyPolicyAccepted?: boolean,
   ) => Promise<void>;
   logout: () => void;
   updateUser: (
@@ -66,12 +68,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     preferredLanguage = "en",
     motherTongue = "en",
     documentationLanguage = "en",
+    privacyPolicyAccepted = false,
   ) => {
     const response = await api.googleLogin(
       credential,
       preferredLanguage,
       motherTongue,
       documentationLanguage,
+      privacyPolicyAccepted,
     );
     setUser(response.user);
   };
@@ -83,6 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     preferredLanguage = "en",
     motherTongue = "en",
     documentationLanguage = "en",
+    privacyPolicyAccepted = false,
   ) => {
     const response = await api.register(
       email,
@@ -91,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       preferredLanguage,
       motherTongue,
       documentationLanguage,
+      privacyPolicyAccepted,
     );
     // Ensure token is set before setting user
     await new Promise(resolve => setTimeout(resolve, 50));

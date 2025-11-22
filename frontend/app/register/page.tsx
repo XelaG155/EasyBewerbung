@@ -30,6 +30,9 @@ export default function RegisterPage() {
   ]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [privacyText, setPrivacyText] = useState("");
 
   const { register, googleLogin } = useAuth();
   const router = useRouter();
@@ -52,17 +55,23 @@ export default function RegisterPage() {
 
   const handleGoogleSuccess = useCallback(async (credential: string) => {
     setError("");
+
+    if (!privacyAccepted) {
+      setError("You must accept the privacy policy to register");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await googleLogin(credential, motherTongue, motherTongue, documentationLanguage);
+      await googleLogin(credential, motherTongue, motherTongue, documentationLanguage, privacyAccepted);
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Google sign-up failed");
     } finally {
       setLoading(false);
     }
-  }, [googleLogin, router]);
+  }, [googleLogin, router, privacyAccepted, motherTongue, documentationLanguage]);
 
   const handleGoogleError = useCallback((err: any) => {
     console.error("Google Auth Error:", err);
@@ -80,6 +89,11 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!privacyAccepted) {
+      setError("You must accept the privacy policy to register");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -90,6 +104,7 @@ export default function RegisterPage() {
         motherTongue,
         motherTongue,
         documentationLanguage,
+        privacyAccepted,
       );
       // Explicit delay to ensure token is saved to localStorage
       await new Promise(resolve => setTimeout(resolve, 200));
@@ -210,11 +225,38 @@ export default function RegisterPage() {
                 </label>
               </div>
 
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-900/50 border border-slate-700">
+                <input
+                  type="checkbox"
+                  id="privacy-checkbox"
+                  checked={privacyAccepted}
+                  onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="privacy-checkbox" className="text-sm text-slate-300">
+                  I accept the{" "}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!privacyText) {
+                        const data = await api.getPrivacyPolicy();
+                        setPrivacyText(data.policy);
+                      }
+                      setShowPrivacyModal(true);
+                    }}
+                    className="text-indigo-400 hover:text-indigo-300 underline"
+                  >
+                    Privacy Policy
+                  </button>{" "}
+                  and consent to the collection of my IP address for security purposes
+                </label>
+              </div>
+
               <Button
                 type="submit"
                 variant="primary"
                 className="w-full"
-                disabled={loading}
+                disabled={loading || !privacyAccepted}
               >
                 {loading ? "Creating account..." : "Create Account"}
               </Button>
@@ -232,6 +274,31 @@ export default function RegisterPage() {
           </Card>
         </div>
       </div>
+
+      {/* Privacy Policy Modal */}
+      {showPrivacyModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-800 rounded-lg max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-slate-700">
+              <h2 className="text-2xl font-bold text-slate-100">Privacy Policy</h2>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              <pre className="whitespace-pre-wrap text-sm text-slate-300 font-sans">
+                {privacyText}
+              </pre>
+            </div>
+            <div className="p-6 border-t border-slate-700">
+              <Button
+                onClick={() => setShowPrivacyModal(false)}
+                variant="primary"
+                className="w-full"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
