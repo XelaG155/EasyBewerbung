@@ -17,76 +17,84 @@ from app.language_catalog import DEFAULT_LANGUAGE, normalize_language
 router = APIRouter()
 
 
+def get_language_instruction(lang: str) -> str:
+    """Get language-specific instructions for LLM prompts."""
+    if lang in ["Deutsch (Schweiz)", "de-CH"]:
+        return f"{lang} (IMPORTANT: Use Swiss German spelling with 'ss' instead of 'ß', as used in Switzerland)"
+    return lang
+
+
 def generate_document_prompt(doc_type: str, job_description: str, cv_text: str, application) -> Optional[str]:
     """Generate OpenAI prompt based on document type."""
     lang = application.documentation_language or 'English'
+    lang_instruction = get_language_instruction(lang)
 
     prompts = {
         "COVER_LETTER": f"""Write a professional cover letter for this job application.
 Job Details: {job_description}
 Candidate CV: {cv_text}
-Language: {lang}
+Language: {lang_instruction}
 
 Create a compelling cover letter with proper greeting, body, and closing.""",
 
         "motivational_letter_pdf": f"""Write a motivational letter for this job application.
 Job: {job_description}
 CV: {cv_text}
-Language: {lang}
+Language: {lang_instruction}
 
 Write a formal motivational letter explaining why the candidate is motivated for this role.""",
 
         "tailored_cv_pdf": f"""Create a tailored CV summary for this specific job application.
 Job: {job_description}
 Original CV: {cv_text}
-Language: {lang}
+Language: {lang_instruction}
 
 Rewrite the CV to emphasize experiences and skills most relevant to this job.""",
 
         "email_formal": f"""Write a formal email to submit a job application.
 Job: {job_description}
-Language: {lang}
+Language: {lang_instruction}
 
 Write a concise, professional email introducing the attached application documents.""",
 
         "email_linkedin": f"""Write a LinkedIn direct message to a recruiter for this position.
 Job: {job_description}
 CV Summary: {cv_text[:500]}
-Language: {lang}
+Language: {lang_instruction}
 
 Write a brief, engaging LinkedIn message (max 200 words).""",
 
         "match_score_report": f"""Create a detailed match score report analyzing how well the candidate fits this job.
 Job: {job_description}
 CV: {cv_text}
-Language: {lang}
+Language: {lang_instruction}
 
 Provide: Overall score (0-100), Key strengths (3-5), Gaps (2-4), Recommendations (2-3).""",
 
         "company_intelligence_briefing": f"""Create a company intelligence briefing for interview preparation.
 Company: {job_description}
-Language: {lang}
+Language: {lang_instruction}
 
 Research and summarize: Company overview, culture, recent news, strategic direction, interview tips.""",
 
         "interview_preparation_pack": f"""Create an interview preparation guide for this role.
 Job: {job_description}
 CV: {cv_text}
-Language: {lang}
+Language: {lang_instruction}
 
 Include: Likely interview questions, STAR method answers, 30-second pitch, key talking points.""",
 
         "executive_summary": f"""Create an executive summary / personal profile for the candidate.
 CV: {cv_text}
 Target Role: {job_description}
-Language: {lang}
+Language: {lang_instruction}
 
 Write a compelling 1-page executive summary highlighting career story and value proposition.""",
 
         "linkedin_optimization": f"""Provide LinkedIn profile optimization suggestions.
 Current CV: {cv_text}
 Target Industry/Role: {job_description}
-Language: {lang}
+Language: {lang_instruction}
 
 Suggest: Improved About section, headline, key skills, and keywords for recruiter discovery.""",
     }

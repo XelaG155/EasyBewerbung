@@ -14,7 +14,7 @@ type DocumentRecord = {
   id: number;
   filename: string;
   doc_type: string;
-  created_at: string;
+  created_at?: string;
   has_text?: boolean;
 };
 
@@ -22,7 +22,7 @@ type ApplicationRecord = {
   id: number;
   job_title: string;
   company: string;
-  job_offer_url?: string;
+  job_offer_url?: string | null;
   applied: boolean;
   applied_at?: string | null;
   result?: string | null;
@@ -185,7 +185,7 @@ export default function DashboardPage() {
 
   const handleAnalyzeJob = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!jobUrl) return;
+    if (!jobUrl || !user) return;
 
     setAnalyzing(true);
     setAnalysisError("");
@@ -407,7 +407,7 @@ export default function DashboardPage() {
                           </p>
                         )}
                         <p className="text-xs text-slate-500 mt-1">
-                          {new Date(doc.created_at).toLocaleDateString()}
+                          {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'N/A'}
                         </p>
                       </div>
                       <button
@@ -568,7 +568,7 @@ export default function DashboardPage() {
                         )}
 
                         <button
-                          onClick={() => openStatusModal(app.id, app.result)}
+                          onClick={() => openStatusModal(app.id, app.result ?? null)}
                           className="text-sm px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white"
                         >
                           Update Status
