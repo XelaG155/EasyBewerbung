@@ -3,14 +3,14 @@ from typing import List, Optional
 import os
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session, joinedload
 from openai import OpenAI
 
 from app.database import get_db
 from app.document_catalog import ALLOWED_GENERATED_DOC_TYPES
-from app.models import Application, GeneratedDocument, User, Document, JobOffer, MatchingScore
+from app.models import Application, GeneratedDocument, User, Document, JobOffer, MatchingScore, GenerationTask
 from app.auth import get_current_user
 from app.language_catalog import DEFAULT_LANGUAGE, normalize_language
 
@@ -100,6 +100,110 @@ Suggest: Improved About section, headline, key skills, and keywords for recruite
     }
 
     return prompts.get(doc_type)
+
+
+def generate_documents_background(task_id: int, application_id: int, doc_types: List[str], user_id: int):
+    """Background task to generate documents asynchronously."""
+    from app.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        # Get the task
+        task = db.query(GenerationTask).filter(GenerationTask.id == task_id).first()
+        if not task:
+            return
+
+        # Update status to processing
+        task.status = "processing"
+        task.total_docs = len(doc_types)
+        db.commit()
+
+        # Get application and user data
+        application = db.query(Application).filter(Application.id == application_id).first()
+        if not application:
+            task.status = "failed"
+            task.error_message = "Application not found"
+            db.commit()
+            return
+
+        # Get user's CV
+        cv_doc = (
+            db.query(Document)
+            .filter(Document.user_id == user_id, Document.doc_type == "CV")
+            .order_by(Document.created_at.desc())
+            .first()
+        )
+        if not cv_doc or not cv_doc.content_text:
+            task.status = "failed"
+            task.error_message = "No CV found with text content"
+            db.commit()
+            return
+
+        # Get job offer details
+        job_offer = (
+            db.query(JobOffer)
+            .filter(JobOffer.url == application.job_offer_url)
+            .first()
+        )
+
+        job_description = ""
+        if job_offer:
+            job_description = f"Title: {job_offer.title}\nCompany: {job_offer.company}\nDescription: {job_offer.description}"
+        else:
+            job_description = f"Title: {application.job_title}\nCompany: {application.company}"
+
+        # Generate documents
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+        for idx, doc_type in enumerate(doc_types):
+            try:
+                # Generate prompt based on document type
+                prompt = generate_document_prompt(doc_type, job_description, cv_doc.content_text, application)
+
+                if not prompt:
+                    continue  # Skip unsupported types
+
+                response = client.chat.completions.create(
+                    model="gpt-5-nano",
+                    messages=[{"role": "user", "content": prompt}],
+                )
+
+                content = response.choices[0].message.content
+
+                # Save generated document
+                gen_doc = GeneratedDocument(
+                    application_id=application_id,
+                    doc_type=doc_type,
+                    format="TEXT",
+                    storage_path=f"generated/app_{application_id}_{doc_type}.txt",
+                    content=content,
+                )
+                db.add(gen_doc)
+
+                # Update progress
+                task.completed_docs = idx + 1
+                task.progress = int((task.completed_docs / task.total_docs) * 100)
+                db.commit()
+
+            except Exception as e:
+                # Log error but continue with other documents
+                print(f"Error generating {doc_type}: {str(e)}")
+                task.error_message = f"Partial failure: Error generating {doc_type}: {str(e)}"
+                db.commit()
+
+        # Mark as completed
+        task.status = "completed"
+        task.progress = 100
+        db.commit()
+
+    except Exception as e:
+        # Fatal error
+        if task:
+            task.status = "failed"
+            task.error_message = str(e)
+            db.commit()
+    finally:
+        db.close()
 
 
 class ApplicationCreate(BaseModel):
@@ -545,10 +649,11 @@ Format your response as valid JSON only, no additional text."""
 async def generate_documents(
     application_id: int,
     doc_types: List[str],
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Generate documents (cover letter, etc.) for an application using AI."""
+    """Queue documents (cover letter, etc.) for generation using AI in the background."""
     # Get application
     application = (
         db.query(Application)
@@ -557,14 +662,14 @@ async def generate_documents(
     )
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
-    
+
     # Check credits
     cost_per_doc = 1
     total_cost = len(doc_types) * cost_per_doc
     if current_user.credits < total_cost:
         raise HTTPException(status_code=402, detail=f"Insufficient credits. Need {total_cost}, have {current_user.credits}")
-    
-    # Get user's CV
+
+    # Verify CV exists
     cv_doc = (
         db.query(Document)
         .filter(Document.user_id == current_user.id, Document.doc_type == "CV")
@@ -573,74 +678,136 @@ async def generate_documents(
     )
     if not cv_doc or not cv_doc.content_text:
         raise HTTPException(status_code=400, detail="No CV found with text content")
-    
-    # Get job offer details
-    job_offer = (
-        db.query(JobOffer)
-        .filter(JobOffer.url == application.job_offer_url)
+
+    # Deduct credits upfront
+    current_user.credits -= total_cost
+
+    # Create generation task
+    task = GenerationTask(
+        application_id=application_id,
+        user_id=current_user.id,
+        status="pending",
+        total_docs=len(doc_types),
+        completed_docs=0,
+        progress=0,
+    )
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+
+    # Queue background job
+    background_tasks.add_task(
+        generate_documents_background,
+        task.id,
+        application_id,
+        doc_types,
+        current_user.id,
+    )
+
+    return {
+        "task_id": task.id,
+        "status": "queued",
+        "message": "Document generation has been queued. Use the status endpoint to check progress.",
+        "application_id": application_id,
+        "total_documents": len(doc_types),
+        "credits_used": total_cost,
+        "remaining_credits": current_user.credits,
+    }
+
+
+@router.get("/{application_id}/generation-status/{task_id}")
+async def get_generation_status(
+    application_id: int,
+    task_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get the status of a document generation task."""
+    task = (
+        db.query(GenerationTask)
+        .filter(
+            GenerationTask.id == task_id,
+            GenerationTask.application_id == application_id,
+            GenerationTask.user_id == current_user.id,
+        )
         .first()
     )
-    
-    job_description = ""
-    if job_offer:
-        job_description = f"Title: {job_offer.title}\nCompany: {job_offer.company}\nDescription: {job_offer.description}"
-    else:
-        job_description = f"Title: {application.job_title}\nCompany: {application.company}"
-    
-    generated_docs = []
-    
-    try:
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        
-        for doc_type in doc_types:
-            # Generate prompt based on document type
-            prompt = generate_document_prompt(doc_type, job_description, cv_doc.content_text, application)
 
-            if not prompt:
-                continue  # Skip unsupported types
+    if not task:
+        raise HTTPException(status_code=404, detail="Generation task not found")
 
-            response = client.chat.completions.create(
-                model="gpt-5-nano",
-                messages=[{"role": "user", "content": prompt}],
-            )
+    response = {
+        "task_id": task.id,
+        "application_id": task.application_id,
+        "status": task.status,
+        "progress": task.progress,
+        "total_docs": task.total_docs,
+        "completed_docs": task.completed_docs,
+        "created_at": task.created_at.isoformat(),
+        "updated_at": task.updated_at.isoformat(),
+    }
 
-            content = response.choices[0].message.content
+    if task.error_message:
+        response["error_message"] = task.error_message
 
-            # Save generated document
-            gen_doc = GeneratedDocument(
-                application_id=application_id,
-                doc_type=doc_type,
-                format="TEXT",
-                storage_path=f"generated/app_{application_id}_{doc_type}.txt",
-                content=content,
-            )
-            db.add(gen_doc)
-            generated_docs.append(gen_doc)
-        
-        # Deduct credits
-        current_user.credits -= total_cost
-        db.commit()
-        
-        # Refresh to get IDs
-        for doc in generated_docs:
-            db.refresh(doc)
-        
-        return {
-            "application_id": application_id,
-            "generated_documents": [
+    # If completed, include the generated documents
+    if task.status == "completed":
+        application = (
+            db.query(Application)
+            .options(joinedload(Application.generated_documents))
+            .filter(Application.id == application_id)
+            .first()
+        )
+        if application:
+            response["generated_documents"] = [
                 {
                     "id": doc.id,
                     "doc_type": doc.doc_type,
                     "format": doc.format,
                     "created_at": doc.created_at.isoformat(),
-                    "content": doc.content,
                 }
-                for doc in generated_docs
-            ],
-            "credits_used": total_cost,
-            "remaining_credits": current_user.credits,
-        }
-        
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to generate documents: {str(e)}")
+                for doc in application.generated_documents
+            ]
+
+    return response
+
+
+@router.get("/{application_id}/generation-tasks")
+async def list_generation_tasks(
+    application_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List all generation tasks for an application."""
+    # Verify application belongs to user
+    application = (
+        db.query(Application)
+        .filter(Application.id == application_id, Application.user_id == current_user.id)
+        .first()
+    )
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    tasks = (
+        db.query(GenerationTask)
+        .filter(GenerationTask.application_id == application_id)
+        .order_by(GenerationTask.created_at.desc())
+        .all()
+    )
+
+    return {
+        "application_id": application_id,
+        "tasks": [
+            {
+                "task_id": task.id,
+                "status": task.status,
+                "progress": task.progress,
+                "total_docs": task.total_docs,
+                "completed_docs": task.completed_docs,
+                "created_at": task.created_at.isoformat(),
+                "updated_at": task.updated_at.isoformat(),
+                "error_message": task.error_message,
+            }
+            for task in tasks
+        ],
+    }
