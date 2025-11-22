@@ -51,6 +51,7 @@ export interface Application {
   job_title: string;
   company: string;
   job_offer_url: string | null;
+  job_description: string | null;
   applied: boolean;
   applied_at: string | null;
   result: string | null;
@@ -339,6 +340,24 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(docTypes),
     });
+  }
+
+  async downloadJobDescriptionPDF(applicationId: number) {
+    const headers: HeadersInit = {};
+    if (this.token) {
+      headers["Authorization"] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(`${this.baseUrl}/applications/${applicationId}/job-description-pdf`, {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to download PDF");
+    }
+
+    return response.blob();
   }
 }
 

@@ -23,6 +23,7 @@ type ApplicationRecord = {
   job_title: string;
   company: string;
   job_offer_url?: string | null;
+  job_description?: string | null;
   applied: boolean;
   applied_at?: string | null;
   result?: string | null;
@@ -94,6 +95,11 @@ export default function DashboardPage() {
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [selectedAppId, setSelectedAppId] = useState<number | null>(null);
   const [newStatus, setNewStatus] = useState("");
+
+  // Filtering and sorting
+  const [filterApplied, setFilterApplied] = useState<string>("all"); // "all", "applied", "not-applied"
+  const [filterMonth, setFilterMonth] = useState<string>("all"); // "all" or "YYYY-MM"
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Redirect if not logged in
   useEffect(() => {
@@ -284,6 +290,50 @@ export default function DashboardPage() {
     logout();
     router.push("/");
   };
+
+  const handleDownloadJobPDF = async (appId: number, jobTitle: string, company: string) => {
+    try {
+      const blob = await api.downloadJobDescriptionPDF(appId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `job_${company}_${jobTitle}.pdf`.replace(/\s+/g, "_");
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      alert("Failed to download PDF: " + error.message);
+    }
+  };
+
+  // Filter and sort applications
+  const filteredAndSortedApplications = applications
+    .filter((app) => {
+      // Filter by applied status
+      if (filterApplied === "applied" && !app.applied) return false;
+      if (filterApplied === "not-applied" && app.applied) return false;
+
+      // Filter by month
+      if (filterMonth !== "all" && app.created_at) {
+        const appMonth = app.created_at.substring(0, 7); // YYYY-MM
+        if (appMonth !== filterMonth) return false;
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+    });
+
+  // Get unique months from applications
+  const availableMonths = Array.from(
+    new Set(
+      applications
+        .filter((app) => app.created_at)
+        .map((app) => app.created_at!.substring(0, 7))
+    )
+  ).sort((a, b) => b.localeCompare(a));
 
   if (authLoading || loading) {
     return (
@@ -503,8 +553,71 @@ export default function DashboardPage() {
                 </p>
               </Card>
             ) : (
-              <div className="space-y-4">
-                {applications.map((app) => (
+              <>
+                {/* Filter and Sort Controls */}
+                <Card>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-200 mb-2">
+                        Filter by Status
+                      </label>
+                      <select
+                        value={filterApplied}
+                        onChange={(e) => setFilterApplied(e.target.value)}
+                        className="w-full px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="all">All Applications</option>
+                        <option value="applied">Applied Only</option>
+                        <option value="not-applied">Not Applied</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-200 mb-2">
+                        Filter by Month
+                      </label>
+                      <select
+                        value={filterMonth}
+                        onChange={(e) => setFilterMonth(e.target.value)}
+                        className="w-full px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="all">All Months</option>
+                        {availableMonths.map((month) => (
+                          <option key={month} value={month}>
+                            {new Date(month + "-01").toLocaleDateString(undefined, {
+                              year: "numeric",
+                              month: "long",
+                            })}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-200 mb-2">
+                        Sort by Date
+                      </label>
+                      <select
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
+                        className="w-full px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="desc">Newest First</option>
+                        <option value="asc">Oldest First</option>
+                      </select>
+                    </div>
+                  </div>
+                </Card>
+
+                {filteredAndSortedApplications.length === 0 ? (
+                  <Card>
+                    <p className="text-slate-400 text-center py-8">
+                      No applications match your filters.
+                    </p>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    {filteredAndSortedApplications.map((app) => (
                   <Card key={app.id}>
                     <div className="space-y-3">
                       <div className="flex items-start justify-between">
@@ -526,6 +639,15 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
+                      {/* Job Description Preview */}
+                      {app.job_description && (
+                        <div className="mt-2 p-3 bg-slate-800 rounded-lg">
+                          <p className="text-sm text-slate-400 line-clamp-2">
+                            {app.job_description}
+                          </p>
+                        </div>
+                      )}
+
                       <div className="flex items-center gap-4 text-sm flex-wrap">
                         <span
                           className={`px-3 py-1 rounded ${app.applied
@@ -544,7 +666,13 @@ export default function DashboardPage() {
 
                         {app.created_at && (
                           <span className="text-slate-500">
-                            Added {new Date(app.created_at).toLocaleDateString()}
+                            Added {new Date(app.created_at).toLocaleString(undefined, {
+                              year: "numeric",
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
                           </span>
                         )}
                       </div>
@@ -573,11 +701,21 @@ export default function DashboardPage() {
                         >
                           Update Status
                         </button>
+
+                        <button
+                          onClick={() => handleDownloadJobPDF(app.id, app.job_title, app.company)}
+                          className="text-sm px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white"
+                          title="Download job description as PDF"
+                        >
+                          📄 Download PDF
+                        </button>
                       </div>
                     </div>
                   </Card>
                 ))}
               </div>
+                )}
+              </>
             )}
           </section>
         </main>
