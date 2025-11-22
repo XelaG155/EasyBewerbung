@@ -20,6 +20,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     last_login_at = Column(DateTime, nullable=True)
     password_changed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    privacy_policy_accepted_at = Column(DateTime, nullable=True)
 
     # OAuth fields
     oauth_provider = Column(String, nullable=True)  # "google", "email", etc.
@@ -134,11 +135,11 @@ class UserActivityLog(Base):
     __tablename__ = "user_activity_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    action = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    action = Column(String, nullable=False, index=True)
     ip_address = Column(String, nullable=True)
     metadata = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
     user = relationship("User", back_populates="activity_logs")
 

@@ -189,6 +189,7 @@ class ApiClient {
     preferredLanguage = "en",
     motherTongue = "en",
     documentationLanguage = "en",
+    privacyPolicyAccepted = false,
   ) {
     const data = await this.request<TokenResponse>("/users/register", {
       method: "POST",
@@ -199,6 +200,7 @@ class ApiClient {
         preferred_language: preferredLanguage,
         mother_tongue: motherTongue,
         documentation_language: documentationLanguage,
+        privacy_policy_accepted: privacyPolicyAccepted,
       }),
     });
 
@@ -221,6 +223,7 @@ class ApiClient {
     preferredLanguage = "en",
     motherTongue = "en",
     documentationLanguage = "en",
+    privacyPolicyAccepted = false,
   ) {
     const data = await this.request<TokenResponse>("/users/google", {
       method: "POST",
@@ -229,11 +232,16 @@ class ApiClient {
         preferred_language: preferredLanguage,
         mother_tongue: motherTongue,
         documentation_language: documentationLanguage,
+        privacy_policy_accepted: privacyPolicyAccepted,
       }),
     });
 
     this.setToken(data.access_token);
     return data;
+  }
+
+  async getPrivacyPolicy() {
+    return this.request<{ policy: string }>("/users/privacy-policy");
   }
 
   async getCurrentUser() {
