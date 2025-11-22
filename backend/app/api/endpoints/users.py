@@ -36,7 +36,7 @@ def record_activity(db: Session, user: User, action: str, request: Optional[Requ
         user_id=user.id,
         action=action,
         ip_address=ip_address,
-        metadata=metadata,
+        metadata_=metadata,
     )
     db.add(log_entry)
     db.commit()
