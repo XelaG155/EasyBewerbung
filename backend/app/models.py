@@ -57,6 +57,7 @@ class JobOffer(Base):
     title = Column(String, nullable=True)
     company = Column(String, nullable=True)
     description = Column(Text, nullable=True)
+    original_pdf_path = Column(String, nullable=True)  # Path to original job listing PDF
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     owner = relationship("User", back_populates="job_offers")

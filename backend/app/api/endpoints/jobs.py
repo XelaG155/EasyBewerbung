@@ -1,13 +1,17 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, HttpUrl
 from sqlalchemy.orm import Session
 import requests
 from urllib.parse import urlparse
 import ipaddress
 import re
+import os
+import uuid
 from app.limiter import limiter
 from bs4 import BeautifulSoup
 from typing import Optional
+from weasyprint import HTML
 
 from app.database import get_db
 from app.models import JobOffer, User
@@ -113,6 +117,32 @@ def sanitize_html_text(text: str) -> str:
     return text.strip()
 
 
+def save_original_pdf(html_content: str, user_id: int, job_title: str = None) -> str:
+    """
+    Save the original HTML content as a PDF file.
+    Returns the file path where the PDF is saved.
+    """
+    # Create directory for job listing PDFs
+    pdf_dir = os.path.join("uploads", str(user_id), "job_listings")
+    os.makedirs(pdf_dir, exist_ok=True)
+
+    # Generate unique filename
+    timestamp = uuid.uuid4().hex[:8]
+    safe_title = re.sub(r'[^\w\s-]', '', job_title or 'job_listing')[:30]
+    safe_title = re.sub(r'[-\s]+', '_', safe_title)
+    filename = f"{safe_title}_{timestamp}.pdf"
+    filepath = os.path.join(pdf_dir, filename)
+
+    try:
+        # Convert HTML to PDF using weasyprint
+        HTML(string=html_content).write_pdf(filepath)
+        return filepath
+    except Exception as e:
+        # If PDF conversion fails, log error but don't fail the entire job analysis
+        print(f"Warning: Failed to save original PDF: {str(e)}")
+        return None
+
+
 def scrape_job_offer(url: str) -> dict:
     """
     Scrape basic job information from a URL.
@@ -195,6 +225,7 @@ def scrape_job_offer(url: str) -> dict:
             "title": title,
             "company": company,
             "description": description[:MAX_DESCRIPTION_LENGTH] if description else None,
+            "html_content": response.text,  # Include original HTML for PDF generation
         }
 
     except requests.Timeout:
@@ -231,6 +262,16 @@ async def analyze_job_offer(
     # Scrape job information
     scraped_data = scrape_job_offer(url)
 
+    # Save original HTML as PDF
+    html_content = scraped_data.get("html_content")
+    original_pdf_path = None
+    if html_content:
+        original_pdf_path = save_original_pdf(
+            html_content,
+            current_user.id,
+            scraped_data.get("title")
+        )
+
     # Save to database
     job_offer = JobOffer(
         user_id=current_user.id,
@@ -238,6 +279,7 @@ async def analyze_job_offer(
         title=scraped_data.get("title"),
         company=scraped_data.get("company"),
         description=scraped_data.get("description"),
+        original_pdf_path=original_pdf_path,
     )
 
     db.add(job_offer)
@@ -251,4 +293,46 @@ async def analyze_job_offer(
         requirements=None,  # TODO: Extract requirements from description
         url=job_offer.url,
         saved_id=job_offer.id,
+    )
+
+
+@router.get("/{job_offer_id}/original-pdf")
+async def download_original_pdf(
+    job_offer_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Download the original job listing PDF for a specific job offer.
+    """
+    # Get the job offer
+    job_offer = db.query(JobOffer).filter(
+        JobOffer.id == job_offer_id,
+        JobOffer.user_id == current_user.id
+    ).first()
+
+    if not job_offer:
+        raise HTTPException(status_code=404, detail="Job offer not found")
+
+    if not job_offer.original_pdf_path:
+        raise HTTPException(
+            status_code=404,
+            detail="Original PDF not available for this job offer"
+        )
+
+    if not os.path.exists(job_offer.original_pdf_path):
+        raise HTTPException(
+            status_code=404,
+            detail="PDF file not found on server"
+        )
+
+    # Generate filename
+    safe_title = re.sub(r'[^\w\s-]', '', job_offer.title or 'job_listing')[:30]
+    safe_title = re.sub(r'[-\s]+', '_', safe_title)
+    filename = f"{safe_title}_original.pdf"
+
+    return FileResponse(
+        path=job_offer.original_pdf_path,
+        media_type="application/pdf",
+        filename=filename
     )

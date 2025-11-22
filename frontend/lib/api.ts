@@ -463,6 +463,24 @@ class ApiClient {
 
     return response.blob();
   }
+
+  async downloadOriginalJobPDF(jobOfferId: number) {
+    const headers: HeadersInit = {};
+    if (this.token) {
+      headers["Authorization"] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(`${this.baseUrl}/jobs/${jobOfferId}/original-pdf`, {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to download original job PDF");
+    }
+
+    return response.blob();
+  }
 }
 
 export const api = new ApiClient(API_BASE_URL);
