@@ -3,7 +3,7 @@ from typing import Optional
 import os
 from dotenv import load_dotenv
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -14,7 +14,6 @@ from app.models import User
 load_dotenv()
 
 # Security configuration
-# Security configuration
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 if SECRET_KEY == "your-secret-key-change-this-in-production":
     if os.getenv("ENVIRONMENT") == "production":
@@ -24,22 +23,25 @@ if SECRET_KEY == "your-secret-key-change-this-in-production":
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer(auto_error=False)  # Don't auto-raise errors for optional auth
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against a hash. Truncate to 72 bytes for bcrypt compatibility."""
-    # bcrypt has a maximum password length of 72 bytes
-    password_bytes = plain_password.encode('utf-8')[:72]
-    return pwd_context.verify(password_bytes.decode('utf-8', errors='ignore'), hashed_password)
+    """Verify a password against a hash using bcrypt directly."""
+    try:
+        # bcrypt handles encoding internally
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception as e:
+        print(f"Password verification error: {e}")
+        return False
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password. Truncate to 72 bytes for bcrypt compatibility."""
-    # bcrypt has a maximum password length of 72 bytes
-    password_bytes = password.encode('utf-8')[:72]
-    return pwd_context.hash(password_bytes.decode('utf-8', errors='ignore'))
+    """Hash a password using bcrypt directly."""
+    # bcrypt.hashpw automatically handles the 72 byte limit
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
