@@ -23,6 +23,7 @@ from app.auth import (
     get_current_user,
 )
 from app.limiter import limiter
+from app.privacy_policy import PRIVACY_POLICY_TEXT
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,7 @@ class UserRegister(BaseModel):
     preferred_language: str = DEFAULT_LANGUAGE
     mother_tongue: str = DEFAULT_LANGUAGE
     documentation_language: str = DEFAULT_LANGUAGE
+    privacy_policy_accepted: bool = False
 
     @field_validator("preferred_language", "mother_tongue", "documentation_language", mode="before")
     @classmethod
@@ -136,6 +138,7 @@ class GoogleLoginRequest(BaseModel):
     preferred_language: str = DEFAULT_LANGUAGE
     mother_tongue: str = DEFAULT_LANGUAGE
     documentation_language: str = DEFAULT_LANGUAGE
+    privacy_policy_accepted: bool = False
 
     @field_validator("preferred_language", "mother_tongue", "documentation_language", mode="before")
     @classmethod
@@ -193,6 +196,11 @@ async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db
 
         # If still no user, create new one
         if not user:
+            if not request.privacy_policy_accepted:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="You must accept the privacy policy to register",
+                )
             user = User(
                 email=email,
                 google_id=google_user_id,
@@ -203,6 +211,7 @@ async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db
                 mother_tongue=request.mother_tongue,
                 documentation_language=request.documentation_language,
                 hashed_password=None,  # OAuth users don't have passwords
+                privacy_policy_accepted_at=datetime.now(timezone.utc) if request.privacy_policy_accepted else None,
             )
             db.add(user)
             db.commit()
@@ -247,6 +256,12 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
             detail="Email already registered",
         )
 
+    if not user_data.privacy_policy_accepted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You must accept the privacy policy to register",
+        )
+
     # Create new user
     hashed_password = get_password_hash(user_data.password)
     new_user = User(
@@ -258,6 +273,7 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
         documentation_language=user_data.documentation_language,
         oauth_provider="email",  # Mark as email/password user
         password_changed_at=datetime.now(timezone.utc),
+        privacy_policy_accepted_at=datetime.now(timezone.utc) if user_data.privacy_policy_accepted else None,
     )
 
     db.add(new_user)
@@ -362,6 +378,12 @@ async def update_user(
 async def list_supported_languages():
     """Expose the platform language list for UI and generation toggles."""
     return LANGUAGE_OPTIONS_RESPONSE
+
+
+@router.get("/privacy-policy")
+async def get_privacy_policy():
+    """Return the privacy policy text."""
+    return {"policy": PRIVACY_POLICY_TEXT}
 
 
 @router.post("/admin/credits", response_model=UserResponse)

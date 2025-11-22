@@ -21,11 +21,19 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Constants
+MAX_SEARCH_RESULTS = 50
+MAX_ACTIVITY_LOGS = 50
+
 
 def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
     if not getattr(current_user, "is_admin", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required"
+        )
+    if not getattr(current_user, "is_active", True):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Account is locked"
         )
     return current_user
 
@@ -94,6 +102,14 @@ class PromptUpdateRequest(BaseModel):
     content: Optional[str] = None
 
 
+class ToggleActiveRequest(BaseModel):
+    is_active: bool
+
+
+class ToggleAdminRequest(BaseModel):
+    is_admin: bool
+
+
 DEFAULT_PROMPTS = [
     ("cover_letter", "Cover Letter", "Default cover letter prompt"),
     ("cv", "CV", "Default CV prompt"),
@@ -142,12 +158,22 @@ async def update_languages(
 ):
     ensure_language_settings(db)
     code_to_setting = {ls.code: ls for ls in db.query(LanguageSetting).all()}
+    invalid_codes = []
     for item in payload:
         setting = code_to_setting.get(item.code)
         if not setting:
+            invalid_codes.append(item.code)
             continue
         setting.is_active = item.is_active
         setting.sort_order = item.sort_order
+
+    if invalid_codes:
+        logger.warning(f"Invalid language codes in update request: {invalid_codes}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid language codes: {', '.join(invalid_codes)}"
+        )
+
     db.commit()
     languages = db.query(LanguageSetting).order_by(LanguageSetting.sort_order).all()
     return languages
@@ -163,7 +189,7 @@ async def search_users(
     if query:
         like_query = f"%{query}%"
         q = q.filter((User.email.ilike(like_query)) | (User.full_name.ilike(like_query)))
-    users = q.order_by(User.created_at.desc()).limit(50).all()
+    users = q.order_by(User.created_at.desc()).limit(MAX_SEARCH_RESULTS).all()
     return [
         AdminUserSummary(
             id=user.id,
@@ -191,7 +217,7 @@ async def get_user_detail(
         db.query(UserActivityLog)
         .filter(UserActivityLog.user_id == user.id)
         .order_by(UserActivityLog.created_at.desc())
-        .limit(50)
+        .limit(MAX_ACTIVITY_LOGS)
         .all()
     )
     return UserDetailResponse(
@@ -229,17 +255,19 @@ async def adjust_credits(
 @router.post("/admin/users/{user_id}/active", response_model=UserDetailResponse)
 async def toggle_active(
     user_id: int,
-    payload: dict,
+    payload: ToggleActiveRequest,
     db: Session = Depends(get_db),
     admin: User = Depends(get_admin_user),
 ):
+    if user_id == admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot modify your own active status"
+        )
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    desired = payload.get("is_active")
-    if desired is None:
-        raise HTTPException(status_code=400, detail="is_active is required")
-    user.is_active = bool(desired)
+    user.is_active = payload.is_active
     db.commit()
     record_activity(db, user, "unlock" if user.is_active else "lock")
     return await get_user_detail(user_id, db, admin)
@@ -248,17 +276,19 @@ async def toggle_active(
 @router.post("/admin/users/{user_id}/admin", response_model=UserDetailResponse)
 async def toggle_admin(
     user_id: int,
-    payload: dict,
+    payload: ToggleAdminRequest,
     db: Session = Depends(get_db),
     admin: User = Depends(get_admin_user),
 ):
+    if user_id == admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot modify your own admin status"
+        )
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    desired = payload.get("is_admin")
-    if desired is None:
-        raise HTTPException(status_code=400, detail="is_admin is required")
-    user.is_admin = bool(desired)
+    user.is_admin = payload.is_admin
     db.commit()
     record_activity(db, user, "grant_admin" if user.is_admin else "revoke_admin")
     return await get_user_detail(user_id, db, admin)
