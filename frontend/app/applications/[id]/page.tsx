@@ -169,6 +169,11 @@ export default function ApplicationDetailPage() {
           <Card>
             <h1 className="text-3xl font-bold mb-4">{application.job_title}</h1>
             <p className="text-xl text-slate-300 mb-4">{application.company}</p>
+            {application.is_spontaneous && (
+              <span className="inline-block mb-3 px-3 py-1 rounded bg-amber-900/50 text-amber-200 border border-amber-700 text-sm">
+                Spontaneous outreach (no posting)
+              </span>
+            )}
             {application.job_offer_url && (
               <a
                 href={application.job_offer_url}
@@ -178,6 +183,14 @@ export default function ApplicationDetailPage() {
               >
                 View Job Posting →
               </a>
+            )}
+            {(application.job_description || application.opportunity_context) && (
+              <div className="mt-4 p-4 rounded-lg bg-slate-800 border border-slate-700">
+                <h3 className="font-semibold text-slate-200 mb-2">Context</h3>
+                <p className="text-slate-300 whitespace-pre-wrap text-sm leading-relaxed">
+                  {application.job_description || application.opportunity_context}
+                </p>
+              </div>
             )}
             <div className="mt-4 flex items-center gap-4">
               <span
