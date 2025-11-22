@@ -65,8 +65,33 @@ def scrape_job_offer(url: str) -> dict:
 
         # Extract description (all paragraph text)
         description = ""
-        paragraphs = soup.find_all("p")
-        description = "\n".join([p.get_text(separator=" ", strip=True) for p in paragraphs[:10]])  # First 10 paragraphs
+
+        # Remove script and style elements before extracting text
+        for script in soup(["script", "style", "nav", "header", "footer", "aside"]):
+            script.decompose()
+
+        # Find the main content area (job description is often in main, article, or specific div)
+        main_content = soup.find("main") or soup.find("article") or soup.find("div", class_=lambda x: x and any(
+            keyword in str(x).lower() for keyword in ["job-description", "job_description", "description", "content"]
+        ))
+
+        # Get paragraphs from main content if found, otherwise from whole page
+        if main_content:
+            paragraphs = main_content.find_all("p")
+        else:
+            paragraphs = soup.find_all("p")
+
+        # Extract text from paragraphs, filtering out very short ones (likely UI elements)
+        paragraph_texts = []
+        for p in paragraphs[:15]:  # Check first 15 paragraphs
+            text = p.get_text(separator=" ", strip=True)
+            # Filter out short UI texts and button-like content
+            if len(text) > 30 and not any(keyword in text.lower() for keyword in ["hire now", "apply now", "salary estimator", "cookies", "privacy policy"]):
+                paragraph_texts.append(text)
+            if len(paragraph_texts) >= 10:  # Stop after finding 10 good paragraphs
+                break
+
+        description = "\n\n".join(paragraph_texts)
 
         return {
             "title": title,
