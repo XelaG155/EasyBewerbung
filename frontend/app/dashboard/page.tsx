@@ -643,7 +643,7 @@ export default function DashboardPage() {
                       {app.job_description && (
                         <div className="mt-2 p-3 bg-slate-800 rounded-lg">
                           <p className="text-sm text-slate-400 line-clamp-5 whitespace-pre-wrap">
-                            {app.job_description.split(/\n/).slice(0, 5).join('\n').trim()}
+                            {app.job_description?.split(/\n/).slice(0, 5).join('\n').trim() || 'No description available'}
                           </p>
                         </div>
                       )}
@@ -710,7 +710,7 @@ export default function DashboardPage() {
                             className="text-sm px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white inline-block"
                             title="View original job posting"
                           >
-                            📄 Download PDF
+                            🔗 View Original Posting
                           </a>
                         )}
                       </div>
