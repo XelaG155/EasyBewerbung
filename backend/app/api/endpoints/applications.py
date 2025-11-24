@@ -2,7 +2,10 @@ from datetime import datetime, timezone
 from typing import List, Optional
 import os
 import json
+import re
+import logging
 from io import BytesIO
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.responses import StreamingResponse
@@ -775,7 +778,8 @@ Format your response as valid JSON only, no additional text."""
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to calculate matching score: {str(e)}")
+        logging.error(f"Matching score calculation error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to calculate matching score. Please try again.")
 
 
 @router.post("/{application_id}/generate")
@@ -1003,12 +1007,21 @@ async def download_job_description_pdf(
 
     # Prepare response
     buffer.seek(0)
-    filename = f"job_{application.company}_{application.job_title}.pdf".replace(" ", "_").replace("/", "-")
+    # Sanitize filename to prevent header injection
+    safe_company = re.sub(r'[^\w\s-]', '', application.company or 'company')[:30]
+    safe_title = re.sub(r'[^\w\s-]', '', application.job_title or 'job')[:30]
+    safe_company = re.sub(r'[-\s]+', '_', safe_company)
+    safe_title = re.sub(r'[-\s]+', '_', safe_title)
+    filename = f"job_{safe_company}_{safe_title}.pdf"
+    # Use RFC 5987 encoding for the filename
+    encoded_filename = quote(filename, safe='')
 
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={
+            "Content-Disposition": f"attachment; filename=\"{filename}\"; filename*=UTF-8''{encoded_filename}"
+        }
     )
 
 
