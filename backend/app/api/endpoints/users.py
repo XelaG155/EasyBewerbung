@@ -147,7 +147,8 @@ class GoogleLoginRequest(BaseModel):
 
 
 @router.post("/google", response_model=TokenResponse)
-async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def google_login(http_request: Request, request: GoogleLoginRequest, db: Session = Depends(get_db)):
     """Login or register with Google OAuth."""
     try:
         # Get Google Client ID from environment
@@ -246,7 +247,8 @@ async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserRegister, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+async def register(request: Request, user_data: UserRegister, db: Session = Depends(get_db)):
     """Register a new user."""
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
@@ -287,7 +289,8 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(user_data: UserLogin, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def login(request: Request, user_data: UserLogin, db: Session = Depends(get_db)):
     """Login an existing user."""
     # Find user by email
     user = db.query(User).filter(User.email == user_data.email).first()
