@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 import os
+import secrets
+import logging
 from dotenv import load_dotenv
 from jose import JWTError, jwt
 import bcrypt
@@ -10,15 +12,24 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
 
+logger = logging.getLogger(__name__)
+
 # Load environment variables
 load_dotenv()
 
 # Security configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
-if SECRET_KEY == "your-secret-key-change-this-in-production":
+_default_secret = "your-secret-key-change-this-in-production"
+SECRET_KEY = os.getenv("SECRET_KEY", _default_secret)
+
+if SECRET_KEY == _default_secret:
     if os.getenv("ENVIRONMENT") == "production":
-        raise ValueError("SECRET_KEY must be set in production!")
-    print("⚠️  WARNING: Using default SECRET_KEY. Set SECRET_KEY in .env file!")
+        raise ValueError("SECRET_KEY must be set in production! Generate with: openssl rand -hex 32")
+    # Generate a random key for development to prevent using known default
+    SECRET_KEY = secrets.token_hex(32)
+    logger.warning(
+        "⚠️  SECRET_KEY not configured - generated ephemeral key. "
+        "Sessions will not persist across restarts. Set SECRET_KEY in .env file!"
+    )
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
@@ -59,12 +70,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 def decode_token(token: str) -> dict:
     """Decode and verify a JWT token."""
     try:
-        print(f"🔓 Attempting to decode token: {token[:20]}...")
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        print(f"✅ Token decoded successfully, user_id: {payload.get('sub')}")
         return payload
-    except JWTError as e:
-        print(f"❌ Token decode failed: {str(e)}")
+    except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -78,7 +86,6 @@ def get_current_user(
 ) -> User:
     """Get the current authenticated user from the JWT token."""
     if credentials is None:
-        print("⚠️  No credentials provided in request")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
@@ -86,7 +93,6 @@ def get_current_user(
         )
 
     token = credentials.credentials
-    print(f"🎫 Received credentials, token: {token[:20]}...")
     payload = decode_token(token)
 
     user_id_str: str = payload.get("sub")

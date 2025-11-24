@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 import requests
 from urllib.parse import urlparse
 import ipaddress
+import socket
 import re
 import os
 import uuid
@@ -79,25 +80,38 @@ def validate_url_safety(url: str) -> None:
         raise HTTPException(400, "Invalid URL: no hostname")
 
     # Block localhost and common localhost aliases
-    blocked_hosts = ['localhost', '127.0.0.1', '0.0.0.0', '[::1]']
+    blocked_hosts = ['localhost', '127.0.0.1', '0.0.0.0', '[::1]', '::1']
     if parsed.hostname.lower() in blocked_hosts:
         raise HTTPException(400, "Local URLs are not allowed")
 
-    # Resolve hostname to IP and check against private ranges
+    # Check for IP address format first
     try:
-        # Basic IP validation - check if hostname looks like an IP
-        if parsed.hostname.replace('.', '').replace(':', '').replace('[', '').replace(']', '').replace('a', '').replace('b', '').replace('c', '').replace('d', '').replace('e', '').replace('f', '').isalnum():
-            # Might be an IP address
+        ip = ipaddress.ip_address(parsed.hostname.strip('[]'))
+        for private_range in PRIVATE_IP_RANGES:
+            if ip in private_range:
+                raise HTTPException(400, "Private IP addresses are not allowed")
+    except ValueError:
+        # Not an IP address, it's a hostname - resolve it to check
+        pass
+
+    # Resolve hostname to IP and verify it doesn't point to private ranges
+    # This prevents DNS rebinding attacks
+    try:
+        resolved_ips = socket.getaddrinfo(parsed.hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        for family, socktype, proto, canonname, sockaddr in resolved_ips:
+            ip_str = sockaddr[0]
             try:
-                ip = ipaddress.ip_address(parsed.hostname.strip('[]'))
+                ip = ipaddress.ip_address(ip_str)
                 for private_range in PRIVATE_IP_RANGES:
                     if ip in private_range:
-                        raise HTTPException(400, "Private IP addresses are not allowed")
+                        raise HTTPException(400, "URL resolves to a private IP address")
             except ValueError:
-                # Not a valid IP, continue with domain validation
-                pass
+                continue
+    except socket.gaierror:
+        raise HTTPException(400, "Could not resolve hostname")
+    except HTTPException:
+        raise
     except Exception:
-        # If validation fails, reject to be safe
         raise HTTPException(400, "Invalid URL format")
 
 
@@ -233,15 +247,15 @@ def scrape_job_offer(url: str) -> dict:
             status_code=400,
             detail="Request timed out while fetching job offer",
         )
-    except requests.RequestException as e:
+    except requests.RequestException:
         raise HTTPException(
             status_code=400,
-            detail=f"Could not fetch job offer: {str(e)}",
+            detail="Could not fetch job offer. Please check the URL and try again.",
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=500,
-            detail=f"Error analyzing job offer: {str(e)}",
+            detail="Error analyzing job offer. Please try again later.",
         )
 
 
