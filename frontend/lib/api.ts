@@ -130,14 +130,11 @@ class ApiClient {
 
   setToken(token: string | null) {
     this.token = token;
-    console.log("💾 Setting token:", token ? `${token.substring(0, 20)}...` : "null");
     if (typeof window !== "undefined") {
       if (token) {
         localStorage.setItem("access_token", token);
-        console.log("✅ Token saved to localStorage");
       } else {
         localStorage.removeItem("access_token");
-        console.log("🗑️ Token removed from localStorage");
       }
     }
   }
@@ -158,14 +155,10 @@ class ApiClient {
     // Always try to get the latest token from localStorage if not in memory
     if (!this.token && typeof window !== "undefined") {
       this.token = localStorage.getItem("access_token");
-      console.log("🔑 Loaded token from localStorage:", this.token ? `${this.token.substring(0, 20)}...` : "null");
     }
 
     if (this.token) {
       headers["Authorization"] = `Bearer ${this.token}`;
-      console.log(`🚀 Making ${options.method || "GET"} request to ${endpoint} with token`);
-    } else {
-      console.log(`🚀 Making ${options.method || "GET"} request to ${endpoint} WITHOUT token`);
     }
 
     const response = await fetch(`${this.baseUrl}${endpoint}`, {

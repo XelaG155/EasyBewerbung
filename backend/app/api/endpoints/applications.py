@@ -728,7 +728,6 @@ Format your response as valid JSON only, no additional text."""
         )
 
         content = response.choices[0].message.content
-        print(f"📝 OpenAI response: {content[:200]}...")
 
         # Try to parse JSON, handle cases where OpenAI adds markdown formatting
         if content.startswith("```json"):
