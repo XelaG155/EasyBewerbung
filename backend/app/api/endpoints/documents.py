@@ -100,7 +100,8 @@ async def upload_document(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Could not save file: {e}")
+        logger.error(f"File save error: {e}")
+        raise HTTPException(status_code=500, detail="Could not save file. Please try again.")
 
     # Extract text if PDF
     content_text = None

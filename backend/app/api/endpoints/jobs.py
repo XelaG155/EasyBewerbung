@@ -247,15 +247,15 @@ def scrape_job_offer(url: str) -> dict:
             status_code=400,
             detail="Request timed out while fetching job offer",
         )
-    except requests.RequestException as e:
+    except requests.RequestException:
         raise HTTPException(
             status_code=400,
-            detail=f"Could not fetch job offer: {str(e)}",
+            detail="Could not fetch job offer. Please check the URL and try again.",
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=500,
-            detail=f"Error analyzing job offer: {str(e)}",
+            detail="Error analyzing job offer. Please try again later.",
         )
 
 
