@@ -1,4 +1,5 @@
 import logging
+import secrets
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, EmailStr, Field, validator, field_validator
@@ -147,7 +148,8 @@ class GoogleLoginRequest(BaseModel):
 
 
 @router.post("/google", response_model=TokenResponse)
-async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def google_login(http_request: Request, request: GoogleLoginRequest, db: Session = Depends(get_db)):
     """Login or register with Google OAuth."""
     try:
         # Get Google Client ID from environment
@@ -228,17 +230,16 @@ async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db
 
         return TokenResponse(access_token=access_token, token_type="bearer", user=serialize_user(user))
 
-    except ValueError as e:
+    except ValueError:
         # Invalid token
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid Google token: {str(e)}",
+            detail="Invalid Google token",
         )
     except HTTPException:
         raise
     except Exception as e:
-        # In a real app, log this error
-        print(f"Google auth error: {e}")
+        logger.error(f"Google auth error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Google authentication failed",
@@ -246,7 +247,8 @@ async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserRegister, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+async def register(request: Request, user_data: UserRegister, db: Session = Depends(get_db)):
     """Register a new user."""
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
@@ -287,7 +289,8 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(user_data: UserLogin, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def login(request: Request, user_data: UserLogin, db: Session = Depends(get_db)):
     """Login an existing user."""
     # Find user by email
     user = db.query(User).filter(User.email == user_data.email).first()
@@ -395,16 +398,19 @@ async def grant_credits(
 ):
     """
     Admin-only endpoint to add credits. Protects with a static token header.
+    Uses constant-time comparison to prevent timing attacks.
     """
-    admin_token_header = request.headers.get("X-Admin-Token")
-    admin_token_env = os.getenv("ADMIN_TOKEN")
+    admin_token_header = request.headers.get("X-Admin-Token") or ""
+    admin_token_env = os.getenv("ADMIN_TOKEN") or ""
     client_ip = request.client.host if request.client else "unknown"
     timestamp = datetime.now(timezone.utc).isoformat()
-    if not admin_token_env or admin_token_header != admin_token_env:
+
+    # Use constant-time comparison to prevent timing attacks
+    if not admin_token_env or not secrets.compare_digest(admin_token_header, admin_token_env):
         logger.warning(
             "Admin credit grant denied", extra={"ip": client_ip, "timestamp": timestamp, "user_id": payload.user_id}
         )
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Admin token invalid")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
     user = db.query(User).filter(User.id == payload.user_id).first()
     if not user:
