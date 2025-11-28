@@ -9,6 +9,7 @@ import { Input } from "@/components/Input";
 import { Card } from "@/components/Card";
 import { useAuth } from "@/lib/auth-context";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
+import { useTranslation } from "@/lib/i18n-context";
 
 declare global {
   interface Window {
@@ -22,6 +23,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const { t } = useTranslation();
   const { login, googleLogin } = useAuth();
   const router = useRouter();
 
@@ -80,13 +82,13 @@ export default function LoginPage() {
               <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
                 EB
               </div>
-              <span className="text-2xl font-bold">EasyBewerbung</span>
+              <span className="text-2xl font-bold">{t("common.appName")}</span>
             </Link>
           </div>
 
           {/* Login Form */}
           <Card>
-            <h1 className="text-2xl font-bold text-center mb-6">Welcome Back</h1>
+            <h1 className="text-2xl font-bold text-center mb-6">{t("auth.welcomeBack")}</h1>
 
             {error && (
               <div className="mb-4 p-3 rounded-lg bg-red-900/20 border border-red-700 text-red-400 text-sm">
@@ -107,23 +109,24 @@ export default function LoginPage() {
                 <div className="w-full border-t border-slate-700"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-slate-800 text-slate-400">Or continue with email</span>
+                <span className="px-2 bg-slate-800 text-slate-400">{t("auth.orContinueWith")}</span>
               </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
                 type="email"
-                label="Email"
+                label={t("auth.email")}
                 value={email}
                 onChange={setEmail}
                 placeholder="your@email.com"
                 required
+                autoFocus
               />
 
               <Input
                 type="password"
-                label="Password"
+                label={t("auth.password")}
                 value={password}
                 onChange={setPassword}
                 placeholder="Enter your password"
@@ -136,17 +139,17 @@ export default function LoginPage() {
                 className="w-full"
                 disabled={loading}
               >
-                {loading ? "Logging in..." : "Log In"}
+                {loading ? t("auth.loggingIn") : t("auth.loginButton")}
               </Button>
             </form>
 
             <p className="text-center text-sm text-slate-400 mt-6">
-              Don't have an account?{" "}
+              {t("auth.dontHaveAccount")}{" "}
               <Link
                 href="/register"
                 className="text-indigo-400 hover:text-indigo-300"
               >
-                Sign up
+                {t("auth.signUp")}
               </Link>
             </p>
           </Card>
