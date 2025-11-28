@@ -56,7 +56,16 @@
     "loggingIn": "Влизане...",
     "creatingAccount": "Създаване на акаунт...",
     "welcomeBack": "Добре дошли отново",
-    "loginSubtitle": "Влезте, за да управлявате вашите кандидатури"
+    "loginSubtitle": "Влезте, за да управлявате вашите кандидатури",
+    "privacyPolicyRequired": "You must accept the privacy policy to register",
+    "googleSignupFailed": "Google sign-up failed",
+    "googleInitFailed": "Google initialization failed",
+    "passwordMinLength": "Password must be at least 8 characters",
+    "registrationFailed": "Registration failed. Please try again.",
+    "acceptPrivacyPrefix": "I accept the",
+    "privacyPolicy": "Privacy Policy",
+    "acceptPrivacySuffix": "and consent to the collection of my IP address for security purposes",
+    "close": "Close"
   },
   "dashboard": {
     "uploadDocuments": "Качване на документи",
@@ -108,6 +117,7 @@
     "settingsSaved": "Настройките са запазени успешно!",
     "accountInformation": "Информация за акаунта",
     "accountCreated": "Акаунтът е създаден",
-    "cancel": "Отказ"
+    "cancel": "Отказ",
+    "saveFailed": "Failed to save settings"
   }
 }

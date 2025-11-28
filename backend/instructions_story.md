@@ -402,10 +402,143 @@ Alle Dokumente werden asynchron im Hintergrund generiert durch:
 Die Generierung folgt diesem Ablauf:
 1. Benutzer wählt Dokumente zur Generierung
 2. Background Task wird gestartet
-3. Für jeden Dokumenttyp wird ein OpenAI-Prompt erstellt
+3. Für jeden Dokumenttyp wird ein OpenAI-Prompt erstellt (JSON-basiert)
 4. Dokument wird generiert und gespeichert
 5. Eintrag in der Datenbank wird aktualisiert
 6. Benutzer kann Dokumente herunterladen
+
+---
+
+## JSON-basierte Prompt-Struktur
+
+Alle Dokumentengenerierungs-Prompts sind in einer strukturierten JSON-Datei definiert: `app/document_prompts.json`
+
+### Prompt-Anatomie
+
+Jeder Dokumenttyp hat folgende Struktur:
+
+```json
+{
+  "document_type": "string",           // Technischer Schlüssel
+  "role": "string",                    // Rolle der KI (z.B. "professional CV writer")
+  "task": "string",                    // Hauptaufgabe
+  "inputs": ["array"],                 // Benötigte Input-Variablen
+  "instructions": ["array"],           // Schritt-für-Schritt Anweisungen
+  "output_format": "string",           // Erwartetes Ausgabeformat
+  "length_guideline": "string",        // Längenvorgabe
+  "prompt_template": "string"          // Vollständiger Prompt-Template
+}
+```
+
+### Spracheinstellungen in Prompts
+
+Die Prompts respektieren automatisch die gewünschte Output-Sprache:
+- Für **alle Dokumente außer Company Intelligence Briefing**: `documentation_language`
+- Für **Company Intelligence Briefing**: `company_profile_language`
+
+Die Sprachanweisung wird dynamisch in den Prompt eingefügt:
+```
+Language: {language}
+```
+
+**Beispiel:** Wenn `documentation_language = "Tigrinya"`, dann enthält der generierte Prompt:
+```
+Language: Tigrinya
+```
+
+Die KI generiert dann das Dokument vollständig in Tigrinya.
+
+### Prompt-Template Variablen
+
+Verfügbare Variablen in allen Templates:
+- `{role}` - Die Rolle der KI
+- `{task}` - Die Hauptaufgabe
+- `{job_description}` - Stellenbeschreibung
+- `{cv_text}` - Vollständiger CV-Text
+- `{cv_summary}` - Kurzfassung des CVs (erste 500 Zeichen)
+- `{language}` - Zielsprache für Dokumentengenerierung
+- `{company_profile_language}` - Sprache für Unternehmensprofil
+- `{instructions}` - Formatierte Liste aller Anweisungen
+
+### Beispiel: Motivational Letter Prompt
+
+```json
+{
+  "document_type": "motivational_letter_pdf",
+  "role": "professional career counselor",
+  "task": "Write a motivational letter for this job application",
+  "inputs": ["job_description", "cv_text", "language"],
+  "instructions": [
+    "Output ONLY the motivational letter content",
+    "Start directly with the letter",
+    "Use facts from the candidate's CV only",
+    "Write a formal, compelling letter",
+    "Include proper letter formatting",
+    "Keep it concise (typically 1 page)"
+  ],
+  "output_format": "Direct letter content with proper formatting",
+  "length_guideline": "1 page",
+  "prompt_template": "You are a {role}. {task}.\n\nJob Details:\n{job_description}\n\nCandidate CV:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the motivational letter now:"
+}
+```
+
+**Generierter Prompt (Beispiel für Tigrinya):**
+```
+You are a professional career counselor. Write a motivational letter for this job application.
+
+Job Details:
+[Stellenbeschreibung hier]
+
+Candidate CV:
+[CV-Text hier]
+
+Language: Tigrinya
+
+IMPORTANT INSTRUCTIONS:
+1. Output ONLY the motivational letter content
+2. Start directly with the letter
+3. Use facts from the candidate's CV only
+4. Write a formal, compelling letter
+5. Include proper letter formatting
+6. Keep it concise (typically 1 page)
+
+Begin the motivational letter now:
+```
+
+Die KI erhält diesen Prompt und generiert dann das Motivationsschreiben **vollständig in Tigrinya**.
+
+### Mehrsprachigkeit: Funktionsweise
+
+**Aktueller Ansatz:**
+- Prompt-Sprache: **Englisch** (fix)
+- Output-Sprache: **Variabel** (basierend auf Benutzerauswahl)
+- Die KI versteht die englischen Anweisungen und generiert Output in der angegebenen Sprache
+
+**Beispiel-Workflow:**
+1. Benutzer wählt: `documentation_language = "Deutsch"`
+2. System erstellt Prompt mit: `Language: Deutsch`
+3. KI erhält englische Anweisungen + Sprachanweisung "Deutsch"
+4. KI generiert: **Deutsches** Motivationsschreiben
+
+**Unterstützte Sprachen:**
+Alle 46 aktiven Sprachen in der Datenbank werden unterstützt. Die KI (OpenAI GPT-4) beherrscht alle diese Sprachen nativ.
+
+### Prompt-Verwaltung
+
+**Datei-Location:**
+```
+backend/app/document_prompts.json
+```
+
+**Änderungen vornehmen:**
+1. JSON-Datei editieren
+2. Backend neu starten (PM2 restart)
+3. Änderungen sind sofort aktiv
+
+**Neue Dokumenttypen hinzufügen:**
+1. Eintrag in `document_prompts.json` erstellen
+2. Dokumenttyp in `document_catalog.py` registrieren
+3. Backend neu starten
 
 ---
 

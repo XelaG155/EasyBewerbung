@@ -56,7 +56,16 @@
     "loggingIn": "Přihlašování...",
     "creatingAccount": "Vytváření účtu...",
     "welcomeBack": "Vítejte zpět",
-    "loginSubtitle": "Přihlaste se ke správě svých žádostí"
+    "loginSubtitle": "Přihlaste se ke správě svých žádostí",
+    "privacyPolicyRequired": "You must accept the privacy policy to register",
+    "googleSignupFailed": "Google sign-up failed",
+    "googleInitFailed": "Google initialization failed",
+    "passwordMinLength": "Password must be at least 8 characters",
+    "registrationFailed": "Registration failed. Please try again.",
+    "acceptPrivacyPrefix": "I accept the",
+    "privacyPolicy": "Privacy Policy",
+    "acceptPrivacySuffix": "and consent to the collection of my IP address for security purposes",
+    "close": "Close"
   },
   "dashboard": {
     "uploadDocuments": "Nahrát dokumenty",
@@ -108,6 +117,7 @@
     "settingsSaved": "Nastavení úspěšně uloženo!",
     "accountInformation": "Informace o účtu",
     "accountCreated": "Účet vytvořen",
-    "cancel": "Zrušit"
+    "cancel": "Zrušit",
+    "saveFailed": "Failed to save settings"
   }
 }

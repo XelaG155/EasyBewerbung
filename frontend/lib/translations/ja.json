@@ -56,7 +56,16 @@
     "loggingIn": "ログイン中...",
     "creatingAccount": "アカウント作成中...",
     "welcomeBack": "おかえりなさい",
-    "loginSubtitle": "ログインして応募を管理"
+    "loginSubtitle": "ログインして応募を管理",
+    "privacyPolicyRequired": "You must accept the privacy policy to register",
+    "googleSignupFailed": "Google sign-up failed",
+    "googleInitFailed": "Google initialization failed",
+    "passwordMinLength": "Password must be at least 8 characters",
+    "registrationFailed": "Registration failed. Please try again.",
+    "acceptPrivacyPrefix": "I accept the",
+    "privacyPolicy": "Privacy Policy",
+    "acceptPrivacySuffix": "and consent to the collection of my IP address for security purposes",
+    "close": "Close"
   },
   "dashboard": {
     "uploadDocuments": "書類をアップロード",
@@ -108,6 +117,7 @@
     "settingsSaved": "設定が正常に保存されました！",
     "accountInformation": "アカウント情報",
     "accountCreated": "アカウントが作成されました",
-    "cancel": "キャンセル"
+    "cancel": "キャンセル",
+    "saveFailed": "Failed to save settings"
   }
 }
