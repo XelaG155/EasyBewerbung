@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import os
 import json
 import re
@@ -26,6 +26,11 @@ from app.language_catalog import DEFAULT_LANGUAGE, normalize_language
 
 router = APIRouter()
 
+# Load JSON prompts
+PROMPTS_FILE = os.path.join(os.path.dirname(__file__), '../../document_prompts.json')
+with open(PROMPTS_FILE, 'r', encoding='utf-8') as f:
+    DOCUMENT_PROMPTS: Dict[str, Dict[str, Any]] = json.load(f)
+
 
 def get_language_instruction(lang: str) -> str:
     """Get language-specific instructions for LLM prompts."""
@@ -35,130 +40,48 @@ def get_language_instruction(lang: str) -> str:
 
 
 def generate_document_prompt(doc_type: str, job_description: str, cv_text: str, application) -> Optional[str]:
-    """Generate OpenAI prompt based on document type."""
+    """Generate OpenAI prompt based on document type using JSON prompt templates."""
+
+    # Get prompt configuration from JSON
+    prompt_config = DOCUMENT_PROMPTS.get(doc_type)
+    if not prompt_config:
+        logging.warning(f"No prompt configuration found for document type: {doc_type}")
+        return None
+
+    # Get language settings
     lang = application.documentation_language or 'English'
     lang_instruction = get_language_instruction(lang)
 
-    prompts = {
-        "COVER_LETTER": f"""Write a professional cover letter for this job application.
-Job Details: {job_description}
-Candidate CV: {cv_text}
-Language: {lang_instruction}
+    # Determine which language to use based on document type
+    if doc_type == "company_intelligence_briefing":
+        language_to_use = get_language_instruction(application.company_profile_language or lang)
+    else:
+        language_to_use = lang_instruction
 
-Create a compelling cover letter with proper greeting, body, and closing.""",
-
-        "motivational_letter_pdf": f"""You are a professional career counselor. Write a motivational letter for this job application.
-
-Job Details:
-{job_description}
-
-Candidate CV:
-{cv_text}
-
-Language: {lang_instruction}
-
-IMPORTANT INSTRUCTIONS:
-1. Output ONLY the motivational letter content - NO conversational text, NO introductions like "Here is..." or "Gerne..."
-2. Start directly with the letter (e.g., greeting and opening paragraph)
-3. Use facts from the candidate's CV - DO NOT invent experiences or qualifications
-4. Write a formal, compelling letter explaining why the candidate is motivated and qualified for this role
-5. Include proper letter formatting (greeting, body paragraphs, closing)
-6. Keep it concise (typically 1 page)
-
-Begin the motivational letter now:""",
-
-        "tailored_cv_pdf": f"""You are a professional CV writer. Create a tailored CV for this specific job application.
-
-Job Details:
-{job_description}
-
-Original CV:
-{cv_text}
-
-Language: {lang_instruction}
-
-IMPORTANT INSTRUCTIONS:
-1. Output ONLY the tailored CV content - NO conversational text, NO introductions like "Here is..." or "Gerne..."
-2. Start directly with the CV content (e.g., candidate name or professional profile)
-3. Preserve ALL factual information from the original CV - DO NOT invent or change facts
-4. Only include travel willingness/percentage if explicitly mentioned in the original CV - DO NOT add or infer it
-5. Emphasize experiences and skills most relevant to this specific job posting
-6. Maintain professional CV formatting with clear sections
-7. Keep the same level of detail as the original CV
-
-Begin the tailored CV now:""",
-
-        "email_formal": f"""Write a formal email to submit a job application.
-
-Job Details:
-{job_description}
-
-Language: {lang_instruction}
-
-IMPORTANT INSTRUCTIONS:
-1. Output ONLY the email content - NO conversational text, NO introductions like "Here is..."
-2. Start directly with the email greeting
-3. Write a concise, professional email (3-5 sentences) introducing the attached application documents
-4. Include: greeting, brief introduction, mention of attached documents, expression of interest, closing
-5. Keep it professional and to the point
-
-Begin the email now:""",
-
-        "email_linkedin": f"""Write a LinkedIn direct message to a recruiter for this position.
-
-Job Details:
-{job_description}
-
-CV Summary:
-{cv_text[:500]}
-
-Language: {lang_instruction}
-
-IMPORTANT INSTRUCTIONS:
-1. Output ONLY the LinkedIn message content - NO conversational text, NO meta-commentary
-2. Start directly with the message greeting
-3. Write a brief, engaging message (max 200 words)
-4. Include: greeting, brief introduction, expression of interest, call to action
-5. Keep it professional but conversational (appropriate for LinkedIn)
-
-Begin the LinkedIn message now:""",
-
-        "match_score_report": f"""Create a detailed match score report analyzing how well the candidate fits this job.
-Job: {job_description}
-CV: {cv_text}
-Language: {lang_instruction}
-
-Provide: Overall score (0-100), Key strengths (3-5), Gaps (2-4), Recommendations (2-3).""",
-
-        "company_intelligence_briefing": f"""Create a company intelligence briefing for interview preparation.
-Company: {job_description}
-Language: {lang_instruction}
-
-Research and summarize: Company overview, culture, recent news, strategic direction, interview tips.""",
-
-        "interview_preparation_pack": f"""Create an interview preparation guide for this role.
-Job: {job_description}
-CV: {cv_text}
-Language: {lang_instruction}
-
-Include: Likely interview questions, STAR method answers, 30-second pitch, key talking points.""",
-
-        "executive_summary": f"""Create an executive summary / personal profile for the candidate.
-CV: {cv_text}
-Target Role: {job_description}
-Language: {lang_instruction}
-
-Write a compelling 1-page executive summary highlighting career story and value proposition.""",
-
-        "linkedin_optimization": f"""Provide LinkedIn profile optimization suggestions.
-Current CV: {cv_text}
-Target Industry/Role: {job_description}
-Language: {lang_instruction}
-
-Suggest: Improved About section, headline, key skills, and keywords for recruiter discovery.""",
+    # Prepare input variables
+    inputs = {
+        "job_description": job_description,
+        "cv_text": cv_text,
+        "cv_summary": cv_text[:500] if len(cv_text) > 500 else cv_text,
+        "language": language_to_use,
+        "company_profile_language": get_language_instruction(application.company_profile_language or lang),
+        "role": prompt_config.get("role", ""),
+        "task": prompt_config.get("task", ""),
     }
 
-    return prompts.get(doc_type)
+    # Format instructions
+    instructions_list = prompt_config.get("instructions", [])
+    instructions_text = "\n".join([f"{i+1}. {instr}" for i, instr in enumerate(instructions_list)])
+    inputs["instructions"] = instructions_text
+
+    # Build prompt from template
+    template = prompt_config.get("prompt_template", "")
+    try:
+        prompt = template.format(**inputs)
+        return prompt
+    except KeyError as e:
+        logging.error(f"Missing variable in prompt template for {doc_type}: {e}")
+        return None
 
 
 def generate_documents_background(task_id: int, application_id: int, doc_types: List[str], user_id: int):

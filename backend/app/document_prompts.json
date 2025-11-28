@@ -1,0 +1,255 @@
+{
+  "tailored_cv_pdf": {
+    "document_type": "tailored_cv_pdf",
+    "role": "professional CV writer",
+    "task": "Create a tailored CV for this specific job application",
+    "inputs": ["job_description", "cv_text", "language"],
+    "instructions": [
+      "Output ONLY the tailored CV content - NO conversational text, NO introductions like 'Here is...' or 'Gerne...'",
+      "Start directly with the CV content (e.g., candidate name or professional profile)",
+      "Preserve ALL factual information from the original CV - DO NOT invent or change facts",
+      "Only include travel willingness/percentage if explicitly mentioned in the original CV - DO NOT add or infer it",
+      "Emphasize experiences and skills most relevant to this specific job posting",
+      "Maintain professional CV formatting with clear sections",
+      "Keep the same level of detail as the original CV"
+    ],
+    "output_format": "Direct CV content starting with candidate name",
+    "length_guideline": "Same as original CV",
+    "prompt_template": "You are a {role}. {task}.\n\nJob Details:\n{job_description}\n\nOriginal CV:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the tailored CV now:"
+  },
+  "tailored_cv_editable": {
+    "document_type": "tailored_cv_editable",
+    "role": "professional CV writer",
+    "task": "Create an editable tailored CV with comments explaining each adaptation",
+    "inputs": ["job_description", "cv_text", "language"],
+    "instructions": [
+      "Output ONLY the tailored CV content with inline comments",
+      "Add [COMMENT: explanation] markers to explain adaptations",
+      "Preserve ALL factual information from the original CV",
+      "Highlight sections tailored for this specific job",
+      "Maintain professional CV formatting",
+      "Make it easy to edit and customize further"
+    ],
+    "output_format": "CV content with comment markers",
+    "length_guideline": "Same as original CV plus comments",
+    "prompt_template": "You are a {role}. {task}.\n\nJob Details:\n{job_description}\n\nOriginal CV:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the editable tailored CV now:"
+  },
+  "tailored_cv_one_page": {
+    "document_type": "tailored_cv_one_page",
+    "role": "professional CV writer",
+    "task": "Create a compact one-page CV highlighting only the most relevant experience",
+    "inputs": ["job_description", "cv_text", "language"],
+    "instructions": [
+      "Output ONLY the one-page CV content",
+      "Prioritize most relevant experience and skills for this job",
+      "Be extremely concise while maintaining professionalism",
+      "Use bullet points effectively",
+      "Preserve factual accuracy",
+      "Fit everything on ONE page"
+    ],
+    "output_format": "Concise one-page CV",
+    "length_guideline": "Strictly 1 page",
+    "prompt_template": "You are a {role}. {task}.\n\nJob Details:\n{job_description}\n\nFull CV:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the one-page CV now:"
+  },
+  "motivational_letter_pdf": {
+    "document_type": "motivational_letter_pdf",
+    "role": "professional career counselor",
+    "task": "Write a motivational letter for this job application",
+    "inputs": ["job_description", "cv_text", "language"],
+    "instructions": [
+      "Output ONLY the motivational letter content - NO conversational text, NO introductions like 'Here is...' or 'Gerne...'",
+      "Start directly with the letter (e.g., greeting and opening paragraph)",
+      "Use facts from the candidate's CV - DO NOT invent experiences or qualifications",
+      "Write a formal, compelling letter explaining why the candidate is motivated and qualified for this role",
+      "Include proper letter formatting (greeting, body paragraphs, closing)",
+      "Keep it concise (typically 1 page)"
+    ],
+    "output_format": "Direct letter content with proper formatting",
+    "length_guideline": "1 page",
+    "prompt_template": "You are a {role}. {task}.\n\nJob Details:\n{job_description}\n\nCandidate CV:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the motivational letter now:"
+  },
+  "motivational_letter_editable": {
+    "document_type": "motivational_letter_editable",
+    "role": "professional career counselor",
+    "task": "Write an editable motivational letter with suggestions for personalization",
+    "inputs": ["job_description", "cv_text", "language"],
+    "instructions": [
+      "Output the motivational letter with [SUGGESTION: ...] markers for personalization",
+      "Indicate where candidate can add personal anecdotes",
+      "Use facts from CV but leave room for customization",
+      "Professional and formal tone",
+      "Proper letter formatting"
+    ],
+    "output_format": "Letter with suggestion markers",
+    "length_guideline": "1 page",
+    "prompt_template": "You are a {role}. {task}.\n\nJob Details:\n{job_description}\n\nCandidate CV:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the editable motivational letter now:"
+  },
+  "email_formal": {
+    "document_type": "email_formal",
+    "role": "professional communication specialist",
+    "task": "Write a formal email to submit a job application",
+    "inputs": ["job_description", "language"],
+    "instructions": [
+      "Output ONLY the email content - NO conversational text, NO introductions like 'Here is...'",
+      "Start directly with the email greeting",
+      "Write a concise, professional email (3-5 sentences) introducing the attached application documents",
+      "Include: greeting, brief introduction, mention of attached documents, expression of interest, closing",
+      "Keep it professional and to the point"
+    ],
+    "output_format": "Direct email content",
+    "length_guideline": "3-5 sentences",
+    "prompt_template": "You are a {role}. {task}.\n\nJob Details:\n{job_description}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the email now:"
+  },
+  "email_linkedin": {
+    "document_type": "email_linkedin",
+    "role": "LinkedIn networking expert",
+    "task": "Write a LinkedIn direct message to a recruiter for this position",
+    "inputs": ["job_description", "cv_summary", "language"],
+    "instructions": [
+      "Output ONLY the LinkedIn message content - NO conversational text, NO meta-commentary",
+      "Start directly with the message greeting",
+      "Write a brief, engaging message (max 200 words)",
+      "Include: greeting, brief introduction, expression of interest, call to action",
+      "Keep it professional but conversational (appropriate for LinkedIn)"
+    ],
+    "output_format": "Direct LinkedIn message",
+    "length_guideline": "Max 200 words",
+    "prompt_template": "You are a {role}. {task}.\n\nJob Details:\n{job_description}\n\nCV Summary:\n{cv_summary}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the LinkedIn message now:"
+  },
+  "match_score_report": {
+    "document_type": "match_score_report",
+    "role": "ATS analysis expert",
+    "task": "Create a detailed match score report analyzing how well the candidate fits this job",
+    "inputs": ["job_description", "cv_text", "language"],
+    "instructions": [
+      "Provide an overall match score (0-100)",
+      "List 3-5 key strengths that align with job requirements",
+      "Identify 2-4 gaps or missing qualifications",
+      "Provide 2-3 actionable recommendations for improvement",
+      "Be honest and objective in the analysis",
+      "Structure the report clearly with sections"
+    ],
+    "output_format": "Structured report with score, strengths, gaps, recommendations",
+    "length_guideline": "1-2 pages",
+    "prompt_template": "You are an {role}. {task}.\n\nJob Requirements:\n{job_description}\n\nCandidate CV:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the match score report now:"
+  },
+  "company_intelligence_briefing": {
+    "document_type": "company_intelligence_briefing",
+    "role": "corporate research analyst",
+    "task": "Create a company intelligence briefing for interview preparation",
+    "inputs": ["job_description", "company_profile_language"],
+    "instructions": [
+      "Research and summarize company overview",
+      "Analyze company culture signals",
+      "Identify strategic talking points",
+      "Provide lightweight SWOT analysis",
+      "Note hiring patterns if available",
+      "Include interview preparation tips"
+    ],
+    "output_format": "Structured briefing with sections",
+    "length_guideline": "1-2 pages",
+    "prompt_template": "You are a {role}. {task}.\n\nCompany/Job Information:\n{job_description}\n\nLanguage: {company_profile_language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the company intelligence briefing now:"
+  },
+  "interview_preparation_pack": {
+    "document_type": "interview_preparation_pack",
+    "role": "interview preparation coach",
+    "task": "Create an interview preparation guide for this role",
+    "inputs": ["job_description", "cv_text", "language"],
+    "instructions": [
+      "List 8-12 likely interview questions for this role",
+      "Provide tailored answers using STAR method (Situation, Task, Action, Result)",
+      "Create a compelling 30-second pitch",
+      "Highlight key talking points from CV",
+      "Include preparation checklist for interview day",
+      "Be specific to this role and candidate's background"
+    ],
+    "output_format": "Comprehensive preparation guide",
+    "length_guideline": "2-3 pages",
+    "prompt_template": "You are an {role}. {task}.\n\nJob Details:\n{job_description}\n\nCandidate CV:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the interview preparation pack now:"
+  },
+  "role_specific_portfolio": {
+    "document_type": "role_specific_portfolio",
+    "role": "portfolio presentation specialist",
+    "task": "Create a one-page portfolio highlighting achievements relevant to this role",
+    "inputs": ["job_description", "cv_text", "language"],
+    "instructions": [
+      "Highlight 3-5 key achievements aligned with job requirements",
+      "Include measurable results and metrics where available",
+      "Use visual-friendly formatting (bullet points, sections)",
+      "Focus on impact and outcomes",
+      "Keep it to ONE page",
+      "Make it scannable and impressive"
+    ],
+    "output_format": "One-page portfolio showcase",
+    "length_guideline": "Strictly 1 page",
+    "prompt_template": "You are a {role}. {task}.\n\nJob Requirements:\n{job_description}\n\nCandidate Experience:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the role-specific portfolio now:"
+  },
+  "linkedin_optimization": {
+    "document_type": "linkedin_optimization",
+    "role": "LinkedIn optimization expert",
+    "task": "Provide LinkedIn profile optimization suggestions",
+    "inputs": ["cv_text", "job_description", "language"],
+    "instructions": [
+      "Suggest an improved 'About' section (3-5 paragraphs)",
+      "Recommend an optimized headline",
+      "List 10-15 key skills to add/highlight",
+      "Provide keywords for recruiter discovery",
+      "Suggest job title optimizations",
+      "Include tips for profile completeness"
+    ],
+    "output_format": "Structured optimization guide",
+    "length_guideline": "2-3 pages",
+    "prompt_template": "You are a {role}. {task}.\n\nCurrent CV:\n{cv_text}\n\nTarget Industry/Role:\n{job_description}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the LinkedIn optimization suggestions now:"
+  },
+  "executive_summary": {
+    "document_type": "executive_summary",
+    "role": "executive branding consultant",
+    "task": "Create an executive summary / personal profile for the candidate",
+    "inputs": ["cv_text", "job_description", "language"],
+    "instructions": [
+      "Write a compelling one-page career story",
+      "Highlight value proposition and unique selling points",
+      "Focus on leadership and strategic impact",
+      "Include career highlights and key achievements",
+      "Professional tone suitable for senior positions",
+      "Include placeholder for QR code to portfolio/LinkedIn"
+    ],
+    "output_format": "One-page executive summary",
+    "length_guideline": "Strictly 1 page",
+    "prompt_template": "You are an {role}. {task}.\n\nCandidate CV:\n{cv_text}\n\nTarget Role:\n{job_description}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the executive summary now:"
+  },
+  "skill_gap_report": {
+    "document_type": "skill_gap_report",
+    "role": "career development advisor",
+    "task": "Create a skill gap analysis and upskilling recommendation report",
+    "inputs": ["job_description", "cv_text", "language"],
+    "instructions": [
+      "Identify missing skills compared to job requirements",
+      "Prioritize skills by importance (critical, important, nice-to-have)",
+      "Suggest specific courses and certifications",
+      "Provide learning paths with time estimates",
+      "Include both technical and soft skills",
+      "Be constructive and actionable"
+    ],
+    "output_format": "Structured development plan",
+    "length_guideline": "2-3 pages",
+    "prompt_template": "You are a {role}. {task}.\n\nJob Requirements:\n{job_description}\n\nCurrent Skills (from CV):\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the skill gap report now:"
+  },
+  "reference_summary": {
+    "document_type": "reference_summary",
+    "role": "reference verification specialist",
+    "task": "Create an AI-verified reference summary consolidating reference letters",
+    "inputs": ["reference_letters", "language"],
+    "instructions": [
+      "Extract and consolidate key strengths from all reference letters",
+      "Summarize consistent themes across references",
+      "Include notable recommendations or endorsements",
+      "Add verification notice",
+      "Professional structured format",
+      "Highlight unique qualifications mentioned"
+    ],
+    "output_format": "Consolidated reference summary",
+    "length_guideline": "1-2 pages",
+    "prompt_template": "You are a {role}. {task}.\n\nReference Letters:\n{reference_letters}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the reference summary now:"
+  }
+}

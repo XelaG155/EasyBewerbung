@@ -56,7 +56,16 @@
     "loggingIn": "Пријављивање...",
     "creatingAccount": "Креирање налога...",
     "welcomeBack": "Добродошли назад",
-    "loginSubtitle": "Пријавите се да управљате својим пријавама"
+    "loginSubtitle": "Пријавите се да управљате својим пријавама",
+    "privacyPolicyRequired": "You must accept the privacy policy to register",
+    "googleSignupFailed": "Google sign-up failed",
+    "googleInitFailed": "Google initialization failed",
+    "passwordMinLength": "Password must be at least 8 characters",
+    "registrationFailed": "Registration failed. Please try again.",
+    "acceptPrivacyPrefix": "I accept the",
+    "privacyPolicy": "Privacy Policy",
+    "acceptPrivacySuffix": "and consent to the collection of my IP address for security purposes",
+    "close": "Close"
   },
   "dashboard": {
     "uploadDocuments": "Пренеси документе",
@@ -108,6 +117,7 @@
     "settingsSaved": "Подешавања успешно сачувана!",
     "accountInformation": "Информације о налогу",
     "accountCreated": "Налог креиран",
-    "cancel": "Откажи"
+    "cancel": "Откажи",
+    "saveFailed": "Failed to save settings"
   }
 }

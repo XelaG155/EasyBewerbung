@@ -56,7 +56,16 @@
     "loggingIn": "Вход...",
     "creatingAccount": "Создание учетной записи...",
     "welcomeBack": "Добро пожаловать",
-    "loginSubtitle": "Войдите, чтобы управлять своими заявками"
+    "loginSubtitle": "Войдите, чтобы управлять своими заявками",
+    "privacyPolicyRequired": "You must accept the privacy policy to register",
+    "googleSignupFailed": "Google sign-up failed",
+    "googleInitFailed": "Google initialization failed",
+    "passwordMinLength": "Password must be at least 8 characters",
+    "registrationFailed": "Registration failed. Please try again.",
+    "acceptPrivacyPrefix": "I accept the",
+    "privacyPolicy": "Privacy Policy",
+    "acceptPrivacySuffix": "and consent to the collection of my IP address for security purposes",
+    "close": "Close"
   },
   "dashboard": {
     "uploadDocuments": "Загрузить документы",
@@ -108,6 +117,7 @@
     "settingsSaved": "Настройки успешно сохранены!",
     "accountInformation": "Информация об учетной записи",
     "accountCreated": "Учетная запись создана",
-    "cancel": "Отмена"
+    "cancel": "Отмена",
+    "saveFailed": "Failed to save settings"
   }
 }

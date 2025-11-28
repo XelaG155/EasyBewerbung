@@ -47,8 +47,8 @@ import trTranslations from "./translations/tr.json";
 import ukTranslations from "./translations/uk.json";
 import urTranslations from "./translations/ur.json";
 import viTranslations from "./translations/vi.json";
-import zhCNTranslations from "./translations/zh-CN.json";
-import zhTWTranslations from "./translations/zh-TW.json";
+import zhHansTranslations from "./translations/zh-Hans.json";
+import zhHantTranslations from "./translations/zh-Hant.json";
 
 type Translations = typeof enTranslations;
 
@@ -100,8 +100,8 @@ const translations: Record<string, any> = {
   uk: ukTranslations,
   ur: urTranslations,
   vi: viTranslations,
-  "zh-CN": zhCNTranslations,
-  "zh-TW": zhTWTranslations,
+  "zh-Hans": zhHansTranslations,
+  "zh-Hant": zhHantTranslations,
 };
 
 interface I18nContextType {
