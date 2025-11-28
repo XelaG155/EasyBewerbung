@@ -542,4 +542,174 @@ backend/app/document_prompts.json
 
 ---
 
+## ATS-Optimierung & Ehrlichkeitsgarantie
+
+### Was sind ATS-Systeme?
+
+**Applicant Tracking Systems (ATS)** sind Software-Lösungen, die von 97.8% der Fortune 500 Unternehmen und 75% aller Firmen weltweit verwendet werden, um Bewerbungen automatisch zu filtern und zu ranken.
+
+**Typische ATS-Pipeline:**
+1. **Ingestion:** PDF/DOCX → Textextraktion
+2. **Parsing:** Erkennung von Struktur (Name, Kontakt, Erfahrung, Skills, Ausbildung)
+3. **Normalisierung:** Skill-Taxonomie, Synonyme zusammenführen (z.B. "JS", "JavaScript" → ein Skill)
+4. **Matching:** Keyword-Matching, TF-IDF, Deep Learning (BERT-Embeddings)
+5. **Scoring:** Ranking der Kandidaten nach Match-Score
+6. **Filtering:** Hard Filters für Must-Have Requirements
+
+**Wichtige Erkenntnis:** Ohne ATS-Optimierung erreichen viele qualifizierte Bewerbungen nie einen menschlichen Recruiter.
+
+### Unsere ATS-Optimierungsstrategie
+
+**Ziel:** Maximale ATS-Kompatibilität bei absoluter Ehrlichkeit
+
+#### 1. Formatierungs-Optimierung
+
+**ATS-freundlich:**
+- ✓ **Single-Column Layout** (keine Tabellen, Multi-Column, Textboxen)
+- ✓ **Standard Section Headers:** "Professional Summary", "Work Experience", "Education", "Skills", "Certifications", "Languages"
+- ✓ **Simple Bullet Points** (•, -, *) - keine speziellen Grafiken
+- ✓ **Kontaktinfo im Main Body** (nicht in Header/Footer - 25% werden sonst nicht erkannt)
+- ✓ **Common Fonts:** Arial, Calibri, Times New Roman, Helvetica
+- ✓ **Konsistente Datumsformate:** MM/YYYY oder Month YYYY
+
+**ATS-problematisch (vermeiden):**
+- ✗ Tabellen mit kritischem Content
+- ✗ Text-Boxen, Bilder, Icons
+- ✗ Mehrspaltiges Layout
+- ✗ Ungewöhnliche Section Headers ("My Journey", "What I Do")
+- ✗ Komplexe Grafiken oder Skill-Bars
+
+#### 2. Keyword-Optimierung (Ehrlich!)
+
+**Strategie:**
+1. **Must-Have Skills extrahieren** aus Stellenbeschreibung
+2. **Exact Phrasing verwenden** (wenn Job "Python" sagt, verwende "Python", nicht "Python programming")
+3. **Acronyms + Long-Form** beide angeben (z.B. "ERP (Enterprise Resource Planning)")
+4. **Strategische Platzierung:**
+   - Professional Summary/Profile (Top des CV)
+   - Job Titles (wenn sie tatsächlich passen)
+   - Erste 1-2 Bullets der relevantesten Work Experience
+   - Skills Section (prominent)
+5. **Synonyme einbauen:** "JavaScript (JS, ES6+, Node.js)" statt nur "JavaScript"
+6. **Natürliche Integration:** Keyword-Stuffing vermeiden, Kontext bewahren
+
+**KRITISCH - Ehrlichkeitsgarantie:**
+- ✓ Nur Skills verwenden, die **tatsächlich im Original-CV stehen**
+- ✓ Nur Erfahrungen referenzieren, die **nachweisbar** sind (Zeugnisse, Referenzen)
+- ✗ **NIEMALS** Skills erfinden, die der Kandidat nicht besitzt
+- ✗ **NIEMALS** Qualifikationen hinzufügen, die nicht existieren
+- ✗ **NIEMALS** Erfahrungen fabrizieren
+
+**Beispiel - Richtig:**
+- Original CV: "Worked with Python for data analysis"
+- Job fordert: "Python, Pandas, NumPy"
+- Wenn Pandas/NumPy im CV erwähnt: ✓ "Python (Pandas, NumPy) for data analysis"
+- Wenn NICHT erwähnt: ✗ NICHT hinzufügen
+
+**Beispiel - Falsch:**
+- Original CV: Keine Erwähnung von "Machine Learning"
+- Job fordert: "Machine Learning experience required"
+- ✗ NICHT hinzufügen: "Experience with Machine Learning"
+- ✓ STATTDESSEN: Skill-Gap transparent lassen oder verwandte Skills highlighten
+
+#### 3. Content-Priorisierung
+
+**ATS-Score-Faktoren:**
+- 40% Must-Have Skills Coverage
+- 15% Nice-to-Have Skills
+- 15% Job Title/Seniority Match
+- 15% Experience Relevance
+- 10% Keyword Optimization
+- 5% ATS-Friendly Formatting
+
+**Optimierung:**
+1. **Reorder Work Experiences:** Relevanteste zuerst (chronologisch innerhalb Relevanz-Gruppen)
+2. **Emphasize Achievements:** Die Job-Requirements matchen
+3. **Quantify with Metrics:** Wo im Original-CV vorhanden (z.B. "improved efficiency by 25%")
+4. **Action Verbs:** Aus Job Description übernehmen (wenn Job "managed" sagt, verwende "managed")
+
+#### 4. Motivationsschreiben & ATS
+
+**Wichtig:** Viele moderne ATS parsen auch Cover Letters als zusätzliche Textquelle für Keyword-Matching.
+
+**Optimierung:**
+- 5-8 kritische Keywords natürlich einbauen
+- Exact Phrasing für Must-Have Skills verwenden
+- Company Name + Job Title nennen
+- Spezifische Requirements referenzieren und mit CV-Erfahrungen matchen
+- Soft Skills und Cultural Fit zeigen (mit Keywords)
+
+**Balance:** ATS-Optimierung + menschliche Lesbarkeit
+
+#### 5. Match Score Report
+
+**Simulation echter ATS-Behavior:**
+- Keyword-Matching analysieren
+- Hard Filter identifizieren (fehlende Must-Haves)
+- Skill Coverage berechnen
+- Formatting-Issues erkennen
+
+**Ehrliche Gap-Analyse:**
+- Wenn Must-Have Skills fehlen → **transparent kommunizieren**
+- Wenn CV ATS-Filter wahrscheinlich nicht besteht → **klar sagen**
+- Recommendations nur für **echte, vorhandene Qualifikationen**
+
+### Implementierung in Prompts
+
+Alle CV- und Motivationsschreiben-Prompts enthalten jetzt:
+
+1. **=== ABSOLUTE HONESTY REQUIREMENTS (CRITICAL) ===**
+   - Explizite Anweisungen, niemals Skills/Erfahrungen zu erfinden
+   - Verifikations-Requirement (gegen Diplome, Referenzen, Arbeitszeugnisse)
+   - Warnung vor Background-Checks
+
+2. **=== ATS OPTIMIZATION STRATEGY ===**
+   - Keyword-Extraction Anweisungen
+   - Exact Phrasing Guidelines
+   - Placement Strategy (wo Keywords platzieren)
+
+3. **=== ATS-FRIENDLY FORMATTING ===**
+   - Single-Column Layout
+   - Standard Section Headers
+   - Simple Formatting-Regeln
+
+4. **=== KEYWORD OPTIMIZATION (HONEST) ===**
+   - Nur vorhandene Skills expandieren
+   - Synonyme nur für existierende Tools/Skills
+   - Natural Language, kein Keyword-Stuffing
+
+**Beispiel-Prompt-Auszug (tailored_cv_pdf):**
+```
+"NEVER invent, fabricate, or add skills that are not explicitly mentioned in the original CV"
+"NEVER create fictional experiences, qualifications, certifications, or achievements"
+"NEVER claim competencies the candidate does not possess - this would fail background checks"
+"ONLY reorder, emphasize, and rephrase EXISTING information from the original CV"
+"All statements must be verifiable against the candidate's diplomas, references, and work history"
+```
+
+### Ethik & Realismus
+
+**Philosophie:**
+- ATS-Optimierung = **Präsentation optimieren, nicht Fakten**
+- Reihenfolge, Wortwahl, Gewichtung optimieren ✓
+- Skills erfinden ✗
+
+**Warum Ehrlichkeit kritisch ist:**
+- Background Checks würden Lügen aufdecken
+- Probezeit würde fehlendes Know-how offenbaren
+- Rechtliche Konsequenzen (Kündigung, Schadensersatz)
+- Reputationsschaden
+
+**Was wir tun:**
+- Vorhandene Stärken optimal präsentieren ✓
+- ATS-Hürden mit echten Qualifikationen überwinden ✓
+- Gaps transparent lassen oder ehrlich adressieren ✓
+
+**Was wir NICHT tun:**
+- Fake Skills hinzufügen ✗
+- Erfahrungen erfinden ✗
+- Qualifikationen fabrizieren ✗
+
+---
+
 *Diese Dokumentation wird fortlaufend aktualisiert, wenn neue Artefakte hinzugefügt werden.*

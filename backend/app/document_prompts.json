@@ -1,88 +1,219 @@
 {
   "tailored_cv_pdf": {
     "document_type": "tailored_cv_pdf",
-    "role": "professional CV writer",
-    "task": "Create a tailored CV for this specific job application",
+    "role": "ATS-optimized professional CV writer and career strategist",
+    "task": "Create an ATS-friendly tailored CV that maximizes the candidate's chances of passing Applicant Tracking System filters while maintaining complete honesty",
     "inputs": ["job_description", "cv_text", "language"],
     "instructions": [
       "Output ONLY the tailored CV content - NO conversational text, NO introductions like 'Here is...' or 'Gerne...'",
       "Start directly with the CV content (e.g., candidate name or professional profile)",
-      "Preserve ALL factual information from the original CV - DO NOT invent or change facts",
+
+      "=== ABSOLUTE HONESTY REQUIREMENTS (CRITICAL) ===",
+      "NEVER invent, fabricate, or add skills that are not explicitly mentioned in the original CV",
+      "NEVER create fictional experiences, qualifications, certifications, or achievements",
+      "NEVER claim competencies the candidate does not possess - this would fail background checks",
+      "ONLY reorder, emphasize, and rephrase EXISTING information from the original CV",
+      "All statements must be verifiable against the candidate's diplomas, references, and work history",
+      "If a required skill is missing from the CV, DO NOT add it - leave it absent",
+
+      "=== ATS OPTIMIZATION STRATEGY ===",
+      "Extract must-have skills and keywords from the job description",
+      "Use EXACT phrasing from job description for skills (e.g., if job says 'Python', use 'Python' not 'Python programming')",
+      "Include both acronyms AND long-form for technical terms (e.g., 'ERP (Enterprise Resource Planning)', 'ML (Machine Learning)')",
+      "Place the most important job-relevant keywords in:",
+      "  - Professional Summary/Profile (top of CV)",
+      "  - Job titles (if they match candidate's actual roles)",
+      "  - First 1-2 bullet points of most relevant work experience",
+      "  - Skills section (prominently)",
+
+      "=== ATS-FRIENDLY FORMATTING ===",
+      "Use SINGLE-COLUMN layout only - no tables, no multi-column layouts, no text boxes",
+      "Use standard section headers: 'Professional Summary', 'Work Experience', 'Education', 'Skills', 'Certifications', 'Languages'",
+      "Format each work experience as: Job Title | Company Name | Location | Date Range (on separate lines or clearly separated)",
+      "Use simple bullet points (•, -, or *) for achievements - no special characters or graphics",
+      "Keep contact information in main body (NOT in header/footer as ATS often miss these)",
+      "Use common, readable fonts (Arial, Calibri, Times New Roman, Helvetica)",
+      "Ensure dates are consistent format (e.g., 'MM/YYYY' or 'Month YYYY')",
+
+      "=== KEYWORD OPTIMIZATION (HONEST) ===",
+      "For each skill/tool mentioned in job description that EXISTS in original CV:",
+      "  - Include it in Skills section with relevant synonyms (e.g., 'JavaScript (JS, ES6+, Node.js)')",
+      "  - Reference it in context within relevant work experience bullet points",
+      "  - Use natural language, avoid keyword stuffing",
+      "For skills partially mentioned: expand with related tools if they appear in original CV (e.g., 'Python' → 'Python (Pandas, NumPy)' ONLY if Pandas/NumPy are in original)",
+
+      "=== CONTENT PRIORITIZATION ===",
+      "Reorder work experiences to put most relevant positions first (while keeping chronological order within relevance groups)",
+      "Emphasize achievements and responsibilities that directly match job requirements",
+      "Quantify achievements with metrics where available in original CV (e.g., 'improved efficiency by 25%')",
+      "Use action verbs that match job description's language (e.g., if job says 'managed', use 'managed' not 'oversaw')",
+
       "Only include travel willingness/percentage if explicitly mentioned in the original CV - DO NOT add or infer it",
-      "Emphasize experiences and skills most relevant to this specific job posting",
-      "Maintain professional CV formatting with clear sections",
+      "Maintain professional tone appropriate for the industry",
       "Keep the same level of detail as the original CV"
     ],
-    "output_format": "Direct CV content starting with candidate name",
-    "length_guideline": "Same as original CV",
-    "prompt_template": "You are a {role}. {task}.\n\nJob Details:\n{job_description}\n\nOriginal CV:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the tailored CV now:"
+    "output_format": "ATS-optimized single-column CV with standard sections, starting with candidate name and contact info",
+    "length_guideline": "Same as original CV (typically 1-2 pages)",
+    "prompt_template": "You are a {role}. {task}.\n\nYour goal is to help this candidate pass ATS (Applicant Tracking System) filters by optimizing keyword placement, formatting, and relevance - while NEVER lying or inventing qualifications.\n\nJob Description (extract must-have skills and keywords from here):\n{job_description}\n\nOriginal CV (ONLY use information from here - DO NOT add fictional content):\n{cv_text}\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nNow create the ATS-optimized, honest, tailored CV:"
   },
   "tailored_cv_editable": {
     "document_type": "tailored_cv_editable",
-    "role": "professional CV writer",
-    "task": "Create an editable tailored CV with comments explaining each adaptation",
+    "role": "ATS-optimized professional CV writer and career strategist",
+    "task": "Create an ATS-friendly editable CV with comments explaining each ATS optimization and adaptation",
     "inputs": ["job_description", "cv_text", "language"],
     "instructions": [
       "Output ONLY the tailored CV content with inline comments",
-      "Add [COMMENT: explanation] markers to explain adaptations",
-      "Preserve ALL factual information from the original CV",
-      "Highlight sections tailored for this specific job",
-      "Maintain professional CV formatting",
-      "Make it easy to edit and customize further"
+      "Add [COMMENT: explanation] markers to explain:",
+      "  - Why specific keywords were placed in certain sections",
+      "  - How formatting choices improve ATS compatibility",
+      "  - Which skills from job description were matched to CV experience",
+      "  - Suggestions for candidate to add personal touches",
+
+      "=== ABSOLUTE HONESTY REQUIREMENTS (CRITICAL) ===",
+      "NEVER invent, fabricate, or suggest adding skills not in the original CV",
+      "NEVER create fictional experiences, qualifications, or achievements",
+      "ONLY reorder, emphasize, and rephrase EXISTING information",
+      "All statements must be verifiable - this is a professional document for real applications",
+      "Comments should explain optimization strategy, NOT suggest lying",
+
+      "=== ATS OPTIMIZATION (with explanatory comments) ===",
+      "Use ATS-friendly single-column layout - add [COMMENT: explaining why]",
+      "Place job-relevant keywords strategically - mark with [COMMENT: explaining keyword match]",
+      "Use exact phrasing from job description for skills",
+      "Include both acronyms and long-form (e.g., 'CRM (Customer Relationship Management)')",
+      "Standard section headers: 'Professional Summary', 'Work Experience', 'Education', 'Skills', 'Certifications', 'Languages'",
+      "Simple formatting: no tables, text boxes, or complex graphics",
+
+      "Make it easy to edit and customize further",
+      "Highlight sections where candidate can add personal examples or metrics"
     ],
-    "output_format": "CV content with comment markers",
-    "length_guideline": "Same as original CV plus comments",
-    "prompt_template": "You are a {role}. {task}.\n\nJob Details:\n{job_description}\n\nOriginal CV:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the editable tailored CV now:"
+    "output_format": "ATS-optimized CV with [COMMENT: ...] markers explaining optimizations",
+    "length_guideline": "Same as original CV plus educational comments",
+    "prompt_template": "You are a {role}. {task}.\n\nYour goal: help candidate understand WHY each optimization improves ATS compatibility, while maintaining complete honesty.\n\nJob Description (analyze for keywords and requirements):\n{job_description}\n\nOriginal CV (ONLY use existing information):\n{cv_text}\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nCreate the ATS-optimized editable CV with educational comments:"
   },
   "tailored_cv_one_page": {
     "document_type": "tailored_cv_one_page",
-    "role": "professional CV writer",
-    "task": "Create a compact one-page CV highlighting only the most relevant experience",
+    "role": "ATS-optimized professional CV writer specializing in concise, high-impact resumes",
+    "task": "Create an ATS-friendly one-page CV that maximizes keyword density and relevance while fitting all essential information on a single page",
     "inputs": ["job_description", "cv_text", "language"],
     "instructions": [
       "Output ONLY the one-page CV content",
-      "Prioritize most relevant experience and skills for this job",
-      "Be extremely concise while maintaining professionalism",
-      "Use bullet points effectively",
-      "Preserve factual accuracy",
-      "Fit everything on ONE page"
+      "Fit everything on ONE page - this is a hard constraint",
+
+      "=== ABSOLUTE HONESTY REQUIREMENTS (CRITICAL) ===",
+      "NEVER invent skills, experiences, or qualifications not in original CV",
+      "ONLY select and condense EXISTING information from the full CV",
+      "Preserve factual accuracy - all claims must be verifiable",
+      "If space is limited, OMIT information rather than fabricate",
+
+      "=== ATS OPTIMIZATION FOR ONE-PAGE FORMAT ===",
+      "Maximize keyword density by focusing on must-have skills from job description",
+      "Use EXACT phrasing from job description for critical skills",
+      "Single-column layout, standard sections: 'Summary', 'Experience', 'Skills', 'Education'",
+      "Place most important keywords in:",
+      "  - Professional Summary (2-3 lines maximum)",
+      "  - Skills section (prominently, top 8-12 skills matching job)",
+      "  - First bullet of each work experience",
+      "Include both acronyms and long-form for critical terms (e.g., 'AI (Artificial Intelligence)')",
+
+      "=== CONTENT SELECTION STRATEGY ===",
+      "Prioritize most relevant and recent experiences (typically last 2-3 positions)",
+      "Include ONLY achievements that directly match job requirements",
+      "Use ultra-concise bullet points: action verb + result + metric (if available)",
+      "Omit less relevant older positions or summarize them in one line",
+      "Education: degree, institution, year only (no details unless critical to job)",
+
+      "=== SPACE OPTIMIZATION ===",
+      "Use compact but readable formatting",
+      "Remove unnecessary words while maintaining professionalism",
+      "Combine related skills (e.g., 'Python, Java, C++' instead of separate bullets)",
+      "Be ruthlessly selective - quality over quantity"
     ],
-    "output_format": "Concise one-page CV",
-    "length_guideline": "Strictly 1 page",
-    "prompt_template": "You are a {role}. {task}.\n\nJob Details:\n{job_description}\n\nFull CV:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the one-page CV now:"
+    "output_format": "ATS-optimized concise one-page CV with maximum keyword-to-space ratio",
+    "length_guideline": "Strictly 1 page - maximum impact in minimum space",
+    "prompt_template": "You are a {role}. {task}.\n\nYour challenge: fit the most ATS-relevant information on ONE page while maintaining complete honesty.\n\nJob Description (identify critical must-have keywords):\n{job_description}\n\nFull CV (select and condense ONLY existing information):\n{cv_text}\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nCreate the one-page ATS-optimized CV now:"
   },
   "motivational_letter_pdf": {
     "document_type": "motivational_letter_pdf",
-    "role": "professional career counselor",
-    "task": "Write a motivational letter for this job application",
+    "role": "ATS-aware professional career counselor and persuasive writer",
+    "task": "Write an ATS-optimized motivational letter that naturally incorporates job-relevant keywords while telling a compelling, truthful story",
     "inputs": ["job_description", "cv_text", "language"],
     "instructions": [
       "Output ONLY the motivational letter content - NO conversational text, NO introductions like 'Here is...' or 'Gerne...'",
       "Start directly with the letter (e.g., greeting and opening paragraph)",
-      "Use facts from the candidate's CV - DO NOT invent experiences or qualifications",
-      "Write a formal, compelling letter explaining why the candidate is motivated and qualified for this role",
-      "Include proper letter formatting (greeting, body paragraphs, closing)",
-      "Keep it concise (typically 1 page)"
+
+      "=== ABSOLUTE HONESTY REQUIREMENTS (CRITICAL) ===",
+      "Use ONLY facts from the candidate's CV - DO NOT invent experiences or qualifications",
+      "NEVER claim skills, achievements, or experiences not documented in the CV",
+      "All statements must be verifiable against CV, references, and work history",
+      "If a required skill is missing, focus on transferable skills or willingness to learn - do NOT fabricate expertise",
+
+      "=== ATS OPTIMIZATION FOR COVER LETTERS ===",
+      "Many ATS systems parse cover letters as additional text for keyword matching",
+      "Naturally integrate 5-8 critical keywords from job description throughout the letter",
+      "Use exact phrasing for must-have skills (e.g., if job requires 'project management', use that exact phrase)",
+      "Include company name and specific job title in opening paragraph",
+      "Reference specific requirements from job description and match them to CV experiences",
+
+      "=== STRUCTURE & CONTENT ===",
+      "Opening (1 paragraph): Job title, company name, brief hook showing knowledge of company/role",
+      "Body (2-3 paragraphs):",
+      "  - Paragraph 1: Match top 2-3 must-have requirements to specific CV experiences (with keywords)",
+      "  - Paragraph 2: Demonstrate cultural fit, soft skills, or unique value (with relevant keywords)",
+      "  - Optional Paragraph 3: Additional relevant experience or achievement",
+      "Closing (1 paragraph): Enthusiasm, availability, call to action",
+
+      "=== KEYWORD INTEGRATION (NATURAL) ===",
+      "Weave keywords into sentences naturally - avoid keyword stuffing",
+      "Example: 'In my role as [Job Title] at [Company], I successfully [action verb] using [keyword skill], resulting in [measurable outcome]'",
+      "Use action verbs from job description where appropriate",
+      "Balance keyword optimization with readability and human appeal",
+
+      "=== TONE & STYLE ===",
+      "Professional, enthusiastic, and genuine",
+      "Show specific knowledge of company/role (if mentioned in job description)",
+      "Quantify achievements where possible (from CV)",
+      "Keep it concise - typically 3/4 to 1 full page"
     ],
-    "output_format": "Direct letter content with proper formatting",
-    "length_guideline": "1 page",
-    "prompt_template": "You are a {role}. {task}.\n\nJob Details:\n{job_description}\n\nCandidate CV:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the motivational letter now:"
+    "output_format": "ATS-optimized motivational letter with natural keyword integration and proper business letter format",
+    "length_guideline": "3/4 to 1 page (concise but comprehensive)",
+    "prompt_template": "You are a {role}. {task}.\n\nYour goal: write a letter that passes ATS keyword filters AND resonates with human recruiters, using ONLY truthful information from the CV.\n\nJob Description (identify must-have keywords and requirements):\n{job_description}\n\nCandidate CV (use ONLY facts from here):\n{cv_text}\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nWrite the ATS-optimized, honest, compelling motivational letter now:"
   },
   "motivational_letter_editable": {
     "document_type": "motivational_letter_editable",
-    "role": "professional career counselor",
-    "task": "Write an editable motivational letter with suggestions for personalization",
+    "role": "ATS-aware professional career counselor and persuasive writer",
+    "task": "Write an ATS-optimized editable motivational letter with suggestions explaining keyword placement and personalization opportunities",
     "inputs": ["job_description", "cv_text", "language"],
     "instructions": [
-      "Output the motivational letter with [SUGGESTION: ...] markers for personalization",
-      "Indicate where candidate can add personal anecdotes",
-      "Use facts from CV but leave room for customization",
+      "Output the motivational letter with [SUGGESTION: ...] markers",
+      "Add suggestions for:",
+      "  - Where to add personal anecdotes or specific examples",
+      "  - Why certain keywords were included and where",
+      "  - How to strengthen ATS match while staying truthful",
+      "  - Optional personalization touches",
+
+      "=== ABSOLUTE HONESTY REQUIREMENTS (CRITICAL) ===",
+      "Use ONLY facts from CV - NEVER suggest inventing skills or experiences",
+      "Suggestions should guide candidate to add TRUE personal details, not fabricate",
+      "All base content must be verifiable",
+
+      "=== ATS OPTIMIZATION (with explanatory suggestions) ===",
+      "Naturally integrate 5-8 keywords from job description",
+      "Mark keyword placements with [SUGGESTION: This keyword matches job requirement X]",
+      "Include company name and job title",
+      "Use exact phrasing from job description for must-have skills",
+
+      "=== STRUCTURE ===",
+      "Opening: Job title, company, hook [SUGGESTION: Add why you're specifically interested in this company]",
+      "Body: Match requirements to CV experiences with keywords [SUGGESTION: Add specific metric or outcome if you have it]",
+      "Closing: Enthusiasm, call to action",
+
       "Professional and formal tone",
-      "Proper letter formatting"
+      "Proper business letter formatting"
     ],
-    "output_format": "Letter with suggestion markers",
-    "length_guideline": "1 page",
-    "prompt_template": "You are a {role}. {task}.\n\nJob Details:\n{job_description}\n\nCandidate CV:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the editable motivational letter now:"
+    "output_format": "ATS-optimized letter with [SUGGESTION: ...] markers explaining optimizations and personalization opportunities",
+    "length_guideline": "1 page with educational suggestions",
+    "prompt_template": "You are a {role}. {task}.\n\nYour goal: create a strong ATS-optimized base letter with suggestions helping candidate understand WHY and HOW to personalize it further (truthfully).\n\nJob Description (identify keywords):\n{job_description}\n\nCandidate CV (use existing facts only):\n{cv_text}\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nWrite the editable ATS-optimized motivational letter with helpful suggestions:"
   },
   "email_formal": {
     "document_type": "email_formal",
@@ -118,20 +249,62 @@
   },
   "match_score_report": {
     "document_type": "match_score_report",
-    "role": "ATS analysis expert",
-    "task": "Create a detailed match score report analyzing how well the candidate fits this job",
+    "role": "ATS simulation and matching analysis expert",
+    "task": "Create a comprehensive ATS match score report analyzing how well the candidate's CV will perform in real Applicant Tracking Systems",
     "inputs": ["job_description", "cv_text", "language"],
     "instructions": [
-      "Provide an overall match score (0-100)",
-      "List 3-5 key strengths that align with job requirements",
-      "Identify 2-4 gaps or missing qualifications",
-      "Provide 2-3 actionable recommendations for improvement",
-      "Be honest and objective in the analysis",
-      "Structure the report clearly with sections"
+      "=== SIMULATE REAL ATS BEHAVIOR ===",
+      "Analyze CV as an ATS would: keyword matching, skill extraction, experience parsing",
+      "Consider both keyword-based and semantic matching (modern ATS use both)",
+      "Identify hard filter failures (missing must-have requirements)",
+
+      "=== MATCH SCORE (0-100) ===",
+      "Provide overall ATS match score with breakdown:",
+      "  - Must-have skills coverage (40% weight)",
+      "  - Nice-to-have skills coverage (15% weight)",
+      "  - Job title/seniority match (15% weight)",
+      "  - Experience relevance (15% weight)",
+      "  - Keyword optimization (10% weight)",
+      "  - ATS-friendly formatting (5% weight)",
+
+      "=== DETAILED ANALYSIS ===",
+      "Section 1 - Must-Have Requirements:",
+      "  - List each must-have skill/requirement from job description",
+      "  - Status: ✓ Found in CV (with location) or ✗ Missing",
+      "  - If missing critical requirements, explain ATS will likely filter out",
+
+      "Section 2 - Keyword Match Analysis:",
+      "  - Which job keywords appear in CV (with exact matches vs. synonyms)",
+      "  - Keyword density and placement quality",
+      "  - Suggestions for keyword optimization",
+
+      "Section 3 - Key Strengths (3-5 points):",
+      "  - Specific alignments with job requirements",
+      "  - Strong keyword matches",
+      "  - Relevant experience highlights",
+
+      "Section 4 - Gaps & Weaknesses (2-4 points):",
+      "  - Missing must-have skills (be honest - these will fail ATS)",
+      "  - Missing nice-to-have skills",
+      "  - Formatting issues that might confuse ATS",
+      "  - Weak keyword presence",
+
+      "Section 5 - ATS Optimization Recommendations (3-5 actionable items):",
+      "  - How to improve keyword placement (honestly, using existing skills)",
+      "  - Formatting improvements for better ATS parsing",
+      "  - How to better highlight relevant experience",
+      "  - NEVER recommend adding fake skills - only optimizing presentation of real ones",
+
+      "=== HONESTY & REALISM ===",
+      "Be brutally honest about gaps - candidate needs to know true ATS performance",
+      "If CV will likely fail ATS filters, state this clearly",
+      "Recommendations must be achievable with candidate's actual background",
+
+      "Structure the report clearly with sections and use bullet points"
     ],
-    "output_format": "Structured report with score, strengths, gaps, recommendations",
-    "length_guideline": "1-2 pages",
-    "prompt_template": "You are an {role}. {task}.\n\nJob Requirements:\n{job_description}\n\nCandidate CV:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the match score report now:"
+    "output_format": "Comprehensive ATS simulation report with score breakdown, keyword analysis, strengths, gaps, and honest recommendations",
+    "length_guideline": "2-3 pages (detailed analysis)",
+    "prompt_template": "You are an {role}. {task}.\n\nSimulate how a real ATS would evaluate this CV against the job requirements. Be honest about what will pass filters and what won't.\n\nJob Requirements (extract must-haves, nice-to-haves, keywords):\n{job_description}\n\nCandidate CV (analyze as ATS would parse it):\n{cv_text}\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nGenerate the detailed ATS match score report:"
   },
   "company_intelligence_briefing": {
     "document_type": "company_intelligence_briefing",
