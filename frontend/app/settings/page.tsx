@@ -6,6 +6,7 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { useAuth } from "@/lib/auth-context";
+import { useTranslation } from "@/lib/i18n-context";
 import api, { LanguageOption } from "@/lib/api";
 
 const FALLBACK_LANGUAGE_OPTIONS: LanguageOption[] = [
@@ -17,6 +18,7 @@ const FALLBACK_LANGUAGE_OPTIONS: LanguageOption[] = [
 ];
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const { user, loading: authLoading, logout, refreshUser } = useAuth();
   const router = useRouter();
 
@@ -65,10 +67,10 @@ export default function SettingsPage() {
         documentationLanguage
       );
       await refreshUser();
-      setSuccess("Settings saved successfully!");
+      setSuccess(t("settings.settingsSaved"));
       setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
-      setError(err.message || "Failed to save settings");
+      setError(err.message || t("settings.saveFailed") || "Failed to save settings");
     } finally {
       setSaving(false);
     }
@@ -84,7 +86,7 @@ export default function SettingsPage() {
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-slate-400">Loading...</p>
+          <p className="text-slate-400">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -102,11 +104,11 @@ export default function SettingsPage() {
               onClick={() => router.push("/dashboard")}
               className="text-slate-400 hover:text-slate-200"
             >
-              ← Back to Dashboard
+              ← {t("common.backToDashboard")}
             </button>
             <div className="flex items-center gap-2">
               <img src="/logo.png" alt="EasyBewerbung" className="w-8 h-8 rounded-lg" />
-              <span className="text-xl font-bold">EasyBewerbung</span>
+              <span className="text-xl font-bold">{t("common.appName")}</span>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -117,22 +119,22 @@ export default function SettingsPage() {
               Credits: {user.credits}
             </span>
             <Button onClick={handleLogout} variant="outline">
-              Log Out
+              {t("common.logout")}
             </Button>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-6 py-8 max-w-2xl">
-        <h1 className="text-3xl font-bold mb-8">Settings</h1>
+        <h1 className="text-3xl font-bold mb-8">{t("settings.title")}</h1>
 
         <Card>
           <form onSubmit={handleSave} className="space-y-6">
             {/* Profile Information */}
             <div>
-              <h2 className="text-xl font-semibold mb-4">Profile Information</h2>
+              <h2 className="text-xl font-semibold mb-4">{t("settings.profileInformation")}</h2>
               <Input
-                label="Full Name"
+                label={t("settings.fullName")}
                 value={fullName}
                 onChange={setFullName}
                 placeholder="Your full name"
@@ -141,15 +143,15 @@ export default function SettingsPage() {
 
             {/* Language Settings */}
             <div className="space-y-4 pt-4 border-t border-slate-700">
-              <h2 className="text-xl font-semibold">Language Preferences</h2>
+              <h2 className="text-xl font-semibold">{t("settings.languagePreferences")}</h2>
               <p className="text-sm text-slate-400">
-                Choose your preferred languages for communication and documentation.
+                {t("settings.languageDescription")}
               </p>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-200 mb-2">
-                    Preferred Language (UI)
+                    {t("settings.preferredLanguage")}
                   </label>
                   <select
                     value={preferredLanguage}
@@ -163,13 +165,13 @@ export default function SettingsPage() {
                     ))}
                   </select>
                   <p className="text-xs text-slate-500 mt-1">
-                    Your preferred language for the user interface
+                    {t("settings.preferredLanguageHint")}
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-200 mb-2">
-                    Mother Tongue
+                    {t("settings.motherTongue")}
                   </label>
                   <select
                     value={motherTongue}
@@ -183,13 +185,13 @@ export default function SettingsPage() {
                     ))}
                   </select>
                   <p className="text-xs text-slate-500 mt-1">
-                    Your native language for company profile generation
+                    {t("settings.motherTongueHint")}
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-200 mb-2">
-                    Documentation Language
+                    {t("settings.documentationLanguage")}
                   </label>
                   <select
                     value={documentationLanguage}
@@ -203,7 +205,7 @@ export default function SettingsPage() {
                     ))}
                   </select>
                   <p className="text-xs text-slate-500 mt-1">
-                    Default language for generated documents and applications
+                    {t("settings.documentationLanguageHint")}
                   </p>
                 </div>
               </div>
@@ -229,14 +231,14 @@ export default function SettingsPage() {
                 onClick={() => router.push("/dashboard")}
                 variant="outline"
               >
-                Cancel
+                {t("settings.cancel")}
               </Button>
               <Button
                 type="submit"
                 disabled={saving}
                 variant="primary"
               >
-                {saving ? "Saving..." : "Save Settings"}
+                {saving ? t("settings.saving") : t("settings.saveSettings")}
               </Button>
             </div>
           </form>
@@ -244,14 +246,14 @@ export default function SettingsPage() {
 
         {/* Account Information */}
         <Card className="mt-6">
-          <h2 className="text-xl font-semibold mb-4">Account Information</h2>
+          <h2 className="text-xl font-semibold mb-4">{t("settings.accountInformation")}</h2>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-slate-400">Email:</span>
               <span className="text-white">{user.email}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400">Account Created:</span>
+              <span className="text-slate-400">{t("settings.accountCreated")}:</span>
               <span className="text-white">
                 {new Date(user.created_at).toLocaleDateString()}
               </span>

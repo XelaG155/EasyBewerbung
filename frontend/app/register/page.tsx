@@ -9,6 +9,7 @@ import { Input } from "@/components/Input";
 import { Card } from "@/components/Card";
 import { useAuth } from "@/lib/auth-context";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
+import { useTranslation } from "@/lib/i18n-context";
 import api, { LanguageOption } from "@/lib/api";
 
 declare global {
@@ -34,6 +35,7 @@ export default function RegisterPage() {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [privacyText, setPrivacyText] = useState("");
 
+  const { t } = useTranslation();
   const { register, googleLogin } = useAuth();
   const router = useRouter();
 
@@ -57,7 +59,7 @@ export default function RegisterPage() {
     setError("");
 
     if (!privacyAccepted) {
-      setError("You must accept the privacy policy to register");
+      setError(t("auth.privacyPolicyRequired"));
       return;
     }
 
@@ -67,7 +69,7 @@ export default function RegisterPage() {
       await googleLogin(credential, motherTongue, motherTongue, documentationLanguage, privacyAccepted);
       router.push("/dashboard");
     } catch (err: any) {
-      setError(err.message || "Google sign-up failed");
+      setError(err.message || t("auth.googleSignupFailed"));
     } finally {
       setLoading(false);
     }
@@ -75,7 +77,7 @@ export default function RegisterPage() {
 
   const handleGoogleError = useCallback((err: any) => {
     console.error("Google Auth Error:", err);
-    setError("Google initialization failed");
+    setError(t("auth.googleInitFailed"));
   }, []);
 
   const { setGoogleLoaded, googleClientId } = useGoogleAuth(handleGoogleSuccess, handleGoogleError);
@@ -85,12 +87,12 @@ export default function RegisterPage() {
     setError("");
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t("auth.passwordMinLength"));
       return;
     }
 
     if (!privacyAccepted) {
-      setError("You must accept the privacy policy to register");
+      setError(t("auth.privacyPolicyRequired"));
       return;
     }
 
@@ -111,7 +113,7 @@ export default function RegisterPage() {
       // Force full page reload to ensure token is properly loaded
       window.location.href = "/dashboard";
     } catch (err: any) {
-      setError(err.message || "Registration failed. Please try again.");
+      setError(err.message || t("auth.registrationFailed"));
       setLoading(false);
     }
   };
@@ -131,14 +133,14 @@ export default function RegisterPage() {
               <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
                 EB
               </div>
-              <span className="text-2xl font-bold">EasyBewerbung</span>
+              <span className="text-2xl font-bold">{t("common.appName")}</span>
             </Link>
           </div>
 
           {/* Register Form */}
           <Card>
             <h1 className="text-2xl font-bold text-center mb-6">
-              Create Your Account
+              {t("auth.createAccount")}
             </h1>
 
             {error && (
@@ -160,14 +162,14 @@ export default function RegisterPage() {
                 <div className="w-full border-t border-slate-700"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-slate-800 text-slate-400">Or continue with email</span>
+                <span className="px-2 bg-slate-800 text-slate-400">{t("auth.orContinueWith")}</span>
               </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
                 type="text"
-                label="Full Name"
+                label={t("auth.fullName")}
                 value={fullName}
                 onChange={setFullName}
                 placeholder="John Doe"
@@ -175,7 +177,7 @@ export default function RegisterPage() {
 
               <Input
                 type="email"
-                label="Email"
+                label={t("auth.email")}
                 value={email}
                 onChange={setEmail}
                 placeholder="your@email.com"
@@ -184,16 +186,16 @@ export default function RegisterPage() {
 
               <Input
                 type="password"
-                label="Password"
+                label={t("auth.password")}
                 value={password}
                 onChange={setPassword}
-                placeholder="At least 8 characters"
+                placeholder={t("auth.passwordHint")}
                 required
               />
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <label className="text-sm text-slate-200">
-                  <span className="block mb-2">Mother tongue (UI language)</span>
+                  <span className="block mb-2">{t("auth.motherTongue")}</span>
                   <select
                     value={motherTongue}
                     onChange={(e) => setMotherTongue(e.target.value)}
@@ -209,7 +211,7 @@ export default function RegisterPage() {
                 </label>
 
                 <label className="text-sm text-slate-200">
-                  <span className="block mb-2">Language for generated documents</span>
+                  <span className="block mb-2">{t("auth.documentationLanguage")}</span>
                   <select
                     value={documentationLanguage}
                     onChange={(e) => setDocumentationLanguage(e.target.value)}
@@ -234,7 +236,7 @@ export default function RegisterPage() {
                   className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-indigo-600 focus:ring-indigo-500"
                 />
                 <label htmlFor="privacy-checkbox" className="text-sm text-slate-300">
-                  I accept the{" "}
+                  {t("auth.acceptPrivacyPrefix")}{" "}
                   <button
                     type="button"
                     onClick={async () => {
@@ -246,9 +248,9 @@ export default function RegisterPage() {
                     }}
                     className="text-indigo-400 hover:text-indigo-300 underline"
                   >
-                    Privacy Policy
+                    {t("auth.privacyPolicy")}
                   </button>{" "}
-                  and consent to the collection of my IP address for security purposes
+                  {t("auth.acceptPrivacySuffix")}
                 </label>
               </div>
 
@@ -258,17 +260,17 @@ export default function RegisterPage() {
                 className="w-full"
                 disabled={loading || !privacyAccepted}
               >
-                {loading ? "Creating account..." : "Create Account"}
+                {loading ? t("auth.creatingAccount") : t("auth.createAccountButton")}
               </Button>
             </form>
 
             <p className="text-center text-sm text-slate-400 mt-6">
-              Already have an account?{" "}
+              {t("auth.alreadyHaveAccount")}{" "}
               <Link
                 href="/login"
                 className="text-indigo-400 hover:text-indigo-300"
               >
-                Log in
+                {t("auth.signIn")}
               </Link>
             </p>
           </Card>
@@ -280,7 +282,7 @@ export default function RegisterPage() {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
           <div className="bg-slate-800 rounded-lg max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
             <div className="p-6 border-b border-slate-700">
-              <h2 className="text-2xl font-bold text-slate-100">Privacy Policy</h2>
+              <h2 className="text-2xl font-bold text-slate-100">{t("auth.privacyPolicy")}</h2>
             </div>
             <div className="p-6 overflow-y-auto flex-1">
               <pre className="whitespace-pre-wrap text-sm text-slate-300 font-sans">
@@ -293,7 +295,7 @@ export default function RegisterPage() {
                 variant="primary"
                 className="w-full"
               >
-                Close
+                {t("auth.close")}
               </Button>
             </div>
           </div>
