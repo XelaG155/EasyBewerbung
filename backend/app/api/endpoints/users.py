@@ -378,9 +378,24 @@ async def update_user(
 
 
 @router.get("/languages", response_model=List[LanguageOptionResponse])
-async def list_supported_languages():
-    """Expose the platform language list for UI and generation toggles."""
-    return LANGUAGE_OPTIONS_RESPONSE
+async def list_supported_languages(db: Session = Depends(get_db)):
+    """Expose only active languages configured by admin."""
+    from app.models import LanguageSetting
+
+    # Query only active languages from database
+    active_languages = db.query(LanguageSetting).filter(
+        LanguageSetting.is_active == True
+    ).order_by(LanguageSetting.sort_order).all()
+
+    # Convert to response format
+    return [
+        LanguageOptionResponse(
+            code=lang.code,
+            label=lang.label,
+            direction=lang.direction
+        )
+        for lang in active_languages
+    ]
 
 
 @router.get("/privacy-policy")
