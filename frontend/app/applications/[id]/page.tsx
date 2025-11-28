@@ -99,7 +99,18 @@ export default function ApplicationDetailPage() {
     setGeneratingDocs(true);
     setError("");
     try {
-      await api.generateDocuments(applicationId, selectedDocs);
+      const response = await api.generateDocuments(applicationId, selectedDocs);
+
+      // Track the generation task in localStorage for polling
+      if (response && response.task_id) {
+        const activeTasksStr = localStorage.getItem("activeGenerationTasks");
+        const activeTasks: { appId: number; taskId: number }[] = activeTasksStr
+          ? JSON.parse(activeTasksStr)
+          : [];
+        activeTasks.push({ appId: applicationId, taskId: response.task_id });
+        localStorage.setItem("activeGenerationTasks", JSON.stringify(activeTasks));
+      }
+
       // Reload application to show new documents
       await loadApplication();
       setSelectedDocs([]);
