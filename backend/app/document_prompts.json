@@ -9,12 +9,13 @@
       "Start directly with the CV content (e.g., candidate name or professional profile)",
 
       "=== ABSOLUTE HONESTY REQUIREMENTS (CRITICAL) ===",
-      "NEVER invent, fabricate, or add skills that are not explicitly mentioned in the original CV",
-      "NEVER create fictional experiences, qualifications, certifications, or achievements",
-      "NEVER claim competencies the candidate does not possess - this would fail background checks",
-      "ONLY reorder, emphasize, and rephrase EXISTING information from the original CV",
-      "All statements must be verifiable against the candidate's diplomas, references, and work history",
-      "If a required skill is missing from the CV, DO NOT add it - leave it absent",
+      "The CV text provided is a compilation of the candidate's verifiable documents (references, diplomas, certificates) and actual work history",
+      "ONLY use skills, experiences, and qualifications that can be verified in these uploaded documents",
+      "NEVER invent, fabricate, or add skills not documented in the candidate's references, certificates, or diplomas",
+      "NEVER create fictional experiences, qualifications, or achievements beyond what is verifiable",
+      "NEVER claim competencies the candidate does not possess - background checks will verify against original documents",
+      "ONLY reorder, emphasize, and rephrase information from the candidate's verifiable documents and work history",
+      "If a required skill is missing from the candidate's actual documents, DO NOT add it - leave it absent",
 
       "=== ATS OPTIMIZATION STRATEGY ===",
       "Extract must-have skills and keywords from the job description",
@@ -54,7 +55,7 @@
     ],
     "output_format": "ATS-optimized single-column CV with standard sections, starting with candidate name and contact info",
     "length_guideline": "Same as original CV (typically 1-2 pages)",
-    "prompt_template": "You are a {role}. {task}.\n\nYour goal is to help this candidate pass ATS (Applicant Tracking System) filters by optimizing keyword placement, formatting, and relevance - while NEVER lying or inventing qualifications.\n\nJob Description (extract must-have skills and keywords from here):\n{job_description}\n\nOriginal CV (ONLY use information from here - DO NOT add fictional content):\n{cv_text}\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nNow create the ATS-optimized, honest, tailored CV:"
+    "prompt_template": "You are a {role}. {task}.\n\nYour goal is to help this candidate pass ATS (Applicant Tracking System) filters by optimizing keyword placement, formatting, and relevance - while NEVER lying or inventing qualifications.\n\nJob Description (extract must-have skills and keywords from here):\n{job_description}\n\nCandidate Information (compiled from uploaded verifiable documents - references, diplomas, certificates - and work history):\n{cv_text}\n\nIMPORTANT: This CV text is a compilation of verifiable documents. ONLY use information that exists in the candidate's actual uploaded documents. DO NOT add fictional content.\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nNow create the ATS-optimized, honest, tailored CV:"
   },
   "tailored_cv_editable": {
     "document_type": "tailored_cv_editable",
@@ -70,11 +71,12 @@
       "  - Suggestions for candidate to add personal touches",
 
       "=== ABSOLUTE HONESTY REQUIREMENTS (CRITICAL) ===",
-      "NEVER invent, fabricate, or suggest adding skills not in the original CV",
-      "NEVER create fictional experiences, qualifications, or achievements",
-      "ONLY reorder, emphasize, and rephrase EXISTING information",
-      "All statements must be verifiable - this is a professional document for real applications",
-      "Comments should explain optimization strategy, NOT suggest lying",
+      "The CV text is a compilation of the candidate's verifiable documents (references, diplomas, certificates) and work history",
+      "ONLY use skills and experiences documented in these uploaded, verifiable sources",
+      "NEVER suggest adding skills not documented in the candidate's references, certificates, or diplomas",
+      "NEVER suggest fictional experiences, qualifications, or achievements",
+      "ONLY reorder, emphasize, and rephrase information from verifiable documents",
+      "Comments should explain optimization strategy using existing documented qualifications - NOT suggest fabricating",
 
       "=== ATS OPTIMIZATION (with explanatory comments) ===",
       "Use ATS-friendly single-column layout - add [COMMENT: explaining why]",
@@ -89,7 +91,7 @@
     ],
     "output_format": "ATS-optimized CV with [COMMENT: ...] markers explaining optimizations",
     "length_guideline": "Same as original CV plus educational comments",
-    "prompt_template": "You are a {role}. {task}.\n\nYour goal: help candidate understand WHY each optimization improves ATS compatibility, while maintaining complete honesty.\n\nJob Description (analyze for keywords and requirements):\n{job_description}\n\nOriginal CV (ONLY use existing information):\n{cv_text}\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nCreate the ATS-optimized editable CV with educational comments:"
+    "prompt_template": "You are a {role}. {task}.\n\nYour goal: help candidate understand WHY each optimization improves ATS compatibility, while maintaining complete honesty.\n\nJob Description (analyze for keywords and requirements):\n{job_description}\n\nCandidate Information (compiled from uploaded verifiable documents - references, diplomas, certificates - and work history):\n{cv_text}\n\nIMPORTANT: This CV text is a compilation of verifiable documents. ONLY use information documented in the candidate's actual uploaded sources.\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nCreate the ATS-optimized editable CV with educational comments:"
   },
   "tailored_cv_one_page": {
     "document_type": "tailored_cv_one_page",
@@ -101,9 +103,10 @@
       "Fit everything on ONE page - this is a hard constraint",
 
       "=== ABSOLUTE HONESTY REQUIREMENTS (CRITICAL) ===",
-      "NEVER invent skills, experiences, or qualifications not in original CV",
-      "ONLY select and condense EXISTING information from the full CV",
-      "Preserve factual accuracy - all claims must be verifiable",
+      "The CV text is a compilation of the candidate's verifiable documents (references, diplomas, certificates) and work history",
+      "ONLY select and condense information that exists in these uploaded, verifiable documents",
+      "NEVER invent skills, experiences, or qualifications not documented in references, certificates, or diplomas",
+      "Preserve factual accuracy - all claims must be verifiable against original uploaded documents",
       "If space is limited, OMIT information rather than fabricate",
 
       "=== ATS OPTIMIZATION FOR ONE-PAGE FORMAT ===",
@@ -131,7 +134,7 @@
     ],
     "output_format": "ATS-optimized concise one-page CV with maximum keyword-to-space ratio",
     "length_guideline": "Strictly 1 page - maximum impact in minimum space",
-    "prompt_template": "You are a {role}. {task}.\n\nYour challenge: fit the most ATS-relevant information on ONE page while maintaining complete honesty.\n\nJob Description (identify critical must-have keywords):\n{job_description}\n\nFull CV (select and condense ONLY existing information):\n{cv_text}\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nCreate the one-page ATS-optimized CV now:"
+    "prompt_template": "You are a {role}. {task}.\n\nYour challenge: fit the most ATS-relevant information on ONE page while maintaining complete honesty.\n\nJob Description (identify critical must-have keywords):\n{job_description}\n\nCandidate Information (compiled from uploaded verifiable documents - references, diplomas, certificates - and work history):\n{cv_text}\n\nIMPORTANT: This text is compiled from verifiable documents. Select and condense ONLY information documented in the candidate's actual uploaded sources.\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nCreate the one-page ATS-optimized CV now:"
   },
   "motivational_letter_pdf": {
     "document_type": "motivational_letter_pdf",
@@ -143,10 +146,11 @@
       "Start directly with the letter (e.g., greeting and opening paragraph)",
 
       "=== ABSOLUTE HONESTY REQUIREMENTS (CRITICAL) ===",
-      "Use ONLY facts from the candidate's CV - DO NOT invent experiences or qualifications",
-      "NEVER claim skills, achievements, or experiences not documented in the CV",
-      "All statements must be verifiable against CV, references, and work history",
-      "If a required skill is missing, focus on transferable skills or willingness to learn - do NOT fabricate expertise",
+      "The CV text is a compilation of the candidate's verifiable documents (references, diplomas, certificates) and work history",
+      "Use ONLY facts documented in these uploaded, verifiable sources - DO NOT invent experiences or qualifications",
+      "NEVER claim skills, achievements, or experiences not documented in references, certificates, or diplomas",
+      "All statements must be verifiable against the candidate's original uploaded documents",
+      "If a required skill is missing from documented sources, focus on transferable skills or willingness to learn - do NOT fabricate expertise",
 
       "=== ATS OPTIMIZATION FOR COVER LETTERS ===",
       "Many ATS systems parse cover letters as additional text for keyword matching",
@@ -177,7 +181,7 @@
     ],
     "output_format": "ATS-optimized motivational letter with natural keyword integration and proper business letter format",
     "length_guideline": "3/4 to 1 page (concise but comprehensive)",
-    "prompt_template": "You are a {role}. {task}.\n\nYour goal: write a letter that passes ATS keyword filters AND resonates with human recruiters, using ONLY truthful information from the CV.\n\nJob Description (identify must-have keywords and requirements):\n{job_description}\n\nCandidate CV (use ONLY facts from here):\n{cv_text}\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nWrite the ATS-optimized, honest, compelling motivational letter now:"
+    "prompt_template": "You are a {role}. {task}.\n\nYour goal: write a letter that passes ATS keyword filters AND resonates with human recruiters, using ONLY truthful information from verifiable documents.\n\nJob Description (identify must-have keywords and requirements):\n{job_description}\n\nCandidate Information (compiled from uploaded verifiable documents - references, diplomas, certificates - and work history):\n{cv_text}\n\nIMPORTANT: Use ONLY facts documented in the candidate's actual uploaded sources. DO NOT invent experiences or skills.\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nWrite the ATS-optimized, honest, compelling motivational letter now:"
   },
   "motivational_letter_editable": {
     "document_type": "motivational_letter_editable",
@@ -193,9 +197,10 @@
       "  - Optional personalization touches",
 
       "=== ABSOLUTE HONESTY REQUIREMENTS (CRITICAL) ===",
-      "Use ONLY facts from CV - NEVER suggest inventing skills or experiences",
-      "Suggestions should guide candidate to add TRUE personal details, not fabricate",
-      "All base content must be verifiable",
+      "The CV text is a compilation of the candidate's verifiable documents (references, diplomas, certificates) and work history",
+      "Use ONLY facts from these uploaded, verifiable sources - NEVER suggest inventing skills or experiences",
+      "Suggestions should guide candidate to add TRUE personal details from their documented background, not fabricate",
+      "All base content must be verifiable against original uploaded documents (references, certificates, diplomas)",
 
       "=== ATS OPTIMIZATION (with explanatory suggestions) ===",
       "Naturally integrate 5-8 keywords from job description",
@@ -213,7 +218,7 @@
     ],
     "output_format": "ATS-optimized letter with [SUGGESTION: ...] markers explaining optimizations and personalization opportunities",
     "length_guideline": "1 page with educational suggestions",
-    "prompt_template": "You are a {role}. {task}.\n\nYour goal: create a strong ATS-optimized base letter with suggestions helping candidate understand WHY and HOW to personalize it further (truthfully).\n\nJob Description (identify keywords):\n{job_description}\n\nCandidate CV (use existing facts only):\n{cv_text}\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nWrite the editable ATS-optimized motivational letter with helpful suggestions:"
+    "prompt_template": "You are a {role}. {task}.\n\nYour goal: create a strong ATS-optimized base letter with suggestions helping candidate understand WHY and HOW to personalize it further (truthfully).\n\nJob Description (identify keywords):\n{job_description}\n\nCandidate Information (compiled from uploaded verifiable documents - references, diplomas, certificates - and work history):\n{cv_text}\n\nIMPORTANT: Use ONLY facts from the candidate's documented sources. Suggestions should guide adding TRUE personal details, not fabricating.\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nWrite the editable ATS-optimized motivational letter with helpful suggestions:"
   },
   "email_formal": {
     "document_type": "email_formal",
@@ -296,15 +301,16 @@
       "  - NEVER recommend adding fake skills - only optimizing presentation of real ones",
 
       "=== HONESTY & REALISM ===",
-      "Be brutally honest about gaps - candidate needs to know true ATS performance",
-      "If CV will likely fail ATS filters, state this clearly",
-      "Recommendations must be achievable with candidate's actual background",
+      "The CV text is a compilation of the candidate's verifiable documents (references, diplomas, certificates) and work history",
+      "Be brutally honest about gaps - candidate needs to know true ATS performance based on their documented qualifications",
+      "If the candidate's documented skills will likely fail ATS filters, state this clearly",
+      "Recommendations must be achievable with candidate's actual documented background - NEVER suggest adding undocumented skills",
 
       "Structure the report clearly with sections and use bullet points"
     ],
     "output_format": "Comprehensive ATS simulation report with score breakdown, keyword analysis, strengths, gaps, and honest recommendations",
     "length_guideline": "2-3 pages (detailed analysis)",
-    "prompt_template": "You are an {role}. {task}.\n\nSimulate how a real ATS would evaluate this CV against the job requirements. Be honest about what will pass filters and what won't.\n\nJob Requirements (extract must-haves, nice-to-haves, keywords):\n{job_description}\n\nCandidate CV (analyze as ATS would parse it):\n{cv_text}\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nGenerate the detailed ATS match score report:"
+    "prompt_template": "You are an {role}. {task}.\n\nSimulate how a real ATS would evaluate the candidate's documented qualifications against the job requirements. Be honest about what will pass filters and what won't.\n\nJob Requirements (extract must-haves, nice-to-haves, keywords):\n{job_description}\n\nCandidate Information (compiled from uploaded verifiable documents - references, diplomas, certificates - and work history):\n{cv_text}\n\nIMPORTANT: Analyze ONLY the documented skills and experiences from verifiable sources. Be honest about gaps.\n\nOutput Language: {language}\n\nCRITICAL INSTRUCTIONS:\n{instructions}\n\nGenerate the detailed ATS match score report:"
   },
   "company_intelligence_briefing": {
     "document_type": "company_intelligence_briefing",

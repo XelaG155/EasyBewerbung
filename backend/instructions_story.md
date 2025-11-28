@@ -562,6 +562,26 @@ backend/app/document_prompts.json
 
 **Ziel:** Maximale ATS-Kompatibilität bei absoluter Ehrlichkeit
 
+#### Wichtig: Dynamisches CV vs. Verifizierbare Quellen
+
+**Das CV in unserem System ist dynamisch:**
+- Für jedes Job-Angebot wird ein neues, angepasstes CV generiert
+- Das CV ist **NICHT** die Quelle der Wahrheit
+
+**Die wahren Quellen der Wahrheit sind:**
+1. **Hochgeladene verifizierbare Dokumente:**
+   - Referenzen (reference letters)
+   - Arbeitszeugnisse (certificates)
+   - Diplome (degrees/diplomas)
+   - Weitere Zertifikate
+
+2. **Dokumentierte Arbeitserfahrung:**
+   - Stationen wo der Kandidat gearbeitet hat
+   - Erfolge die erzielt wurden (und in Referenzen/Zeugnissen überprüfbar sind)
+   - Skills die in diesen Dokumenten erwähnt werden
+
+**Das generierte CV ist eine Kompilation dieser Quellen** - optimiert für das jeweilige Job-Angebot, aber immer basierend auf den verifizierbaren Dokumenten.
+
 #### 1. Formatierungs-Optimierung
 
 **ATS-freundlich:**
@@ -594,23 +614,23 @@ backend/app/document_prompts.json
 6. **Natürliche Integration:** Keyword-Stuffing vermeiden, Kontext bewahren
 
 **KRITISCH - Ehrlichkeitsgarantie:**
-- ✓ Nur Skills verwenden, die **tatsächlich im Original-CV stehen**
-- ✓ Nur Erfahrungen referenzieren, die **nachweisbar** sind (Zeugnisse, Referenzen)
-- ✗ **NIEMALS** Skills erfinden, die der Kandidat nicht besitzt
-- ✗ **NIEMALS** Qualifikationen hinzufügen, die nicht existieren
-- ✗ **NIEMALS** Erfahrungen fabrizieren
+- ✓ Nur Skills verwenden, die **in verifizierbaren Dokumenten (Referenzen, Zeugnisse, Diplome) nachweisbar** sind
+- ✓ Nur Erfahrungen referenzieren, die **dokumentiert** sind (in Referenzen, Arbeitszeugnissen)
+- ✗ **NIEMALS** Skills erfinden, die nicht in hochgeladenen Dokumenten stehen
+- ✗ **NIEMALS** Qualifikationen hinzufügen, die nicht dokumentiert sind
+- ✗ **NIEMALS** Erfahrungen fabrizieren, die nicht verifizierbar sind
 
 **Beispiel - Richtig:**
-- Original CV: "Worked with Python for data analysis"
+- Dokumentierte Erfahrung: "Worked with Python for data analysis" (in Referenz/Zeugnis erwähnt)
 - Job fordert: "Python, Pandas, NumPy"
-- Wenn Pandas/NumPy im CV erwähnt: ✓ "Python (Pandas, NumPy) for data analysis"
-- Wenn NICHT erwähnt: ✗ NICHT hinzufügen
+- Wenn Pandas/NumPy in Dokumenten erwähnt: ✓ "Python (Pandas, NumPy) for data analysis"
+- Wenn NICHT in Dokumenten: ✗ NICHT hinzufügen
 
 **Beispiel - Falsch:**
-- Original CV: Keine Erwähnung von "Machine Learning"
+- Hochgeladene Dokumente: Keine Erwähnung von "Machine Learning"
 - Job fordert: "Machine Learning experience required"
 - ✗ NICHT hinzufügen: "Experience with Machine Learning"
-- ✓ STATTDESSEN: Skill-Gap transparent lassen oder verwandte Skills highlighten
+- ✓ STATTDESSEN: Skill-Gap transparent lassen oder verwandte dokumentierte Skills highlighten
 
 #### 3. Content-Priorisierung
 
@@ -680,11 +700,12 @@ Alle CV- und Motivationsschreiben-Prompts enthalten jetzt:
 
 **Beispiel-Prompt-Auszug (tailored_cv_pdf):**
 ```
-"NEVER invent, fabricate, or add skills that are not explicitly mentioned in the original CV"
-"NEVER create fictional experiences, qualifications, certifications, or achievements"
-"NEVER claim competencies the candidate does not possess - this would fail background checks"
-"ONLY reorder, emphasize, and rephrase EXISTING information from the original CV"
-"All statements must be verifiable against the candidate's diplomas, references, and work history"
+"The CV text provided is a compilation of the candidate's verifiable documents (references, diplomas, certificates) and actual work history"
+"ONLY use skills, experiences, and qualifications that can be verified in these uploaded documents"
+"NEVER invent, fabricate, or add skills not documented in the candidate's references, certificates, or diplomas"
+"NEVER create fictional experiences, qualifications, or achievements beyond what is verifiable"
+"NEVER claim competencies the candidate does not possess - background checks will verify against original documents"
+"ONLY reorder, emphasize, and rephrase information from the candidate's verifiable documents and work history"
 ```
 
 ### Ethik & Realismus
