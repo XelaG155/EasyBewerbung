@@ -8,6 +8,7 @@ import { Input } from "@/components/Input";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Modal } from "@/components/Modal";
 import { useAuth } from "@/lib/auth-context";
+import { useTranslation } from "@/lib/i18n-context";
 import api, { LanguageOption } from "@/lib/api";
 
 type DocumentRecord = {
@@ -75,6 +76,7 @@ const ensureOptionList = (userLanguageValues: (string | undefined | null)[]): La
 
 export default function DashboardPage() {
   const { user, loading: authLoading, logout, refreshUser } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
 
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
@@ -192,7 +194,7 @@ export default function DashboardPage() {
       const fileInput = document.getElementById("file-input") as HTMLInputElement;
       if (fileInput) fileInput.value = "";
     } catch (error: any) {
-      setUploadError(error.message || "Upload failed");
+      setUploadError(error.message || t("dashboard.uploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -216,8 +218,8 @@ export default function DashboardPage() {
           ]);
       // Create application from analyzed job
       await api.createApplication({
-        job_title: result.title || "Unknown Position",
-        company: result.company || "Unknown Company",
+        job_title: result.title || t("dashboard.unknownPosition"),
+        company: result.company || t("dashboard.unknownCompany"),
         job_offer_url: jobUrl,
         ui_language: resolveLanguageCode(user.mother_tongue || user.preferred_language, options),
         documentation_language: documentationLanguage,
@@ -227,9 +229,9 @@ export default function DashboardPage() {
       await loadData();
       await refreshUser();
     } catch (error: any) {
-      const message = error.message || "Analysis failed";
+      const message = error.message || t("dashboard.analysisFailed");
       if (message.toLowerCase().includes("credit")) {
-        setAnalysisError("You do not have enough credits. Please ask an admin to top up your account.");
+        setAnalysisError(t("dashboard.noCredits"));
       } else {
         setAnalysisError(message);
       }
@@ -272,7 +274,7 @@ export default function DashboardPage() {
       const message = error.message || "Could not save spontaneous application";
       if (message.toLowerCase().includes("credit")) {
         setSpontaneousError(
-          "You do not have enough credits. Please ask an admin to top up your account."
+          t("dashboard.noCredits")
         );
       } else {
         setSpontaneousError(message);
@@ -283,13 +285,13 @@ export default function DashboardPage() {
   };
 
   const handleDeleteDocument = async (id: number) => {
-    if (!confirm("Delete this document?")) return;
+    if (!confirm(t("dashboard.deleteConfirm"))) return;
 
     try {
       await api.deleteDocument(id);
       await loadData();
     } catch (error: any) {
-      alert("Delete failed: " + error.message);
+      alert(t("dashboard.deleteFailed") + ": " + error.message);
     }
   };
 
@@ -306,7 +308,7 @@ export default function DashboardPage() {
       });
       await loadData();
     } catch (error: any) {
-      alert("Update failed: " + error.message);
+      alert(t("dashboard.updateFailed") + ": " + error.message);
     }
   };
 
@@ -335,7 +337,7 @@ export default function DashboardPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (error: any) {
-      alert("Failed to generate report: " + error.message);
+      alert(t("dashboard.downloadFailed") + ": " + error.message);
     }
   };
 
@@ -354,7 +356,7 @@ export default function DashboardPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (error: any) {
-      alert("Failed to download PDF: " + error.message);
+      alert(t("dashboard.downloadPdfFailed") + ": " + error.message);
     }
   };
 
@@ -393,7 +395,7 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-slate-400">Loading...</p>
+          <p className="text-slate-400">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -480,7 +482,7 @@ export default function DashboardPage() {
                       disabled={uploading}
                       variant="primary"
                     >
-                      {uploading ? "Uploading..." : "Upload"}
+                      {uploading ? t("dashboard.uploading") : t("dashboard.upload")}
                     </Button>
                   </div>
                 )}
@@ -542,7 +544,7 @@ export default function DashboardPage() {
               <form onSubmit={handleCreateSpontaneous} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
-                    label="Target company"
+                    label={t("dashboard.targetCompany")}
                     value={targetCompany}
                     onChange={setTargetCompany}
                     placeholder="ACME AG"
@@ -550,10 +552,10 @@ export default function DashboardPage() {
                   />
 
                   <Input
-                    label="Role or team you want"
+                    label={t("dashboard.targetRole")}
                     value={targetRole}
                     onChange={setTargetRole}
-                    placeholder="Product Manager, Zurich"
+                    placeholder={t("dashboard.rolePlaceholder")}
                     required
                   />
                 </div>
@@ -607,7 +609,7 @@ export default function DashboardPage() {
                 </div>
 
                 <Button type="submit" disabled={creatingSpontaneous || !targetCompany || !targetRole} variant="primary">
-                  {creatingSpontaneous ? "Saving..." : "Save Spontaneous Application"}
+                  {creatingSpontaneous ? t("dashboard.saving") : t("dashboard.saveSpontaneous")}
                 </Button>
 
                 {spontaneousError && (
@@ -624,7 +626,7 @@ export default function DashboardPage() {
               <form onSubmit={handleAnalyzeJob} className="space-y-4">
                 <Input
                   type="url"
-                  label="Job Offer URL"
+                  label={t("dashboard.jobOfferUrl")}
                   value={jobUrl}
                   onChange={setJobUrl}
                   placeholder="https://example.com/job-posting"
@@ -668,7 +670,7 @@ export default function DashboardPage() {
                   disabled={analyzing || !jobUrl}
                   variant="primary"
                 >
-                  {analyzing ? "Analyzing..." : "Analyze Job"}
+                  {analyzing ? t("dashboard.analyzing") : t("dashboard.analyzeJob")}
                 </Button>
 
                 {analysisError && (
@@ -814,7 +816,7 @@ export default function DashboardPage() {
                             : "bg-slate-700 text-slate-300"
                             }`}
                         >
-                          {app.applied ? "✓ Applied" : "Not Applied"}
+                          {app.applied ? "✓ Applied" : t("dashboard.notApplied")}
                         </span>
 
                         {app.result && (
@@ -886,11 +888,11 @@ export default function DashboardPage() {
         <Modal
           isOpen={statusModalOpen}
           onClose={() => setStatusModalOpen(false)}
-          title="Update Application Status"
+          title={t("dashboard.updateApplicationStatus")}
         >
           <div className="space-y-4">
             <Input
-              label="New Status"
+              label={t("dashboard.newStatus")}
               value={newStatus}
               onChange={setNewStatus}
               placeholder="e.g. Interview, Rejected, Offer"
