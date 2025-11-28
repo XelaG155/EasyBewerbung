@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from datetime import timezone
 import shutil
 import os
 from pathlib import Path
@@ -156,7 +157,7 @@ async def list_documents(
             "filename": doc.filename,
             "doc_type": doc.doc_type,
             "has_text": doc.content_text is not None and len(doc.content_text) > 0,
-            "created_at": doc.created_at.isoformat(),
+            "created_at": doc.created_at.replace(tzinfo=timezone.utc).isoformat() if doc.created_at.tzinfo is None else doc.created_at.isoformat(),
         }
         for doc in documents
     ]
