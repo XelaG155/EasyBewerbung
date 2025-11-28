@@ -429,17 +429,7 @@ export default function DashboardPage() {
 
   const handleDownloadOriginalJobPDF = async (jobOfferId: number, jobTitle: string, company: string) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs/${jobOfferId}/original-pdf`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to download original job posting PDF");
-      }
-
-      const blob = await response.blob();
+      const blob = await api.downloadOriginalJobPDF(jobOfferId);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
