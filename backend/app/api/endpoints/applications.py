@@ -672,6 +672,7 @@ async def get_matching_score(
                 "strengths": json.loads(existing_score.strengths),
                 "gaps": json.loads(existing_score.gaps),
                 "recommendations": json.loads(existing_score.recommendations),
+                "story": existing_score.story,
             }
 
     # Get user's CV
@@ -720,6 +721,7 @@ Please provide a JSON response with:
 2. strengths: Array of 3-5 key strengths/matches
 3. gaps: Array of 2-4 areas where the candidate may not fully meet requirements
 4. recommendations: Array of 2-3 recommendations for the application
+5. story: A concise, 3-6 sentence narrative that addresses potential fit concerns. If the candidate appears overqualified, craft a respectful rationale for stepping into the role that focuses on positive motivations (e.g., desire to mentor, deliver impact quickly, appreciate stability or hands-on work) without criticizing their current employer or manager. If their current role, title, or experience differs from the job requirements, highlight transferable skills, relevant achievements, and a credible motivation for the transition that would reassure ATS/HR and hiring managers. If neither applies, provide a brief storyline that frames their profile positively for the role.
 
 IMPORTANT: Read the ENTIRE CV carefully, including any language skills section, before identifying gaps.
 
@@ -753,6 +755,7 @@ Format your response as valid JSON only, no additional text."""
             existing_score.strengths = json.dumps(result.get("strengths", []))
             existing_score.gaps = json.dumps(result.get("gaps", []))
             existing_score.recommendations = json.dumps(result.get("recommendations", []))
+            existing_score.story = result.get("story")
             existing_score.updated_at = datetime.now(timezone.utc)
         else:
             # Create new score
@@ -762,6 +765,7 @@ Format your response as valid JSON only, no additional text."""
                 strengths=json.dumps(result.get("strengths", [])),
                 gaps=json.dumps(result.get("gaps", [])),
                 recommendations=json.dumps(result.get("recommendations", [])),
+                story=result.get("story"),
             )
             db.add(new_score)
 
@@ -775,6 +779,7 @@ Format your response as valid JSON only, no additional text."""
             "strengths": result.get("strengths", []),
             "gaps": result.get("gaps", []),
             "recommendations": result.get("recommendations", []),
+            "story": result.get("story"),
         }
 
     except Exception as e:
