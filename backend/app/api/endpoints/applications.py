@@ -4,6 +4,7 @@ import os
 import json
 import re
 import logging
+import traceback
 from io import BytesIO
 from urllib.parse import quote
 
@@ -241,6 +242,9 @@ class GeneratedDocumentResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.replace(tzinfo=timezone.utc).isoformat() if v.tzinfo is None else v.isoformat()
+        }
 
 
 class ApplicationResponse(BaseModel):
@@ -248,6 +252,7 @@ class ApplicationResponse(BaseModel):
     job_title: str
     company: str
     job_offer_url: Optional[str]
+    job_offer_id: Optional[int]  # ID of the saved JobOffer for PDF access
     is_spontaneous: bool
     opportunity_context: Optional[str]
     job_description: Optional[str]
@@ -262,16 +267,20 @@ class ApplicationResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.replace(tzinfo=timezone.utc).isoformat() if v and v.tzinfo is None else (v.isoformat() if v else None)
+        }
 
 
 def serialize_generated_document(doc: GeneratedDocument) -> dict:
+    created_at_utc = doc.created_at.replace(tzinfo=timezone.utc) if doc.created_at and doc.created_at.tzinfo is None else doc.created_at
     return {
         "id": doc.id,
         "doc_type": doc.doc_type,
         "format": doc.format,
         "storage_path": doc.storage_path,
         "content": doc.content,
-        "created_at": doc.created_at,
+        "created_at": created_at_utc.isoformat() if created_at_utc else None,
     }
 
 
@@ -286,29 +295,36 @@ def serialize_application(app: Application, db: Session = None, include_job_desc
                                  Set to False for list views to improve performance
     """
     job_description = None
+    job_offer_id = None
     if include_job_description:
         if db and app.job_offer_url:
             job_offer = db.query(JobOffer).filter(JobOffer.url == app.job_offer_url).first()
             if job_offer:
                 job_description = job_offer.description
+                job_offer_id = job_offer.id
         if not job_description and app.opportunity_context:
             job_description = app.opportunity_context
+
+    # Convert naive datetimes to UTC-aware and serialize as ISO 8601
+    created_at_utc = app.created_at.replace(tzinfo=timezone.utc) if app.created_at and app.created_at.tzinfo is None else app.created_at
+    applied_at_utc = app.applied_at.replace(tzinfo=timezone.utc) if app.applied_at and app.applied_at.tzinfo is None else app.applied_at
 
     return {
         "id": app.id,
         "job_title": app.job_title,
         "company": app.company,
         "job_offer_url": app.job_offer_url,
+        "job_offer_id": job_offer_id,
         "is_spontaneous": app.is_spontaneous,
         "opportunity_context": app.opportunity_context,
         "job_description": job_description,
         "applied": app.applied,
-        "applied_at": app.applied_at,
+        "applied_at": applied_at_utc.isoformat() if applied_at_utc else None,
         "result": app.result,
         "ui_language": app.ui_language,
         "documentation_language": app.documentation_language,
         "company_profile_language": app.company_profile_language,
-        "created_at": app.created_at,
+        "created_at": created_at_utc.isoformat() if created_at_utc else None,
         "generated_documents": [serialize_generated_document(doc) for doc in app.generated_documents],
     }
 
@@ -460,47 +476,69 @@ async def list_application_history(
     db: Session = Depends(get_db),
 ):
     """List all applications for the current user."""
-    applications = (
-        db.query(Application)
-        .options(joinedload(Application.generated_documents))
-        .filter(Application.user_id == current_user.id)
-        .order_by(Application.created_at.desc())
-        .all()
-    )
+    try:
+        print(f"📋 Fetching application history for user {current_user.id}")
+        applications = (
+            db.query(Application)
+            .options(joinedload(Application.generated_documents))
+            .filter(Application.user_id == current_user.id)
+            .order_by(Application.created_at.desc())
+            .all()
+        )
+        print(f"✅ Found {len(applications)} applications")
 
-    # Efficiently load job descriptions using a single query
-    # This prevents N+1 query problem
-    job_urls = [app.job_offer_url for app in applications if app.job_offer_url]
-    job_offers_map = {}
-    if job_urls:
-        job_offers = db.query(JobOffer).filter(JobOffer.url.in_(job_urls)).all()
-        job_offers_map = {jo.url: jo.description for jo in job_offers}
+        # Efficiently load job descriptions using a single query
+        # This prevents N+1 query problem
+        job_urls = [app.job_offer_url for app in applications if app.job_offer_url]
+        job_offers_map = {}
+        if job_urls:
+            job_offers = db.query(JobOffer).filter(JobOffer.url.in_(job_urls)).all()
+            job_offers_map = {jo.url: jo.description for jo in job_offers}
+            print(f"✅ Loaded {len(job_offers_map)} job descriptions")
 
-    # Serialize applications with pre-loaded job descriptions
-    result = []
-    for app in applications:
-        serialized = {
-            "id": app.id,
-            "job_title": app.job_title,
-            "company": app.company,
-            "job_offer_url": app.job_offer_url,
-            "is_spontaneous": app.is_spontaneous,
-            "opportunity_context": app.opportunity_context,
-            "job_description": job_offers_map.get(app.job_offer_url)
-            if app.job_offer_url
-            else app.opportunity_context,
-            "applied": app.applied,
-            "applied_at": app.applied_at,
-            "result": app.result,
-            "ui_language": app.ui_language,
-            "documentation_language": app.documentation_language,
-            "company_profile_language": app.company_profile_language,
-            "created_at": app.created_at,
-            "generated_documents": [serialize_generated_document(doc) for doc in app.generated_documents],
-        }
-        result.append(serialized)
+        # Build job_offers ID map for PDF access
+        job_offers_id_map = {}
+        if job_urls:
+            job_offers_id_map = {jo.url: jo.id for jo in job_offers}
 
-    return result
+        # Serialize applications with pre-loaded job descriptions
+        result = []
+        for app in applications:
+            # Convert naive datetimes to UTC-aware and serialize as ISO 8601
+            created_at_utc = app.created_at.replace(tzinfo=timezone.utc) if app.created_at and app.created_at.tzinfo is None else app.created_at
+            applied_at_utc = app.applied_at.replace(tzinfo=timezone.utc) if app.applied_at and app.applied_at.tzinfo is None else app.applied_at
+
+            serialized = {
+                "id": app.id,
+                "job_title": app.job_title,
+                "company": app.company,
+                "job_offer_url": app.job_offer_url,
+                "job_offer_id": job_offers_id_map.get(app.job_offer_url) if app.job_offer_url else None,
+                "is_spontaneous": app.is_spontaneous,
+                "opportunity_context": app.opportunity_context,
+                "job_description": job_offers_map.get(app.job_offer_url)
+                if app.job_offer_url
+                else app.opportunity_context,
+                "applied": app.applied,
+                "applied_at": applied_at_utc.isoformat() if applied_at_utc else None,
+                "result": app.result,
+                "ui_language": app.ui_language,
+                "documentation_language": app.documentation_language,
+                "company_profile_language": app.company_profile_language,
+                "created_at": created_at_utc.isoformat() if created_at_utc else None,
+                "generated_documents": [serialize_generated_document(doc) for doc in app.generated_documents],
+            }
+            result.append(serialized)
+
+        print(f"✅ Serialized {len(result)} applications successfully")
+        return result
+    except Exception as e:
+        print(f"❌ ERROR in list_application_history: {str(e)}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error loading application history. Please try again later.",
+        )
 
 
 @router.get("/rav-report", response_model=dict)

@@ -24,6 +24,7 @@ type ApplicationRecord = {
   job_title: string;
   company: string;
   job_offer_url?: string | null;
+  job_offer_id?: number | null;
   is_spontaneous?: boolean;
   opportunity_context?: string | null;
   job_description?: string | null;
@@ -353,6 +354,30 @@ export default function DashboardPage() {
       const a = document.createElement("a");
       a.href = url;
       a.download = `job_${company}_${jobTitle}.pdf`.replace(/\s+/g, "_");
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      alert(t("dashboard.downloadPdfFailed") + ": " + error.message);
+    }
+  };
+
+  const handleDownloadOriginalJobPDF = async (jobOfferId: number, jobTitle: string, company: string) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs/${jobOfferId}/original-pdf`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to download original job posting PDF");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `original_${company}_${jobTitle}.pdf`.replace(/\s+/g, "_");
       a.click();
       URL.revokeObjectURL(url);
     } catch (error: any) {
@@ -873,6 +898,15 @@ export default function DashboardPage() {
                           >
                             🔗 View Original Posting
                           </a>
+                        )}
+                        {app.job_offer_id && (
+                          <button
+                            onClick={() => handleDownloadOriginalJobPDF(app.job_offer_id!, app.job_title, app.company)}
+                            className="text-sm px-3 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white inline-block"
+                            title="Download original job posting PDF"
+                          >
+                            📄 Download Job PDF
+                          </button>
                         )}
                       </div>
                     </div>

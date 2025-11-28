@@ -9,6 +9,7 @@ import socket
 import re
 import os
 import uuid
+import traceback
 from app.limiter import limiter
 from bs4 import BeautifulSoup
 from typing import Optional
@@ -173,8 +174,7 @@ def scrape_job_offer(url: str) -> dict:
             url,
             headers=headers,
             timeout=REQUEST_TIMEOUT,
-            allow_redirects=True,
-            max_redirects=3
+            allow_redirects=True
         )
         response.raise_for_status()
 
@@ -252,7 +252,9 @@ def scrape_job_offer(url: str) -> dict:
             status_code=400,
             detail="Could not fetch job offer. Please check the URL and try again.",
         )
-    except Exception:
+    except Exception as e:
+        print(f"❌ ERROR in scrape_job_offer: {str(e)}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
         raise HTTPException(
             status_code=500,
             detail="Error analyzing job offer. Please try again later.",
@@ -271,43 +273,59 @@ async def analyze_job_offer(
     Analyze a job offer from a URL by scraping the page content.
     Saves the job offer to the database for the current user.
     """
-    url = str(job_data.url)
+    try:
+        url = str(job_data.url)
+        print(f"🔍 Analyzing job offer: {url}")
 
-    # Scrape job information
-    scraped_data = scrape_job_offer(url)
+        # Scrape job information
+        scraped_data = scrape_job_offer(url)
+        print(f"✅ Job scraped successfully: {scraped_data.get('title')}")
 
-    # Save original HTML as PDF
-    html_content = scraped_data.get("html_content")
-    original_pdf_path = None
-    if html_content:
-        original_pdf_path = save_original_pdf(
-            html_content,
-            current_user.id,
-            scraped_data.get("title")
+        # Save original HTML as PDF
+        html_content = scraped_data.get("html_content")
+        original_pdf_path = None
+        if html_content:
+            original_pdf_path = save_original_pdf(
+                html_content,
+                current_user.id,
+                scraped_data.get("title")
+            )
+            print(f"📄 PDF saved: {original_pdf_path}")
+
+        # Save to database
+        job_offer = JobOffer(
+            user_id=current_user.id,
+            url=url,
+            title=scraped_data.get("title"),
+            company=scraped_data.get("company"),
+            description=scraped_data.get("description"),
+            original_pdf_path=original_pdf_path,
         )
 
-    # Save to database
-    job_offer = JobOffer(
-        user_id=current_user.id,
-        url=url,
-        title=scraped_data.get("title"),
-        company=scraped_data.get("company"),
-        description=scraped_data.get("description"),
-        original_pdf_path=original_pdf_path,
-    )
+        db.add(job_offer)
+        db.commit()
+        db.refresh(job_offer)
+        print(f"💾 Job saved to database with ID: {job_offer.id}")
 
-    db.add(job_offer)
-    db.commit()
-    db.refresh(job_offer)
-
-    return JobAnalysisResponse(
-        title=job_offer.title,
-        company=job_offer.company,
-        description=job_offer.description,
-        requirements=None,  # TODO: Extract requirements from description
-        url=job_offer.url,
-        saved_id=job_offer.id,
-    )
+        return JobAnalysisResponse(
+            title=job_offer.title,
+            company=job_offer.company,
+            description=job_offer.description,
+            requirements=None,  # TODO: Extract requirements from description
+            url=job_offer.url,
+            saved_id=job_offer.id,
+        )
+    except HTTPException:
+        # Re-raise HTTP exceptions (from scrape_job_offer)
+        raise
+    except Exception as e:
+        print(f"❌ ERROR in analyze_job_offer endpoint: {str(e)}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Error analyzing job offer. Please try again later.",
+        )
 
 
 @router.get("/{job_offer_id}/original-pdf")
