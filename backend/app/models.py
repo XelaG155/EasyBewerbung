@@ -110,6 +110,7 @@ class MatchingScore(Base):
     strengths = Column(Text, nullable=False)  # JSON array stored as text
     gaps = Column(Text, nullable=False)  # JSON array stored as text
     recommendations = Column(Text, nullable=False)  # JSON array stored as text
+    story = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
