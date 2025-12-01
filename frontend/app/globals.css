@@ -15,13 +15,19 @@
   --success: #22c55e;
   --nav-surface: rgba(7, 10, 20, 0.7);
   --button-text-on-primary: #f8fafc;
+  --input-background: #1e293b;
+  --input-border: #334155;
+  --input-text: #f1f5f9;
+  --input-placeholder: #94a3b8;
+  --input-label: #e2e8f0;
+  --error-color: #f87171;
 }
 
 .light-theme {
   --background: #f8fafc;
   --foreground: #0f172a;
-  --muted-foreground: #475569;
-  --border: #e2e8f0;
+  --muted-foreground: #64748b;
+  --border: #cbd5e1;
   --card-background: rgba(255, 255, 255, 0.85);
   --card-border: #e2e8f0;
   --chip-background: #e2e8f0;
@@ -30,7 +36,13 @@
   --accent-faint: rgba(79, 70, 229, 0.12);
   --success: #16a34a;
   --nav-surface: rgba(255, 255, 255, 0.8);
-  --button-text-on-primary: #eef2ff;
+  --button-text-on-primary: #ffffff;
+  --input-background: #ffffff;
+  --input-border: #cbd5e1;
+  --input-text: #0f172a;
+  --input-placeholder: #94a3b8;
+  --input-label: #334155;
+  --error-color: #dc2626;
 }
 
 .dark-theme {
@@ -47,6 +59,12 @@
   --success: #22c55e;
   --nav-surface: rgba(7, 10, 20, 0.7);
   --button-text-on-primary: #f8fafc;
+  --input-background: #1e293b;
+  --input-border: #334155;
+  --input-text: #f1f5f9;
+  --input-placeholder: #94a3b8;
+  --input-label: #e2e8f0;
+  --error-color: #f87171;
 }
 
 @theme inline {
@@ -160,4 +178,41 @@ body {
   100% {
     transform: translateX(-50%);
   }
+}
+
+.input-base {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  background-color: var(--input-background);
+  border: 1px solid var(--input-border);
+  color: var(--input-text);
+  transition: all 200ms ease;
+}
+
+.input-base::placeholder {
+  color: var(--input-placeholder);
+}
+
+.input-base:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-faint);
+}
+
+.input-base:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.input-error {
+  border-color: var(--error-color);
+}
+
+.input-label {
+  color: var(--input-label);
+}
+
+.text-error {
+  color: var(--error-color);
 }
