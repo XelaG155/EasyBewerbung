@@ -56,6 +56,7 @@ class JobOffer(Base):
     url = Column(String)
     title = Column(String, nullable=True)
     company = Column(String, nullable=True)
+    location = Column(String, nullable=True)  # Place of work / location
     description = Column(Text, nullable=True)
     original_pdf_path = Column(String, nullable=True)  # Path to original job listing PDF
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
