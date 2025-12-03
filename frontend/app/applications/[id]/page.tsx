@@ -157,7 +157,7 @@ export default function ApplicationDetailPage() {
       <header className="border-b border-muted">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button onClick={() => router.push("/dashboard")} variant="outline">
+            <Button onClick={() => router.back()} variant="outline">
               ← Back
             </Button>
             <div className="flex items-center gap-2">
