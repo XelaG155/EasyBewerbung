@@ -138,6 +138,18 @@ export default function DashboardPage() {
     }
   }, [user, authLoading, router]);
 
+  // Restore scroll position when returning from detail page
+  useEffect(() => {
+    const savedScrollPosition = sessionStorage.getItem('dashboardScrollPosition');
+    if (savedScrollPosition) {
+      // Small delay to ensure content is rendered
+      setTimeout(() => {
+        window.scrollTo(0, parseInt(savedScrollPosition, 10));
+        sessionStorage.removeItem('dashboardScrollPosition');
+      }, 100);
+    }
+  }, []);
+
   // Load data
   useEffect(() => {
     if (user) {
@@ -1017,7 +1029,11 @@ export default function DashboardPage() {
                       {/* Action Buttons */}
                       <div className="flex gap-2 flex-wrap pt-2 border-t border-slate-700">
                         <button
-                          onClick={() => router.push(`/applications/${app.id}`)}
+                          onClick={() => {
+                            // Save scroll position before navigating
+                            sessionStorage.setItem('dashboardScrollPosition', window.scrollY.toString());
+                            router.push(`/applications/${app.id}`);
+                          }}
                           className="text-sm px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white"
                         >
                           View Details →
