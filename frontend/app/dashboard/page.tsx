@@ -118,6 +118,21 @@ export default function DashboardPage() {
   const [filterMonth, setFilterMonth] = useState<string>("all"); // "all" or "YYYY-MM"
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
+  // Expanded job details tracking
+  const [expandedJobs, setExpandedJobs] = useState<Set<number>>(new Set());
+
+  const toggleJobExpanded = (appId: number) => {
+    setExpandedJobs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(appId)) {
+        newSet.delete(appId);
+      } else {
+        newSet.add(appId);
+      }
+      return newSet;
+    });
+  };
+
   // Redirect if not logged in
   useEffect(() => {
     if (!authLoading && !user) {
@@ -883,12 +898,37 @@ export default function DashboardPage() {
                     <div className="space-y-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-lg break-words" style={{ color: 'var(--foreground)' }}>
-                            {app.job_title}
-                          </h3>
-                          <p className="break-words" style={{ color: 'var(--foreground)' }}>{app.company}</p>
+                          <div className="flex items-start gap-2">
+                            <button
+                              onClick={() => toggleJobExpanded(app.id)}
+                              className="text-muted hover:text-foreground transition-colors mt-1 flex-shrink-0"
+                              aria-label={expandedJobs.has(app.id) ? "Collapse details" : "Expand details"}
+                              aria-expanded={expandedJobs.has(app.id)}
+                            >
+                              <svg
+                                className={`w-5 h-5 transition-transform ${expandedJobs.has(app.id) ? 'rotate-90' : ''}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-lg break-words" style={{ color: 'var(--foreground)' }}>
+                                {app.job_title}
+                              </h3>
+                              <p className="break-words" style={{ color: 'var(--foreground)' }}>{app.company}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Collapsible Job Details */}
+                      {expandedJobs.has(app.id) && (
+                        <div className="space-y-3 pl-7">
                           {app.is_spontaneous && (
-                            <span className="inline-block mt-2 px-2 py-1 text-xs rounded bg-amber-900/50 text-amber-200 border border-amber-700">
+                            <span className="inline-block px-2 py-1 text-xs rounded bg-amber-900/50 text-amber-200 border border-amber-700">
                               Spontaneous outreach
                             </span>
                           )}
@@ -897,31 +937,20 @@ export default function DashboardPage() {
                               href={app.job_offer_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-sm text-indigo-400 hover:text-indigo-300 break-all"
+                              className="text-sm text-indigo-400 hover:text-indigo-300 break-all block"
                             >
                               View Job Posting →
                             </a>
                           )}
-                        </div>
-                      </div>
 
-                      {/* Job Description Preview */}
-                      {(app.job_description || app.opportunity_context) && (
-                        <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: 'var(--input-background)' }}>
-                          <p className="text-sm text-muted line-clamp-3">
-                            {(() => {
-                              // Convert newlines and tabs to spaces, then limit length
-                              const previewSource = app.job_description || app.opportunity_context || "";
-                              const cleanText = previewSource
-                                .replace(/[\n\r\t]+/g, ' ')
-                                .replace(/\s+/g, ' ')
-                                .trim();
-                              // Limit to ~300 characters for preview
-                              return cleanText.length > 300
-                                ? cleanText.substring(0, 300) + '...'
-                                : cleanText;
-                            })()}
-                          </p>
+                          {/* Job Description */}
+                          {(app.job_description || app.opportunity_context) && (
+                            <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--input-background)' }}>
+                              <p className="text-sm text-muted whitespace-pre-wrap break-words">
+                                {app.job_description || app.opportunity_context}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
 
