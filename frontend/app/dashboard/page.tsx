@@ -119,17 +119,15 @@ export default function DashboardPage() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Expanded job details tracking
-  const [expandedJobs, setExpandedJobs] = useState<Set<number>>(new Set());
+  const [expandedJobs, setExpandedJobs] = useState<number[]>([]);
 
   const toggleJobExpanded = (appId: number) => {
     setExpandedJobs(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(appId)) {
-        newSet.delete(appId);
+      if (prev.includes(appId)) {
+        return prev.filter(id => id !== appId);
       } else {
-        newSet.add(appId);
+        return [...prev, appId];
       }
-      return newSet;
     });
   };
 
@@ -902,11 +900,11 @@ export default function DashboardPage() {
                             <button
                               onClick={() => toggleJobExpanded(app.id)}
                               className="text-muted hover:text-foreground transition-colors mt-1 flex-shrink-0"
-                              aria-label={expandedJobs.has(app.id) ? "Collapse details" : "Expand details"}
-                              aria-expanded={expandedJobs.has(app.id)}
+                              aria-label={expandedJobs.includes(app.id) ? "Collapse details" : "Expand details"}
+                              aria-expanded={expandedJobs.includes(app.id)}
                             >
                               <svg
-                                className={`w-5 h-5 transition-transform ${expandedJobs.has(app.id) ? 'rotate-90' : ''}`}
+                                className={`w-5 h-5 transition-transform ${expandedJobs.includes(app.id) ? 'rotate-90' : ''}`}
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -925,7 +923,7 @@ export default function DashboardPage() {
                       </div>
 
                       {/* Collapsible Job Details */}
-                      {expandedJobs.has(app.id) && (
+                      {expandedJobs.includes(app.id) ? (
                         <div className="space-y-3 pl-7">
                           {app.is_spontaneous && (
                             <span className="inline-block px-2 py-1 text-xs rounded bg-amber-900/50 text-amber-200 border border-amber-700">
@@ -952,7 +950,7 @@ export default function DashboardPage() {
                             </div>
                           )}
                         </div>
-                      )}
+                      ) : null}
 
                       <div className="flex items-center gap-4 text-sm flex-wrap">
                         <span
