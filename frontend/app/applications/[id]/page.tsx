@@ -157,7 +157,7 @@ export default function ApplicationDetailPage() {
       <header className="border-b border-slate-800">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button onClick={() => router.push("/dashboard")} variant="outline">
+            <Button onClick={() => router.back()} variant="outline">
               ← Back
             </Button>
             <div className="flex items-center gap-2">
@@ -198,9 +198,45 @@ export default function ApplicationDetailPage() {
             {(application.job_description || application.opportunity_context) && (
               <div className="mt-4 p-4 rounded-lg bg-slate-800 border border-slate-700">
                 <h3 className="font-semibold text-slate-200 mb-2">Context</h3>
-                <p className="text-slate-300 whitespace-pre-wrap text-sm leading-relaxed">
-                  {application.job_description || application.opportunity_context}
-                </p>
+                <div className="space-y-3">
+                  {(application.job_description || application.opportunity_context)!.split('\n\n').map((section: string, idx: number) => {
+                    const trimmed = section.trim();
+                    if (!trimmed) return null;
+
+                    // Check if section is a header (ends with :)
+                    const isHeader = trimmed.match(/^[^:]+:$/);
+
+                    // Check if section contains bullet points
+                    const lines = trimmed.split('\n');
+                    const hasBullets = lines.some(line => line.trim().match(/^[•\-\*]\s/));
+
+                    if (isHeader) {
+                      return (
+                        <h4 key={idx} className="font-semibold text-base mt-4 mb-2 text-slate-200">
+                          {trimmed}
+                        </h4>
+                      );
+                    } else if (hasBullets) {
+                      return (
+                        <ul key={idx} className="list-disc list-inside space-y-1 text-sm ml-2 text-slate-300">
+                          {lines.map((line, lineIdx) => {
+                            const bulletMatch = line.trim().match(/^[•\-\*]\s*(.+)/);
+                            if (bulletMatch) {
+                              return <li key={lineIdx}>{bulletMatch[1]}</li>;
+                            }
+                            return line.trim() ? <li key={lineIdx}>{line.trim()}</li> : null;
+                          })}
+                        </ul>
+                      );
+                    } else {
+                      return (
+                        <p key={idx} className="text-sm whitespace-pre-wrap break-words text-slate-300">
+                          {trimmed}
+                        </p>
+                      );
+                    }
+                  })}
+                </div>
               </div>
             )}
             <div className="mt-4 flex items-center gap-4">
