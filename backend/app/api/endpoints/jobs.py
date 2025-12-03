@@ -14,6 +14,7 @@ from app.limiter import limiter
 from bs4 import BeautifulSoup
 from typing import Optional
 from weasyprint import HTML
+from openai import OpenAI
 
 from app.database import get_db
 from app.models import JobOffer, User
@@ -132,6 +133,47 @@ def sanitize_html_text(text: str) -> str:
     return text.strip()
 
 
+def clean_job_title_with_ai(raw_title: str) -> str:
+    """
+    Use OpenAI to extract a clean job title from potentially messy text.
+    Falls back to the original title if AI processing fails.
+    """
+    # If title is already short and clean, don't waste API calls
+    if len(raw_title) < 80 and not any(keyword in raw_title.lower() for keyword in ["save", "apply", "easy apply", "ago", "publication"]):
+        return raw_title
+
+    try:
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a job title extractor. Extract ONLY the actual job title from the given text. Remove any UI elements, dates, locations, metadata, company names, or extra information. Return only the clean job title, nothing else. If you cannot find a clear job title, return the text as-is."
+                },
+                {
+                    "role": "user",
+                    "content": f"Extract the job title from this text:\n\n{raw_title}"
+                }
+            ],
+            temperature=0,
+            max_tokens=100
+        )
+
+        cleaned_title = response.choices[0].message.content.strip()
+
+        # Validate the cleaned title is reasonable
+        if cleaned_title and len(cleaned_title) > 3 and len(cleaned_title) < 200:
+            return cleaned_title
+        else:
+            return raw_title
+
+    except Exception as e:
+        print(f"⚠️ Warning: AI title cleaning failed: {str(e)}")
+        return raw_title
+
+
 def save_original_pdf(html_content: str, user_id: int, job_title: str = None) -> str:
     """
     Save the original HTML content as a PDF file.
@@ -202,6 +244,10 @@ def scrape_job_offer(url: str) -> dict:
                 title = first_line[:200]
             else:
                 title = title[:200]
+
+        # Use AI to clean up the title if it looks messy
+        if title:
+            title = clean_job_title_with_ai(title)
 
         # Try to extract company name
         company = None
