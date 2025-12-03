@@ -9,6 +9,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Modal } from "@/components/Modal";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/i18n-context";
+import { useTheme } from "@/lib/theme-context";
 import api, { LanguageOption } from "@/lib/api";
 
 type DocumentRecord = {
@@ -78,6 +79,7 @@ const ensureOptionList = (userLanguageValues: (string | undefined | null)[]): La
 export default function DashboardPage() {
   const { user, loading: authLoading, logout, refreshUser } = useAuth();
   const { t } = useTranslation();
+  const { theme, toggleTheme } = useTheme();
   const router = useRouter();
 
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
@@ -473,10 +475,10 @@ export default function DashboardPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+      <div className="min-h-screen page-shell flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-slate-400">{t("common.loading")}</p>
+          <p className="text-muted">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -486,16 +488,16 @@ export default function DashboardPage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-slate-950 text-slate-100">
+      <div className="min-h-screen page-shell">
         {/* Header */}
-        <header className="border-b border-slate-800">
+        <header className="border-b border-muted">
           <div className="container mx-auto px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img src="/logo.png" alt="EasyBewerbung" className="w-8 h-8 rounded-lg" />
               <span className="text-xl font-bold">EasyBewerbung</span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-slate-400 flex items-center gap-2">
+              <span className="text-muted flex items-center gap-2">
                 {user.full_name || user.email}
                 {hasActiveGenerations && (
                   <svg
@@ -523,6 +525,15 @@ export default function DashboardPage() {
               <span className="px-3 py-1 rounded bg-slate-800 text-sm text-emerald-300 border border-emerald-700">
                 Credits: {user.credits}
               </span>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="btn-base btn-secondary flex items-center gap-2 text-sm px-3 py-1.5"
+                aria-pressed={theme === "light"}
+                title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+              >
+                <span aria-hidden>{theme === "light" ? "🌙" : "☀️"}</span>
+              </button>
               {user.is_admin && (
                 <Button onClick={() => router.push("/admin")} variant="outline">
                   Admin
@@ -545,14 +556,14 @@ export default function DashboardPage() {
             <Card>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="doc-type" className="block text-sm font-medium text-slate-200 mb-2">
+                  <label htmlFor="doc-type" className="block text-sm font-medium input-label mb-2">
                     Document Type
                   </label>
                   <select
                     id="doc-type"
                     value={docType}
                     onChange={(e) => setDocType(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="input-base"
                     aria-label="Select document type"
                   >
                     <option value="CV">CV / Resume</option>
@@ -564,7 +575,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="file-input" className="block text-sm font-medium text-slate-200 mb-2">
+                  <label htmlFor="file-input" className="block text-sm font-medium input-label mb-2">
                     Select File (PDF, DOC, DOCX, TXT - Max 25MB)
                   </label>
                   <input
@@ -572,14 +583,14 @@ export default function DashboardPage() {
                     type="file"
                     onChange={handleFileChange}
                     accept=".pdf,.doc,.docx,.txt"
-                    className="block w-full text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 file:cursor-pointer"
+                    className="block w-full text-muted file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 file:cursor-pointer"
                     aria-label="Upload document file"
                   />
                 </div>
 
                 {uploadFile && (
                   <div className="flex items-center gap-3">
-                    <span className="text-slate-300">📄 {uploadFile.name}</span>
+                    <span style={{ color: 'var(--foreground)' }}>📄 {uploadFile.name}</span>
                     <Button
                       onClick={handleUpload}
                       disabled={uploading}
@@ -602,7 +613,7 @@ export default function DashboardPage() {
             <h2 className="text-2xl font-bold mb-4">Your Documents</h2>
             {documents.length === 0 ? (
               <Card>
-                <p className="text-slate-400 text-center py-8">
+                <p className="text-muted text-center py-8">
                   No documents uploaded yet. Upload your CV to get started!
                 </p>
               </Card>
@@ -612,14 +623,14 @@ export default function DashboardPage() {
                   <Card key={doc.id}>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <p className="font-semibold text-white">{doc.filename}</p>
-                        <p className="text-sm text-slate-400">{doc.doc_type}</p>
+                        <p className="font-semibold" style={{ color: 'var(--foreground)' }}>{doc.filename}</p>
+                        <p className="text-sm text-muted">{doc.doc_type}</p>
                         {doc.has_text && (
                           <p className="text-xs text-emerald-400 mt-1">
                             ✓ Text extracted
                           </p>
                         )}
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-xs text-muted mt-1">
                           {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'N/A'}
                         </p>
                       </div>
@@ -641,7 +652,7 @@ export default function DashboardPage() {
           <section>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-2xl font-bold">Spontaneous Outreach</h2>
-              <span className="text-sm text-slate-400">Apply proactively without a job posting</span>
+              <span className="text-sm text-muted">Apply proactively without a job posting</span>
             </div>
             <Card>
               <form onSubmit={handleCreateSpontaneous} className="space-y-4">
@@ -664,28 +675,28 @@ export default function DashboardPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                  <label className="block text-sm font-medium input-label mb-2">
                     Context & value proposition
-                    <span className="block text-xs text-slate-500">
+                    <span className="block text-xs text-muted">
                       What makes you relevant? Mention business unit, pain points you solve, or projects to pitch.
                     </span>
                   </label>
                   <textarea
                     value={opportunityContext}
                     onChange={(e) => setOpportunityContext(e.target.value)}
-                    className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="input-base"
                     rows={4}
                     placeholder="I can help the data platform team modernize analytics pipelines and lead stakeholder workshops."
                   />
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <label className="text-sm text-slate-200">
+                  <label className="text-sm input-label">
                     <span className="block mb-2">Language for generated documents</span>
                     <select
                       value={documentationLanguage}
                       onChange={(e) => setDocumentationLanguage(e.target.value)}
-                      className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white"
+                      className="input-base"
                     >
                       {languageOptions.map((lang) => (
                         <option key={lang.code} value={lang.code}>
@@ -695,12 +706,12 @@ export default function DashboardPage() {
                     </select>
                   </label>
 
-                  <label className="text-sm text-slate-200">
+                  <label className="text-sm input-label">
                     <span className="block mb-2">Language for company profile</span>
                     <select
                       value={companyProfileLanguage}
                       onChange={(e) => setCompanyProfileLanguage(e.target.value)}
-                      className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white"
+                      className="input-base"
                     >
                       {languageOptions.map((lang) => (
                         <option key={lang.code} value={lang.code}>
@@ -737,12 +748,12 @@ export default function DashboardPage() {
                 />
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <label className="text-sm text-slate-200">
+                  <label className="text-sm input-label">
                     <span className="block mb-2">Language for generated documents</span>
                     <select
                       value={documentationLanguage}
                       onChange={(e) => setDocumentationLanguage(e.target.value)}
-                      className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white"
+                      className="input-base"
                     >
                       {languageOptions.map((lang) => (
                         <option key={lang.code} value={lang.code}>
@@ -752,12 +763,12 @@ export default function DashboardPage() {
                     </select>
                   </label>
 
-                  <label className="text-sm text-slate-200">
+                  <label className="text-sm input-label">
                     <span className="block mb-2">Language for company profile</span>
                     <select
                       value={companyProfileLanguage}
                       onChange={(e) => setCompanyProfileLanguage(e.target.value)}
-                      className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white"
+                      className="input-base"
                     >
                       {languageOptions.map((lang) => (
                         <option key={lang.code} value={lang.code}>
@@ -796,7 +807,7 @@ export default function DashboardPage() {
 
             {applications.length === 0 ? (
               <Card>
-                <p className="text-slate-400 text-center py-8">
+                <p className="text-muted text-center py-8">
                   No applications yet. Add a job offer to get started!
                 </p>
               </Card>
@@ -806,13 +817,13 @@ export default function DashboardPage() {
                 <Card>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-200 mb-2">
+                      <label className="block text-sm font-medium input-label mb-2">
                         Filter by Status
                       </label>
                       <select
                         value={filterApplied}
                         onChange={(e) => setFilterApplied(e.target.value)}
-                        className="w-full px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="input-base"
                       >
                         <option value="all">All Applications</option>
                         <option value="applied">Applied Only</option>
@@ -821,13 +832,13 @@ export default function DashboardPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-slate-200 mb-2">
+                      <label className="block text-sm font-medium input-label mb-2">
                         Filter by Month
                       </label>
                       <select
                         value={filterMonth}
                         onChange={(e) => setFilterMonth(e.target.value)}
-                        className="w-full px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="input-base"
                       >
                         <option value="all">All Months</option>
                         {availableMonths.map((month) => (
@@ -842,13 +853,13 @@ export default function DashboardPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-slate-200 mb-2">
+                      <label className="block text-sm font-medium input-label mb-2">
                         Sort by Date
                       </label>
                       <select
                         value={sortOrder}
                         onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
-                        className="w-full px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="input-base"
                       >
                         <option value="desc">Newest First</option>
                         <option value="asc">Oldest First</option>
@@ -859,7 +870,7 @@ export default function DashboardPage() {
 
                 {filteredAndSortedApplications.length === 0 ? (
                   <Card>
-                    <p className="text-slate-400 text-center py-8">
+                    <p className="text-muted text-center py-8">
                       No applications match your filters.
                     </p>
                   </Card>
@@ -870,10 +881,10 @@ export default function DashboardPage() {
                     <div className="space-y-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="font-semibold text-white text-lg">
+                          <h3 className="font-semibold text-lg" style={{ color: 'var(--foreground)' }}>
                             {app.job_title}
                           </h3>
-                          <p className="text-slate-300">{app.company}</p>
+                          <p style={{ color: 'var(--foreground)' }}>{app.company}</p>
                           {app.is_spontaneous && (
                             <span className="inline-block mt-2 px-2 py-1 text-xs rounded bg-amber-900/50 text-amber-200 border border-amber-700">
                               Spontaneous outreach
@@ -894,8 +905,8 @@ export default function DashboardPage() {
 
                       {/* Job Description Preview */}
                       {(app.job_description || app.opportunity_context) && (
-                        <div className="mt-2 p-3 bg-slate-800 rounded-lg">
-                          <p className="text-sm text-slate-400 line-clamp-3">
+                        <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: 'var(--input-background)' }}>
+                          <p className="text-sm text-muted line-clamp-3">
                             {(() => {
                               // Convert newlines and tabs to spaces, then limit length
                               const previewSource = app.job_description || app.opportunity_context || "";
@@ -916,20 +927,20 @@ export default function DashboardPage() {
                         <span
                           className={`px-3 py-1 rounded ${app.applied
                             ? "bg-emerald-900/30 text-emerald-400"
-                            : "bg-slate-700 text-slate-300"
+                            : "chip"
                             }`}
                         >
                           {app.applied ? "✓ Applied" : t("dashboard.notApplied")}
                         </span>
 
                         {app.result && (
-                          <span className="px-3 py-1 rounded bg-slate-700 text-slate-300">
+                          <span className="px-3 py-1 rounded chip">
                             {app.result}
                           </span>
                         )}
 
                         {app.created_at && (
-                          <span className="text-slate-500">
+                          <span className="text-muted">
                             Added {new Date(app.created_at).toLocaleString(undefined, {
                               year: "numeric",
                               month: "2-digit",
