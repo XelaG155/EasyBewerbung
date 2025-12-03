@@ -914,9 +914,8 @@ export default function DashboardPage() {
                             </button>
                             <div className="flex-1 min-w-0">
                               <h3 className="font-semibold text-lg break-words" style={{ color: 'var(--foreground)' }}>
-                                {app.job_title}
+                                {app.job_title} - {app.company}
                               </h3>
-                              <p className="break-words" style={{ color: 'var(--foreground)' }}>{app.company}</p>
                             </div>
                           </div>
                         </div>
@@ -941,12 +940,46 @@ export default function DashboardPage() {
                             </a>
                           )}
 
-                          {/* Job Description */}
+                          {/* Job Description - Formatted */}
                           {(app.job_description || app.opportunity_context) && (
-                            <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--input-background)' }}>
-                              <p className="text-sm text-muted whitespace-pre-wrap break-words">
-                                {app.job_description || app.opportunity_context}
-                              </p>
+                            <div className="p-4 rounded-lg space-y-3" style={{ backgroundColor: 'var(--input-background)' }}>
+                              {(app.job_description || app.opportunity_context).split('\n\n').map((section: string, idx: number) => {
+                                const trimmed = section.trim();
+                                if (!trimmed) return null;
+
+                                // Check if section is a header (ends with :)
+                                const isHeader = trimmed.match(/^[^:]+:$/);
+
+                                // Check if section contains bullet points
+                                const lines = trimmed.split('\n');
+                                const hasBullets = lines.some(line => line.trim().match(/^[•\-\*]\s/));
+
+                                if (isHeader) {
+                                  return (
+                                    <h4 key={idx} className="font-semibold text-base mt-4 mb-2" style={{ color: 'var(--foreground)' }}>
+                                      {trimmed}
+                                    </h4>
+                                  );
+                                } else if (hasBullets) {
+                                  return (
+                                    <ul key={idx} className="list-disc list-inside space-y-1 text-sm ml-2" style={{ color: 'var(--foreground)' }}>
+                                      {lines.map((line, lineIdx) => {
+                                        const bulletMatch = line.trim().match(/^[•\-\*]\s*(.+)/);
+                                        if (bulletMatch) {
+                                          return <li key={lineIdx}>{bulletMatch[1]}</li>;
+                                        }
+                                        return line.trim() ? <li key={lineIdx}>{line.trim()}</li> : null;
+                                      })}
+                                    </ul>
+                                  );
+                                } else {
+                                  return (
+                                    <p key={idx} className="text-sm whitespace-pre-wrap break-words" style={{ color: 'var(--foreground)' }}>
+                                      {trimmed}
+                                    </p>
+                                  );
+                                }
+                              })}
                             </div>
                           )}
                         </div>
