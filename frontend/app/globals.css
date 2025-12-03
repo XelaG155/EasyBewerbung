@@ -83,6 +83,11 @@ body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   min-height: 100vh;
   transition: background-color 200ms ease, color 200ms ease;
+  overflow-x: hidden;
+}
+
+* {
+  max-width: 100%;
 }
 
 .page-shell {
