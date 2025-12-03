@@ -943,7 +943,7 @@ export default function DashboardPage() {
                           {/* Job Description - Formatted */}
                           {(app.job_description || app.opportunity_context) && (
                             <div className="p-4 rounded-lg space-y-3" style={{ backgroundColor: 'var(--input-background)' }}>
-                              {(app.job_description || app.opportunity_context).split('\n\n').map((section: string, idx: number) => {
+                              {(app.job_description || app.opportunity_context)!.split('\n\n').map((section: string, idx: number) => {
                                 const trimmed = section.trim();
                                 if (!trimmed) return null;
 
