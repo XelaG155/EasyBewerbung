@@ -140,10 +140,10 @@ export default function ApplicationDetailPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center page-shell">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-slate-400">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto mb-4"></div>
+          <p className="text-muted">Loading...</p>
         </div>
       </div>
     );
@@ -152,9 +152,9 @@ export default function ApplicationDetailPage() {
   if (!user || !application) return null;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen page-shell">
       {/* Header */}
-      <header className="border-b border-slate-800">
+      <header className="border-b border-muted">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button onClick={() => router.push("/dashboard")} variant="outline">
@@ -166,8 +166,8 @@ export default function ApplicationDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-slate-400">{user.full_name || user.email}</span>
-            <span className="px-3 py-1 rounded bg-slate-800 text-sm text-emerald-300 border border-emerald-700">
+            <span className="text-muted">{user.full_name || user.email}</span>
+            <span className="px-3 py-1 rounded chip text-sm text-success border border-success">
               Credits: {user.credits}
             </span>
           </div>
@@ -179,7 +179,7 @@ export default function ApplicationDetailPage() {
         <section>
           <Card>
             <h1 className="text-3xl font-bold mb-4">{application.job_title}</h1>
-            <p className="text-xl text-slate-300 mb-4">{application.company}</p>
+            <p className="text-xl text-muted mb-4">{application.company}</p>
             {application.is_spontaneous && (
               <span className="inline-block mb-3 px-3 py-1 rounded bg-amber-900/50 text-amber-200 border border-amber-700 text-sm">
                 Spontaneous outreach (no posting)
@@ -190,15 +190,15 @@ export default function ApplicationDetailPage() {
                 href={application.job_offer_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-indigo-400 hover:text-indigo-300"
+                className="text-accent hover:opacity-80"
               >
                 View Job Posting →
               </a>
             )}
             {(application.job_description || application.opportunity_context) && (
-              <div className="mt-4 p-4 rounded-lg bg-slate-800 border border-slate-700">
-                <h3 className="font-semibold text-slate-200 mb-2">Context</h3>
-                <p className="text-slate-300 whitespace-pre-wrap text-sm leading-relaxed">
+              <div className="mt-4 p-4 rounded-lg chip border border-muted">
+                <h3 className="font-semibold mb-2">Context</h3>
+                <p className="text-muted whitespace-pre-wrap text-sm leading-relaxed">
                   {application.job_description || application.opportunity_context}
                 </p>
               </div>
@@ -208,13 +208,13 @@ export default function ApplicationDetailPage() {
                 className={`px-3 py-1 rounded ${
                   application.applied
                     ? "bg-emerald-900/30 text-emerald-400"
-                    : "bg-slate-700 text-slate-300"
+                    : "chip text-muted"
                 }`}
               >
                 {application.applied ? "✓ Applied" : "Not Applied"}
               </span>
               {application.result && (
-                <span className="px-3 py-1 rounded bg-slate-700 text-slate-300">
+                <span className="px-3 py-1 rounded chip text-muted">
                   {application.result}
                 </span>
               )}
@@ -234,7 +234,7 @@ export default function ApplicationDetailPage() {
           <Card>
             {!matchingScore ? (
               <div className="text-center py-8">
-                <p className="text-slate-400 mb-4">
+                <p className="text-muted mb-4">
                   Calculate how well your CV matches this job's requirements
                 </p>
                 <Button
@@ -248,15 +248,15 @@ export default function ApplicationDetailPage() {
             ) : (
               <div className="space-y-6">
                 <div className="text-center">
-                  <div className="text-6xl font-bold text-indigo-400 mb-2">
+                  <div className="text-6xl font-bold text-accent mb-2">
                     {matchingScore.overall_score}%
                   </div>
-                  <p className="text-slate-400">Overall Match</p>
+                  <p className="text-muted">Overall Match</p>
                 </div>
 
                 <div>
-                  <h3 className="font-semibold text-emerald-400 mb-2">✓ Strengths</h3>
-                  <ul className="list-disc list-inside space-y-1 text-slate-300">
+                  <h3 className="font-semibold text-success mb-2">✓ Strengths</h3>
+                  <ul className="list-disc list-inside space-y-1">
                     {matchingScore.strengths.map((strength, i) => (
                       <li key={i}>{strength}</li>
                     ))}
@@ -265,7 +265,7 @@ export default function ApplicationDetailPage() {
 
                 <div>
                   <h3 className="font-semibold text-amber-400 mb-2">⚠ Gaps</h3>
-                  <ul className="list-disc list-inside space-y-1 text-slate-300">
+                  <ul className="list-disc list-inside space-y-1">
                     {matchingScore.gaps.map((gap, i) => (
                       <li key={i}>{gap}</li>
                     ))}
@@ -273,8 +273,8 @@ export default function ApplicationDetailPage() {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold text-indigo-400 mb-2">💡 Recommendations</h3>
-                  <ul className="list-disc list-inside space-y-1 text-slate-300">
+                  <h3 className="font-semibold text-accent mb-2">💡 Recommendations</h3>
+                  <ul className="list-disc list-inside space-y-1">
                     {matchingScore.recommendations.map((rec, i) => (
                       <li key={i}>{rec}</li>
                     ))}
@@ -303,7 +303,7 @@ export default function ApplicationDetailPage() {
                 {application.generated_documents.map((doc: GeneratedDoc) => (
                   <div
                     key={doc.id}
-                    className="p-4 bg-slate-700 rounded-lg"
+                    className="p-4 chip rounded-lg"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="font-semibold">
@@ -322,11 +322,11 @@ export default function ApplicationDetailPage() {
                             document.body.removeChild(a);
                             URL.revokeObjectURL(url);
                           }}
-                          className="px-3 py-1 text-sm rounded bg-indigo-600 hover:bg-indigo-700 text-white"
+                          className="btn-primary px-3 py-1 text-sm rounded"
                         >
                           📥 Download
                         </button>
-                        <span className="text-sm text-slate-400">
+                        <span className="text-sm text-muted">
                           {new Date(doc.created_at + 'Z').toLocaleString(undefined, {
                             year: 'numeric',
                             month: '2-digit',
@@ -339,10 +339,10 @@ export default function ApplicationDetailPage() {
                       </div>
                     </div>
                     <details className="cursor-pointer">
-                      <summary className="text-sm text-indigo-400 hover:text-indigo-300 mb-2">
+                      <summary className="text-sm text-accent hover:opacity-80 mb-2">
                         📄 Show Preview
                       </summary>
-                      <pre className="whitespace-pre-wrap text-sm text-slate-300 bg-slate-800 p-3 rounded max-h-96 overflow-y-auto">
+                      <pre className="whitespace-pre-wrap text-sm card-surface p-3 rounded max-h-96 overflow-y-auto">
                         {doc.content || '(No content available)'}
                       </pre>
                     </details>
@@ -358,7 +358,7 @@ export default function ApplicationDetailPage() {
               </div>
             ) : (
               <div className="text-center py-8">
-                <p className="text-slate-400 mb-4">
+                <p className="text-muted mb-4">
                   No documents generated yet. Select documents to generate for this application.
                 </p>
                 <Button
@@ -371,19 +371,19 @@ export default function ApplicationDetailPage() {
             )}
 
             {showDocSelector && (
-              <div className="mt-6 p-4 bg-slate-800 rounded-lg">
+              <div className="mt-6 p-4 chip rounded-lg border border-muted">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">Select Documents to Generate</h3>
                   <div className="flex gap-2">
                     <button
                       onClick={handleCheckAll}
-                      className="px-3 py-1 text-sm rounded bg-slate-700 hover:bg-slate-600 text-white"
+                      className="btn-secondary px-3 py-1 text-sm rounded"
                     >
                       Check All
                     </button>
                     <button
                       onClick={handleUncheckAll}
-                      className="px-3 py-1 text-sm rounded bg-slate-700 hover:bg-slate-600 text-white"
+                      className="btn-secondary px-3 py-1 text-sm rounded"
                     >
                       Uncheck All
                     </button>
@@ -393,7 +393,7 @@ export default function ApplicationDetailPage() {
                   {availableDocs.map((doc) => (
                     <label
                       key={doc.key}
-                      className="flex items-start gap-3 p-3 rounded bg-slate-700 hover:bg-slate-600 cursor-pointer"
+                      className="flex items-start gap-3 p-3 rounded card-surface hover:opacity-90 cursor-pointer"
                     >
                       <input
                         type="checkbox"
@@ -402,20 +402,20 @@ export default function ApplicationDetailPage() {
                         className="mt-1"
                       />
                       <div className="flex-1">
-                        <div className="font-semibold text-white">{doc.title}</div>
-                        <div className="text-sm text-slate-300">{doc.description}</div>
-                        <div className="text-xs text-slate-400 mt-1">
+                        <div className="font-semibold">{doc.title}</div>
+                        <div className="text-sm text-muted">{doc.description}</div>
+                        <div className="text-xs text-muted mt-1">
                           Output: {doc.outputs?.join(", ")}
                         </div>
                         {doc.notes && (
-                          <div className="text-xs text-indigo-400 mt-1">💡 {doc.notes}</div>
+                          <div className="text-xs text-accent mt-1">💡 {doc.notes}</div>
                         )}
                       </div>
                     </label>
                   ))}
                 </div>
                 <div className="mt-4 flex items-center justify-between">
-                  <span className="text-sm text-slate-400">
+                  <span className="text-sm text-muted">
                     {selectedDocs.length} document(s) selected • {selectedDocs.length} credit(s)
                   </span>
                   <Button
