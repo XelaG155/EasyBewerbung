@@ -194,6 +194,15 @@ def scrape_job_offer(url: str) -> dict:
         elif soup.find("h1"):
             title = sanitize_html_text(soup.find("h1").get_text(strip=True))
 
+        # Limit title length and clean up (job titles are typically short)
+        if title and len(title) > 200:
+            # If title is too long, try to extract just the first line or sentence
+            first_line = title.split('\n')[0]
+            if len(first_line) > 20:  # Ensure the first line is meaningful
+                title = first_line[:200]
+            else:
+                title = title[:200]
+
         # Try to extract company name
         company = None
         company_tags = soup.find_all(class_=lambda x: x and any(
@@ -202,7 +211,15 @@ def scrape_job_offer(url: str) -> dict:
         if company_tags:
             company = sanitize_html_text(company_tags[0].get_text(strip=True))
 
-        # Extract description (all paragraph text)
+        # Limit company name length (company names are typically short)
+        if company and len(company) > 150:
+            first_line = company.split('\n')[0]
+            if len(first_line) > 10:
+                company = first_line[:150]
+            else:
+                company = company[:150]
+
+        # Extract description (preserving structure including lists)
         description = ""
 
         # Remove script and style elements before extracting text
@@ -214,26 +231,59 @@ def scrape_job_offer(url: str) -> dict:
             keyword in str(x).lower() for keyword in ["job-description", "job_description", "job-posting", "vacancy"]
         ))
 
-        # Get paragraphs from main content if found, otherwise from whole page
-        if main_content:
-            paragraphs = main_content.find_all("p")
-        else:
-            paragraphs = soup.find_all("p")
+        # Get content elements from main content if found, otherwise from whole page
+        content_area = main_content if main_content else soup
 
-        # Extract text from paragraphs, filtering out very short ones (likely UI elements)
-        paragraph_texts = []
-        for p in paragraphs[:MAX_PARAGRAPHS_TO_CHECK]:
-            text = p.get_text(separator=" ", strip=True)
-            # Filter out short UI texts and button-like content
-            if len(text) > MIN_PARAGRAPH_LENGTH and not any(keyword in text.lower() for keyword in FILTER_KEYWORDS):
-                # Sanitize the text to prevent XSS
-                sanitized_text = sanitize_html_text(text)
-                if sanitized_text:  # Only add if text remains after sanitization
-                    paragraph_texts.append(sanitized_text)
-            if len(paragraph_texts) >= MAX_GOOD_PARAGRAPHS:
+        # Extract structured content (paragraphs, lists, headers)
+        content_parts = []
+        elements_processed = 0
+
+        # Process common content elements in order
+        for element in content_area.find_all(['p', 'ul', 'ol', 'h2', 'h3', 'h4', 'li']):
+            # Skip if we've processed enough content
+            if elements_processed >= MAX_PARAGRAPHS_TO_CHECK * 2:
                 break
 
-        description = "\n\n".join(paragraph_texts)
+            # Skip if element is inside another list item (to avoid duplicates)
+            if element.name == 'li' and element.find_parent(['ul', 'ol']) in content_area.find_all(['ul', 'ol']):
+                continue
+
+            text = element.get_text(separator=" ", strip=True)
+
+            # Filter out short UI texts and button-like content
+            if len(text) < MIN_PARAGRAPH_LENGTH or any(keyword in text.lower() for keyword in FILTER_KEYWORDS):
+                continue
+
+            # Sanitize the text to prevent XSS
+            sanitized_text = sanitize_html_text(text)
+            if not sanitized_text:
+                continue
+
+            # Process based on element type
+            if element.name in ['h2', 'h3', 'h4']:
+                # Headers
+                content_parts.append(f"\n{sanitized_text}\n")
+                elements_processed += 1
+            elif element.name in ['ul', 'ol']:
+                # Lists - extract each list item with bullet
+                list_items = element.find_all('li', recursive=False)
+                for li in list_items:
+                    li_text = li.get_text(separator=" ", strip=True)
+                    sanitized_li = sanitize_html_text(li_text)
+                    if sanitized_li and len(sanitized_li) > 10:  # Minimum length for list items
+                        content_parts.append(f"- {sanitized_li}")
+                        elements_processed += 1
+                content_parts.append("")  # Add spacing after list
+            elif element.name == 'p':
+                # Paragraphs
+                content_parts.append(sanitized_text)
+                content_parts.append("")  # Add spacing after paragraph
+                elements_processed += 1
+
+            if len(content_parts) >= MAX_GOOD_PARAGRAPHS * 3:
+                break
+
+        description = "\n".join(content_parts).strip()
 
         return {
             "title": title,
