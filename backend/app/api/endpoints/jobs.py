@@ -219,6 +219,22 @@ def scrape_job_offer(url: str) -> dict:
             else:
                 company = company[:150]
 
+        # Try to extract location/place of work
+        location = None
+        location_tags = soup.find_all(class_=lambda x: x and any(
+            keyword in str(x).lower() for keyword in ["location", "place", "city", "address", "workplace"]
+        ))
+        if location_tags:
+            location = sanitize_html_text(location_tags[0].get_text(strip=True))
+
+        # Limit location length (locations are typically short)
+        if location and len(location) > 100:
+            first_line = location.split('\n')[0]
+            if len(first_line) > 10:
+                location = first_line[:100]
+            else:
+                location = location[:100]
+
         # Extract description (preserving structure including lists)
         description = ""
 
@@ -288,6 +304,7 @@ def scrape_job_offer(url: str) -> dict:
         return {
             "title": title,
             "company": company,
+            "location": location,
             "description": description[:MAX_DESCRIPTION_LENGTH] if description else None,
             "html_content": response.text,  # Include original HTML for PDF generation
         }
@@ -342,12 +359,28 @@ async def analyze_job_offer(
             )
             print(f"📄 PDF saved: {original_pdf_path}")
 
+        # Format title as: <Job Title> - <company>, <place of work>
+        raw_title = scraped_data.get("title")
+        company = scraped_data.get("company")
+        location = scraped_data.get("location")
+
+        # Build formatted title
+        formatted_title = raw_title if raw_title else "Job Offer"
+        if company or location:
+            formatted_title = f"{formatted_title} -"
+            if company:
+                formatted_title = f"{formatted_title} {company}"
+            if location:
+                separator = "," if company else ""
+                formatted_title = f"{formatted_title}{separator} {location}"
+
         # Save to database
         job_offer = JobOffer(
             user_id=current_user.id,
             url=url,
-            title=scraped_data.get("title"),
-            company=scraped_data.get("company"),
+            title=formatted_title,
+            company=company,
+            location=location,
             description=scraped_data.get("description"),
             original_pdf_path=original_pdf_path,
         )
