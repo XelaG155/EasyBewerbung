@@ -491,60 +491,62 @@ export default function DashboardPage() {
       <div className="min-h-screen page-shell">
         {/* Header */}
         <header className="border-b border-muted">
-          <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="EasyBewerbung" className="w-8 h-8 rounded-lg" />
-              <span className="text-xl font-bold">EasyBewerbung</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-muted flex items-center gap-2">
-                {user.full_name || user.email}
-                {hasActiveGenerations && (
-                  <svg
-                    className="animate-spin h-5 w-5 text-emerald-400"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
+          <div className="container mx-auto px-4 sm:px-6 py-4">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+                <img src="/logo.png" alt="EasyBewerbung" className="w-8 h-8 rounded-lg flex-shrink-0" />
+                <span className="text-lg sm:text-xl font-bold truncate">EasyBewerbung</span>
+              </div>
+              <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+                <span className="text-muted flex items-center gap-2 text-sm sm:text-base hidden sm:flex">
+                  {user.full_name || user.email}
+                  {hasActiveGenerations && (
+                    <svg
+                      className="animate-spin h-5 w-5 text-emerald-400"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                  )}
+                </span>
+                <span className="px-2 sm:px-3 py-1 rounded bg-slate-800 text-xs sm:text-sm text-emerald-300 border border-emerald-700 whitespace-nowrap">
+                  Credits: {user.credits}
+                </span>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="btn-base btn-secondary flex items-center gap-2 text-sm px-2 sm:px-3 py-1.5 flex-shrink-0"
+                  aria-pressed={theme === "light"}
+                  title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+                >
+                  <span aria-hidden>{theme === "light" ? "🌙" : "☀️"}</span>
+                </button>
+                {user.is_admin && (
+                  <Button onClick={() => router.push("/admin")} variant="outline" className="hidden sm:inline-flex">
+                    Admin
+                  </Button>
                 )}
-              </span>
-              <span className="px-3 py-1 rounded bg-slate-800 text-sm text-emerald-300 border border-emerald-700">
-                Credits: {user.credits}
-              </span>
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="btn-base btn-secondary flex items-center gap-2 text-sm px-3 py-1.5"
-                aria-pressed={theme === "light"}
-                title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-              >
-                <span aria-hidden>{theme === "light" ? "🌙" : "☀️"}</span>
-              </button>
-              {user.is_admin && (
-                <Button onClick={() => router.push("/admin")} variant="outline">
-                  Admin
+                <Button onClick={() => router.push("/settings")} variant="outline" className="hidden sm:inline-flex">
+                  Settings
                 </Button>
-              )}
-              <Button onClick={() => router.push("/settings")} variant="outline">
-                Settings
-              </Button>
-              <Button onClick={handleLogout} variant="outline">
-                Log Out
-              </Button>
+                <Button onClick={handleLogout} variant="outline" className="hidden sm:inline-flex">
+                  Log Out
+                </Button>
+              </div>
             </div>
           </div>
         </header>
