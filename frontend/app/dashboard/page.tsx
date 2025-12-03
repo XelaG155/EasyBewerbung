@@ -488,7 +488,7 @@ export default function DashboardPage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen page-shell">
+      <div className="min-h-screen page-shell overflow-x-hidden">
         {/* Header */}
         <header className="border-b border-muted">
           <div className="container mx-auto px-4 sm:px-6 py-4">
@@ -498,7 +498,7 @@ export default function DashboardPage() {
                 <span className="text-lg sm:text-xl font-bold truncate">EasyBewerbung</span>
               </div>
               <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-                <span className="text-muted flex items-center gap-2 text-sm sm:text-base hidden sm:flex">
+                <span className="text-muted flex items-center gap-2 text-sm sm:text-base">
                   {user.full_name || user.email}
                   {hasActiveGenerations && (
                     <svg
@@ -551,7 +551,7 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        <main className="container mx-auto px-6 py-8 space-y-8">
+        <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 overflow-x-hidden">
           {/* Upload Section */}
           <section>
             <h2 className="text-2xl font-bold mb-4">Upload Documents</h2>
@@ -882,11 +882,11 @@ export default function DashboardPage() {
                   <Card key={app.id}>
                     <div className="space-y-3">
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg" style={{ color: 'var(--foreground)' }}>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-lg break-words" style={{ color: 'var(--foreground)' }}>
                             {app.job_title}
                           </h3>
-                          <p style={{ color: 'var(--foreground)' }}>{app.company}</p>
+                          <p className="break-words" style={{ color: 'var(--foreground)' }}>{app.company}</p>
                           {app.is_spontaneous && (
                             <span className="inline-block mt-2 px-2 py-1 text-xs rounded bg-amber-900/50 text-amber-200 border border-amber-700">
                               Spontaneous outreach
@@ -897,7 +897,7 @@ export default function DashboardPage() {
                               href={app.job_offer_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-sm text-indigo-400 hover:text-indigo-300"
+                              className="text-sm text-indigo-400 hover:text-indigo-300 break-all"
                             >
                               View Job Posting →
                             </a>
