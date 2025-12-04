@@ -38,6 +38,9 @@ export default function ApplicationDetailPage() {
   const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
   const [showDocSelector, setShowDocSelector] = useState(false);
 
+  // Active generations tracking
+  const [hasActiveGenerations, setHasActiveGenerations] = useState(false);
+
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/login");
@@ -51,6 +54,72 @@ export default function ApplicationDetailPage() {
       loadAvailableDocs();
     }
   }, [user, applicationId]);
+
+  // Poll for active generations
+  useEffect(() => {
+    const checkActiveGenerations = async () => {
+      try {
+        const activeTasksStr = localStorage.getItem("activeGenerationTasks");
+        if (!activeTasksStr) {
+          setHasActiveGenerations(false);
+          return;
+        }
+
+        const activeTasks: { appId: number; taskId: number }[] = JSON.parse(activeTasksStr);
+        if (activeTasks.length === 0) {
+          setHasActiveGenerations(false);
+          return;
+        }
+
+        // Check status of each task
+        const stillActive: { appId: number; taskId: number }[] = [];
+        for (const task of activeTasks) {
+          try {
+            const response = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL}/applications/${task.appId}/generation-status/${task.taskId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("token")}`,
+                },
+              }
+            );
+            if (response.ok) {
+              const status = await response.json();
+              // Keep task if still processing
+              if (status.status === "pending" || status.status === "processing") {
+                stillActive.push(task);
+              } else if (task.appId === applicationId) {
+                // If task for this application completed, reload documents
+                loadApplication();
+              }
+            }
+          } catch (error) {
+            // If error, keep task in list (will retry next poll)
+            stillActive.push(task);
+          }
+        }
+
+        // Update localStorage and state
+        if (stillActive.length > 0) {
+          localStorage.setItem("activeGenerationTasks", JSON.stringify(stillActive));
+          setHasActiveGenerations(true);
+        } else {
+          localStorage.removeItem("activeGenerationTasks");
+          setHasActiveGenerations(false);
+        }
+      } catch (error) {
+        console.error("Error checking active generations:", error);
+      }
+    };
+
+    // Initial check
+    checkActiveGenerations();
+
+    // Poll every 5 seconds
+    const interval = setInterval(checkActiveGenerations, 5000);
+
+    return () => clearInterval(interval);
+  }, [applicationId]);
 
   const loadAvailableDocs = async () => {
     try {
@@ -166,7 +235,31 @@ export default function ApplicationDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-muted">{user.full_name || user.email}</span>
+            <span className="text-muted flex items-center gap-2">
+              {user.full_name || user.email}
+              {hasActiveGenerations && (
+                <svg
+                  className="animate-spin h-5 w-5 text-emerald-400"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              )}
+            </span>
             <span className="px-3 py-1 rounded chip text-sm text-success border border-success">
               Credits: {user.credits}
             </span>
