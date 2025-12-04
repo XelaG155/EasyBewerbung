@@ -11,6 +11,10 @@ export interface User {
   preferred_language: string;
   mother_tongue: string;
   documentation_language: string;
+  // Extended profile fields
+  employment_status?: string | null; // "employed", "unemployed", "student", "transitioning"
+  education_type?: string | null; // "wms", "bms", "university", "apprenticeship", "other"
+  additional_profile_context?: string | null; // Free text for additional info
   credits: number;
   created_at: string;
   is_admin: boolean;
@@ -57,6 +61,7 @@ export interface Application {
   job_offer_url: string | null;
   is_spontaneous: boolean;
   opportunity_context: string | null;
+  application_type: string; // "fulltime", "internship", "apprenticeship"
   job_description: string | null;
   applied: boolean;
   applied_at: string | null;
@@ -252,6 +257,9 @@ class ApiClient {
     preferredLanguage?: string,
     motherTongue?: string,
     documentationLanguage?: string,
+    employmentStatus?: string,
+    educationType?: string,
+    additionalProfileContext?: string,
   ) {
     return this.request<User>("/users/me", {
       method: "PATCH",
@@ -260,6 +268,9 @@ class ApiClient {
         preferred_language: preferredLanguage,
         mother_tongue: motherTongue,
         documentation_language: documentationLanguage,
+        employment_status: employmentStatus,
+        education_type: educationType,
+        additional_profile_context: additionalProfileContext,
       }),
     });
   }
@@ -332,6 +343,7 @@ class ApiClient {
     job_offer_url?: string;
     is_spontaneous?: boolean;
     opportunity_context?: string;
+    application_type?: string; // "fulltime", "internship", "apprenticeship"
     applied?: boolean;
     applied_at?: string;
     result?: string;
@@ -349,6 +361,7 @@ class ApiClient {
     job_title: string;
     company: string;
     opportunity_context?: string;
+    application_type?: string; // "fulltime", "internship", "apprenticeship"
     ui_language?: string;
     documentation_language?: string;
     company_profile_language?: string;
