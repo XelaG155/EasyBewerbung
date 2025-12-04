@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "ዘይተፈልጠ ቦታ",
+    "unknownCompany": "ዘይተፈልጠ ኩባንያ",
+    "applicationType": "ዓይነት መመልከቲ",
+    "fulltime": "ምሉእ ግዜ ቦታ",
+    "internship": "ተለማማዲነት",
+    "apprenticeship": "ናይ ሙያ ተማሃሮ",
+    "internshipHint": "ንተለማማዲነት ቦታታት",
+    "apprenticeshipHint": "ንናይ ሙያ ስልጠና ቦታታት"
   },
   "settings": {
     "title": "ምትዓታት",

@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Poziție necunoscută",
+    "unknownCompany": "Companie necunoscută",
+    "applicationType": "Tip de aplicație",
+    "fulltime": "Program complet",
+    "internship": "Stagiu",
+    "apprenticeship": "Ucenicie",
+    "internshipHint": "Pentru poziții de stagiu",
+    "apprenticeshipHint": "Pentru poziții de formare profesională"
   },
   "settings": {
     "title": "Setări",

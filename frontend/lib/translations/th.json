@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "ตำแหน่งไม่ทราบ",
+    "unknownCompany": "บริษัทไม่ทราบ",
+    "applicationType": "ประเภทใบสมัคร",
+    "fulltime": "เต็มเวลา",
+    "internship": "ฝึกงาน",
+    "apprenticeship": "ฝึกอาชีพ",
+    "internshipHint": "สำหรับตำแหน่งฝึกงาน",
+    "apprenticeshipHint": "สำหรับตำแหน่งฝึกอาชีพ"
   },
   "settings": {
     "title": "การตั้งค่า",

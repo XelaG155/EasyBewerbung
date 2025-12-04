@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "অজানা পদ",
+    "unknownCompany": "অজানা কোম্পানি",
+    "applicationType": "আবেদনের ধরন",
+    "fulltime": "পূর্ণ-সময়ের পদ",
+    "internship": "ইন্টার্নশিপ",
+    "apprenticeship": "শিক্ষানবিশ",
+    "internshipHint": "ইন্টার্নশিপ পদের জন্য",
+    "apprenticeshipHint": "বৃত্তিমূলক প্রশিক্ষণ পদের জন্য"
   },
   "settings": {
     "title": "সেটিংস",

@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Άγνωστη θέση",
+    "unknownCompany": "Άγνωστη εταιρεία",
+    "applicationType": "Τύπος αίτησης",
+    "fulltime": "Πλήρης απασχόληση",
+    "internship": "Πρακτική άσκηση",
+    "apprenticeship": "Μαθητεία",
+    "internshipHint": "Για θέσεις πρακτικής άσκησης",
+    "apprenticeshipHint": "Για θέσεις επαγγελματικής κατάρτισης"
   },
   "settings": {
     "title": "Ρυθμίσεις",

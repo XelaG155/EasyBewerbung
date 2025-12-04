@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "ਅਣਜਾਣ ਅਹੁਦਾ",
+    "unknownCompany": "ਅਣਜਾਣ ਕੰਪਨੀ",
+    "applicationType": "ਅਰਜ਼ੀ ਦੀ ਕਿਸਮ",
+    "fulltime": "ਪੂਰੀ-ਸਮਾਂ ਨੌਕਰੀ",
+    "internship": "ਇੰਟਰਨਸ਼ਿਪ",
+    "apprenticeship": "ਅਪ੍ਰੈਂਟਿਸਸ਼ਿਪ",
+    "internshipHint": "ਇੰਟਰਨਸ਼ਿਪ ਅਹੁਦਿਆਂ ਲਈ",
+    "apprenticeshipHint": "ਵੋਕੇਸ਼ਨਲ ਸਿਖਲਾਈ ਅਹੁਦਿਆਂ ਲਈ"
   },
   "settings": {
     "title": "ਸੈਟਿੰਗਾਂ",

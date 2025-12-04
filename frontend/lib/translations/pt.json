@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Posição desconhecida",
+    "unknownCompany": "Empresa desconhecida",
+    "applicationType": "Tipo de candidatura",
+    "fulltime": "Posição a tempo inteiro",
+    "internship": "Estágio",
+    "apprenticeship": "Aprendizagem",
+    "internshipHint": "Para posições de estágio",
+    "apprenticeshipHint": "Para posições de formação profissional"
   },
   "settings": {
     "title": "Definições",
