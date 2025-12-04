@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import api, { DocumentTemplate, DocumentTemplateUpdate } from "@/lib/api";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
 
 export default function AdminDocumentsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -17,6 +15,40 @@ export default function AdminDocumentsPage() {
   const [expandedPrompt, setExpandedPrompt] = useState<number | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
+
+  // Available models for each provider (as of Dec 2025)
+  const availableModels: Record<string, string[]> = {
+    openai: [
+      // GPT-5 Series (latest)
+      "gpt-5.1",
+      "gpt-5",
+      "gpt-5-mini",
+      "gpt-5-nano",
+      "gpt-5-pro",
+      // GPT-4o Series (multimodal)
+      "gpt-4o",
+      "gpt-4o-2024-05-13",
+      "gpt-4o-mini"
+    ],
+    anthropic: [
+      "claude-3-5-sonnet-20241022",
+      "claude-3-5-haiku-20241022",
+      "claude-3-opus-20240229",
+      "claude-3-sonnet-20240229",
+      "claude-3-haiku-20240307"
+    ],
+    google: [
+      // Gemini 3 (latest)
+      "gemini-3-pro-preview",
+      // Gemini 2.5 (stable)
+      "gemini-2.5-pro",
+      "gemini-2.5-flash",
+      "gemini-2.5-flash-lite",
+      // Gemini 2.0
+      "gemini-2.0-flash-exp",
+      "gemini-2.0-flash"
+    ]
+  };
 
   useEffect(() => {
     if (!authLoading && (!user || !user.is_admin)) {
@@ -99,18 +131,21 @@ export default function AdminDocumentsPage() {
     <div className="max-w-7xl mx-auto space-y-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Document Templates Admin</h1>
-        <Button onClick={() => router.push("/admin")} variant="outline">
+        <button
+          onClick={() => router.push("/admin")}
+          className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+        >
           Zurück zu Admin
-        </Button>
+        </button>
       </div>
 
       {status && (
-        <div className="rounded bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 px-4 py-2 text-sm" role="status">
+        <div className="rounded bg-green-100 text-green-800 px-4 py-2 text-sm" role="status">
           {status}
         </div>
       )}
 
-      <Card>
+      <section className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-800">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
@@ -121,12 +156,20 @@ export default function AdminDocumentsPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => handleSeed(false)} disabled={seeding} variant="outline">
+            <button
+              onClick={() => handleSeed(false)}
+              disabled={seeding}
+              className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50"
+            >
               {seeding ? "Seeding..." : "Seed Templates"}
-            </Button>
-            <Button onClick={() => handleSeed(true)} disabled={seeding} variant="outline">
+            </button>
+            <button
+              onClick={() => handleSeed(true)}
+              disabled={seeding}
+              className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50"
+            >
               {seeding ? "Seeding..." : "Force Update"}
-            </Button>
+            </button>
           </div>
         </div>
 
@@ -139,7 +182,7 @@ export default function AdminDocumentsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
+                <tr className="border-b border-gray-200 dark:border-gray-800">
                   <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">Dokumenttyp</th>
                   <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">Credits</th>
                   <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">Sprachquelle</th>
@@ -156,7 +199,7 @@ export default function AdminDocumentsPage() {
                   const isExpanded = expandedPrompt === template.id;
 
                   return (
-                    <tr key={template.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                    <tr key={template.id} className="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/30">
                       <td className="p-3">
                         <div className="font-semibold text-gray-900 dark:text-gray-100">{template.doc_type}</div>
                         {isEditing ? (
@@ -164,10 +207,10 @@ export default function AdminDocumentsPage() {
                             type="text"
                             value={editForm.display_name || ""}
                             onChange={(e) => setEditForm({ ...editForm, display_name: e.target.value })}
-                            className="mt-1 w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1 text-sm bg-white dark:bg-gray-800"
+                            className="mt-1 w-full rounded border border-gray-200 dark:border-gray-800 px-2 py-1 text-sm bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                           />
                         ) : (
-                          <div className="text-xs text-gray-500 dark:text-gray-400">{template.display_name}</div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400">{template.display_name}</div>
                         )}
                       </td>
 
@@ -180,10 +223,10 @@ export default function AdminDocumentsPage() {
                             max="10"
                             value={editForm.credit_cost ?? 1}
                             onChange={(e) => setEditForm({ ...editForm, credit_cost: parseInt(e.target.value) })}
-                            className="w-16 rounded border border-gray-300 dark:border-gray-600 px-2 py-1 bg-white dark:bg-gray-800"
+                            className="w-16 rounded border border-gray-200 dark:border-gray-800 px-2 py-1 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                           />
                         ) : (
-                          <span className="font-mono">{template.credit_cost}</span>
+                          <span className="font-mono text-gray-900 dark:text-gray-100">{template.credit_cost}</span>
                         )}
                       </td>
 
@@ -193,14 +236,14 @@ export default function AdminDocumentsPage() {
                           <select
                             value={editForm.language_source || "documentation_language"}
                             onChange={(e) => setEditForm({ ...editForm, language_source: e.target.value as DocumentTemplateUpdate["language_source"] })}
-                            className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1 bg-white dark:bg-gray-800"
+                            className="rounded border border-gray-200 dark:border-gray-800 px-2 py-1 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                           >
                             <option value="preferred_language">Preferred Language</option>
                             <option value="mother_tongue">Mother Tongue</option>
                             <option value="documentation_language">Documentation Language</option>
                           </select>
                         ) : (
-                          <span className="text-xs">{template.language_source.replace(/_/g, " ")}</span>
+                          <span className="text-xs text-gray-900 dark:text-gray-100">{template.language_source.replace(/_/g, " ")}</span>
                         )}
                       </td>
 
@@ -209,30 +252,37 @@ export default function AdminDocumentsPage() {
                         {isEditing ? (
                           <select
                             value={editForm.llm_provider || "openai"}
-                            onChange={(e) => setEditForm({ ...editForm, llm_provider: e.target.value })}
-                            className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1 bg-white dark:bg-gray-800"
+                            onChange={(e) => {
+                              const newProvider = e.target.value;
+                              const firstModel = availableModels[newProvider]?.[0] || "";
+                              setEditForm({ ...editForm, llm_provider: newProvider, llm_model: firstModel });
+                            }}
+                            className="rounded border border-gray-200 dark:border-gray-800 px-2 py-1 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                           >
                             <option value="openai">OpenAI</option>
                             <option value="anthropic">Anthropic (Claude)</option>
                             <option value="google">Google (Gemini)</option>
                           </select>
                         ) : (
-                          <span className="capitalize">{template.llm_provider}</span>
+                          <span className="capitalize text-gray-900 dark:text-gray-100">{template.llm_provider}</span>
                         )}
                       </td>
 
                       {/* LLM Model */}
                       <td className="p-3">
                         {isEditing ? (
-                          <input
-                            type="text"
+                          <select
                             value={editForm.llm_model || ""}
                             onChange={(e) => setEditForm({ ...editForm, llm_model: e.target.value })}
-                            className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1 bg-white dark:bg-gray-800"
-                            placeholder="z.B. gpt-4"
-                          />
+                            className="w-full rounded border border-gray-200 dark:border-gray-800 px-2 py-1 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                          >
+                            <option value="">Modell wählen...</option>
+                            {availableModels[editForm.llm_provider || template.llm_provider]?.map((model) => (
+                              <option key={model} value={model}>{model}</option>
+                            ))}
+                          </select>
                         ) : (
-                          <span className="font-mono text-xs">{template.llm_model}</span>
+                          <span className="font-mono text-xs text-gray-900 dark:text-gray-100">{template.llm_model}</span>
                         )}
                       </td>
 
@@ -242,7 +292,7 @@ export default function AdminDocumentsPage() {
                           <textarea
                             value={editForm.prompt_template || ""}
                             onChange={(e) => setEditForm({ ...editForm, prompt_template: e.target.value })}
-                            className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1 bg-white dark:bg-gray-800 text-xs"
+                            className="w-full rounded border border-gray-200 dark:border-gray-800 px-2 py-1 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-xs"
                             rows={6}
                             placeholder="Prompt template mit {language} placeholder"
                           />
@@ -255,7 +305,7 @@ export default function AdminDocumentsPage() {
                               {isExpanded ? "Verbergen" : "Anzeigen"}
                             </button>
                             {isExpanded && (
-                              <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-auto max-h-60 whitespace-pre-wrap">
+                              <pre className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-800 rounded text-xs overflow-auto max-h-60 whitespace-pre-wrap text-gray-900 dark:text-gray-100">
                                 {template.prompt_template}
                               </pre>
                             )}
@@ -291,7 +341,7 @@ export default function AdminDocumentsPage() {
                             </button>
                             <button
                               onClick={cancelEdit}
-                              className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs hover:bg-gray-300 dark:hover:bg-gray-600"
+                              className="px-3 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-xs hover:bg-gray-200 dark:hover:bg-gray-700"
                             >
                               Abbrechen
                             </button>
@@ -312,10 +362,10 @@ export default function AdminDocumentsPage() {
             </table>
           </div>
         )}
-      </Card>
+      </section>
 
       {/* Help Section */}
-      <Card>
+      <section className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-800">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Hilfe</h3>
         <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
           <div>
@@ -330,11 +380,11 @@ export default function AdminDocumentsPage() {
             </ul>
           </div>
           <div>
-            <strong className="text-gray-900 dark:text-gray-100">LLM Provider:</strong> Der KI-Anbieter für die Generierung.
+            <strong className="text-gray-900 dark:text-gray-100">LLM Provider & Modelle:</strong> Der KI-Anbieter für die Generierung.
             <ul className="list-disc ml-5 mt-1">
-              <li><code>openai</code> - OpenAI (GPT-4, etc.)</li>
-              <li><code>anthropic</code> - Anthropic (Claude)</li>
-              <li><code>google</code> - Google (Gemini)</li>
+              <li><code>openai</code> - OpenAI: gpt-5.1, gpt-5, gpt-5-mini, gpt-5-nano, gpt-5-pro, gpt-4o, gpt-4o-mini</li>
+              <li><code>anthropic</code> - Anthropic (Claude): claude-3-5-sonnet, claude-3-5-haiku, claude-3-opus</li>
+              <li><code>google</code> - Google (Gemini): gemini-3-pro-preview, gemini-2.5-pro, gemini-2.5-flash, gemini-2.0-flash</li>
             </ul>
           </div>
           <div>
@@ -342,7 +392,7 @@ export default function AdminDocumentsPage() {
             Verwende <code>{"{language}"}</code> als Platzhalter für die dynamische Sprache.
           </div>
         </div>
-      </Card>
+      </section>
     </div>
   );
 }
