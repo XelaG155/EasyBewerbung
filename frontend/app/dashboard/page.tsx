@@ -28,6 +28,7 @@ type ApplicationRecord = {
   job_offer_id?: number | null;
   is_spontaneous?: boolean;
   opportunity_context?: string | null;
+  application_type?: string; // fulltime, internship, apprenticeship
   job_description?: string | null;
   applied: boolean;
   applied_at?: string | null;
@@ -102,6 +103,7 @@ export default function DashboardPage() {
   const [targetCompany, setTargetCompany] = useState("");
   const [targetRole, setTargetRole] = useState("");
   const [opportunityContext, setOpportunityContext] = useState("");
+  const [applicationType, setApplicationType] = useState("fulltime"); // fulltime, internship, apprenticeship
   const [creatingSpontaneous, setCreatingSpontaneous] = useState(false);
   const [spontaneousError, setSpontaneousError] = useState("");
 
@@ -315,6 +317,7 @@ export default function DashboardPage() {
         job_title: result.title || t("dashboard.unknownPosition"),
         company: result.company || t("dashboard.unknownCompany"),
         job_offer_url: jobUrl,
+        application_type: applicationType,
         ui_language: resolveLanguageCode(user.mother_tongue || user.preferred_language, options),
         documentation_language: documentationLanguage,
         company_profile_language: companyProfileLanguage,
@@ -354,6 +357,7 @@ export default function DashboardPage() {
         job_title: targetRole,
         company: targetCompany,
         opportunity_context: opportunityContext || undefined,
+        application_type: applicationType,
         ui_language: resolveLanguageCode(user.mother_tongue || user.preferred_language, options),
         documentation_language: documentationLanguage,
         company_profile_language: companyProfileLanguage,
@@ -362,6 +366,7 @@ export default function DashboardPage() {
       setTargetCompany("");
       setTargetRole("");
       setOpportunityContext("");
+      setApplicationType("fulltime");
       await loadData();
       await refreshUser();
     } catch (error: any) {
@@ -717,7 +722,27 @@ export default function DashboardPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <label className="text-sm input-label">
+                    <span className="block mb-2">{t("dashboard.applicationType") || "Application Type"}</span>
+                    <select
+                      value={applicationType}
+                      onChange={(e) => setApplicationType(e.target.value)}
+                      className="input-base"
+                    >
+                      <option value="fulltime">{t("dashboard.fulltime") || "Full-time Position"}</option>
+                      <option value="internship">{t("dashboard.internship") || "Internship (Praktikum)"}</option>
+                      <option value="apprenticeship">{t("dashboard.apprenticeship") || "Apprenticeship (Lehrstelle)"}</option>
+                    </select>
+                    <span className="text-xs text-muted block mt-1">
+                      {applicationType === "internship"
+                        ? (t("dashboard.internshipHint") || "For practical training positions")
+                        : applicationType === "apprenticeship"
+                        ? (t("dashboard.apprenticeshipHint") || "For vocational training positions")
+                        : ""}
+                    </span>
+                  </label>
+
                   <label className="text-sm input-label">
                     <span className="block mb-2">Language for generated documents</span>
                     <select
@@ -774,7 +799,20 @@ export default function DashboardPage() {
                   required
                 />
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <label className="text-sm input-label">
+                    <span className="block mb-2">{t("dashboard.applicationType") || "Application Type"}</span>
+                    <select
+                      value={applicationType}
+                      onChange={(e) => setApplicationType(e.target.value)}
+                      className="input-base"
+                    >
+                      <option value="fulltime">{t("dashboard.fulltime") || "Full-time Position"}</option>
+                      <option value="internship">{t("dashboard.internship") || "Internship (Praktikum)"}</option>
+                      <option value="apprenticeship">{t("dashboard.apprenticeship") || "Apprenticeship (Lehrstelle)"}</option>
+                    </select>
+                  </label>
+
                   <label className="text-sm input-label">
                     <span className="block mb-2">Language for generated documents</span>
                     <select
@@ -936,11 +974,23 @@ export default function DashboardPage() {
                       {/* Collapsible Job Details */}
                       {expandedJobs.includes(app.id) ? (
                         <div className="space-y-3 pl-7">
-                          {app.is_spontaneous && (
-                            <span className="inline-block px-2 py-1 text-xs rounded bg-amber-900/50 text-amber-200 border border-amber-700">
-                              Spontaneous outreach
-                            </span>
-                          )}
+                          <div className="flex gap-2 flex-wrap">
+                            {app.is_spontaneous && (
+                              <span className="inline-block px-2 py-1 text-xs rounded bg-amber-900/50 text-amber-200 border border-amber-700">
+                                Spontaneous outreach
+                              </span>
+                            )}
+                            {app.application_type === "internship" && (
+                              <span className="inline-block px-2 py-1 text-xs rounded bg-purple-900/50 text-purple-200 border border-purple-700">
+                                Internship (Praktikum)
+                              </span>
+                            )}
+                            {app.application_type === "apprenticeship" && (
+                              <span className="inline-block px-2 py-1 text-xs rounded bg-blue-900/50 text-blue-200 border border-blue-700">
+                                Apprenticeship (Lehrstelle)
+                              </span>
+                            )}
+                          </div>
                           {app.job_offer_url && (
                             <a
                               href={app.job_offer_url}

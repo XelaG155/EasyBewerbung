@@ -109,6 +109,9 @@ def generate_documents_background(task_id: int, application_id: int, doc_types: 
             db.commit()
             return
 
+        # Get user profile for extended context
+        user = db.query(User).filter(User.id == user_id).first()
+
         # Get user's CV
         cv_doc = (
             db.query(Document)
@@ -140,6 +143,48 @@ def generate_documents_background(task_id: int, application_id: int, doc_types: 
 
         if application.is_spontaneous:
             job_description += "\nThis is a spontaneous application without a specific posting."
+
+        # Add application type context
+        app_type = getattr(application, "application_type", "fulltime")
+        if app_type == "internship":
+            job_description += "\n\n=== APPLICATION TYPE: INTERNSHIP (Praktikum) ==="
+            job_description += "\nThis is an application for an INTERNSHIP position (Praktikum), not a full-time job."
+            job_description += "\nThe tone should reflect that the candidate is seeking a learning opportunity and practical experience."
+        elif app_type == "apprenticeship":
+            job_description += "\n\n=== APPLICATION TYPE: APPRENTICESHIP (Lehrstelle) ==="
+            job_description += "\nThis is an application for an APPRENTICESHIP position (Lehrstelle/Berufslehre), not a full-time job."
+            job_description += "\nThe candidate is seeking vocational training combined with practical work experience."
+
+        # Add user profile context if available
+        user_context = ""
+        if user:
+            employment_status = getattr(user, "employment_status", None)
+            education_type = getattr(user, "education_type", None)
+            additional_context = getattr(user, "additional_profile_context", None)
+
+            if employment_status or education_type or additional_context:
+                user_context = "\n\n=== CANDIDATE PROFILE CONTEXT ==="
+                if employment_status:
+                    status_labels = {
+                        "employed": "Currently employed (in a position, looking to change)",
+                        "unemployed": "Currently unemployed (actively job seeking)",
+                        "student": "Currently a student",
+                        "transitioning": "In career transition"
+                    }
+                    user_context += f"\nEmployment Status: {status_labels.get(employment_status, employment_status)}"
+                if education_type:
+                    edu_labels = {
+                        "wms": "WMS (Wirtschaftsmittelschule) student - in practical year (Praktikumsjahr)",
+                        "bms": "BMS (Berufsmaturitätsschule) student",
+                        "university": "University/FH student",
+                        "apprenticeship": "Currently in an apprenticeship (Berufslehre)",
+                        "other": "Other educational background"
+                    }
+                    user_context += f"\nEducation Type: {edu_labels.get(education_type, education_type)}"
+                if additional_context:
+                    user_context += f"\nAdditional Context: {additional_context}"
+
+                job_description += user_context
 
         # Generate documents
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -203,6 +248,7 @@ class ApplicationCreate(BaseModel):
     opportunity_context: Optional[str] = Field(
         None, description="Context for spontaneous applications (e.g., target team, value proposition)"
     )
+    application_type: str = Field("fulltime", description="Type of position: fulltime, internship, apprenticeship")
     applied: bool = False
     applied_at: Optional[datetime] = None
     result: Optional[str] = Field(None, description="Outcome (e.g., pending, interview, rejected, offer)")
@@ -214,6 +260,16 @@ class ApplicationCreate(BaseModel):
     @classmethod
     def validate_language(cls, value: Optional[str], info):
         return normalize_language(value, field_name=info.field_name) if value else value
+
+    @field_validator("application_type", mode="before")
+    @classmethod
+    def validate_application_type(cls, value: Optional[str]):
+        if value is None:
+            return "fulltime"
+        valid_types = ["fulltime", "internship", "apprenticeship"]
+        if value not in valid_types:
+            raise ValueError(f"application_type must be one of: {', '.join(valid_types)}")
+        return value
 
 
 class ApplicationUpdate(BaseModel):
@@ -255,6 +311,7 @@ class ApplicationResponse(BaseModel):
     job_offer_id: Optional[int]  # ID of the saved JobOffer for PDF access
     is_spontaneous: bool
     opportunity_context: Optional[str]
+    application_type: str  # fulltime, internship, apprenticeship
     job_description: Optional[str]
     applied: bool
     applied_at: Optional[datetime]
@@ -317,6 +374,7 @@ def serialize_application(app: Application, db: Session = None, include_job_desc
         "job_offer_id": job_offer_id,
         "is_spontaneous": app.is_spontaneous,
         "opportunity_context": app.opportunity_context,
+        "application_type": getattr(app, "application_type", "fulltime"),
         "job_description": job_description,
         "applied": app.applied,
         "applied_at": applied_at_utc.isoformat() if applied_at_utc else None,
@@ -379,6 +437,7 @@ async def create_application(
             job_offer_url=payload.job_offer_url,
             is_spontaneous=payload.is_spontaneous,
             opportunity_context=payload.opportunity_context,
+            application_type=payload.application_type,
             applied=payload.applied,
             applied_at=applied_at,
             result=payload.result,
@@ -516,6 +575,7 @@ async def list_application_history(
                 "job_offer_id": job_offers_id_map.get(app.job_offer_url) if app.job_offer_url else None,
                 "is_spontaneous": app.is_spontaneous,
                 "opportunity_context": app.opportunity_context,
+                "application_type": getattr(app, "application_type", "fulltime"),
                 "job_description": job_offers_map.get(app.job_offer_url)
                 if app.job_offer_url
                 else app.opportunity_context,
