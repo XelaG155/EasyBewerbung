@@ -89,24 +89,24 @@ export default function Home() {
     <div className="page-shell min-h-screen">
       {/* Header */}
       <header className="border-b border-muted backdrop-blur nav-surface">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="EasyBewerbung" className="w-8 h-8 rounded-lg" />
-            <span className="text-xl font-bold">{t("common.appName")}</span>
+        <div className="container mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-shrink">
+            <img src="/logo.png" alt="EasyBewerbung" className="w-8 h-8 rounded-lg flex-shrink-0" />
+            <span className="text-lg sm:text-xl font-bold truncate">{t("common.appName")}</span>
           </div>
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-2 sm:gap-3 items-center flex-shrink-0">
             <button
               type="button"
               onClick={toggleTheme}
-              className="btn-base btn-secondary flex items-center gap-2"
+              className="btn-base btn-secondary flex items-center gap-1 sm:gap-2 px-2 sm:px-4"
               aria-pressed={theme === "light"}
             >
               <span aria-hidden>{theme === "light" ? "🌙" : "☀️"}</span>
-              <span className="text-sm">
+              <span className="text-sm hidden md:inline">
                 {theme === "light" ? t("common.darkMode") : t("common.lightMode")}
               </span>
             </button>
-            <div className="relative flex items-center">
+            <div className="relative hidden lg:flex items-center">
               <label className="text-sm text-muted mr-2">{t("common.language")}:</label>
               <select
                 value={locale}
@@ -126,11 +126,12 @@ export default function Home() {
                 ))}
               </select>
             </div>
-            <Button href="/login" variant="outline">
+            <Button href="/login" variant="outline" className="hidden sm:inline-flex">
               {t("common.login")}
             </Button>
             <Button href="/register" variant="primary">
-              {t("common.getStarted")}
+              <span className="hidden sm:inline">{t("common.getStarted")}</span>
+              <span className="sm:hidden">→</span>
             </Button>
           </div>
         </div>
