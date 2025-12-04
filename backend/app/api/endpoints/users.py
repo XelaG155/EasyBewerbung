@@ -87,6 +87,10 @@ class UserResponse(BaseModel):
     preferred_language: str
     mother_tongue: str
     documentation_language: str
+    # Extended profile fields
+    employment_status: Optional[str]
+    education_type: Optional[str]
+    additional_profile_context: Optional[str]
     credits: int
     created_at: str
     is_admin: bool
@@ -106,6 +110,9 @@ def serialize_user(user: User) -> UserResponse:
         preferred_language=_safe_language(user.preferred_language, "preferred_language"),
         mother_tongue=_safe_language(user.mother_tongue, "mother_tongue"),
         documentation_language=_safe_language(user.documentation_language, "documentation_language"),
+        employment_status=getattr(user, "employment_status", None),
+        education_type=getattr(user, "education_type", None),
+        additional_profile_context=getattr(user, "additional_profile_context", None),
         credits=user.credits,
         created_at=user.created_at.isoformat(),
         is_admin=bool(getattr(user, "is_admin", False)),
@@ -343,11 +350,35 @@ class UserUpdate(BaseModel):
     preferred_language: Optional[str] = None
     mother_tongue: Optional[str] = None
     documentation_language: Optional[str] = None
+    # Extended profile fields
+    employment_status: Optional[str] = None  # "employed", "unemployed", "student", "transitioning"
+    education_type: Optional[str] = None  # "wms", "bms", "university", "apprenticeship", "other"
+    additional_profile_context: Optional[str] = None  # Free text for additional info
 
     @field_validator("preferred_language", "mother_tongue", "documentation_language", mode="before")
     @classmethod
     def validate_language(cls, value: Optional[str], info):
         return normalize_language(value, field_name=info.field_name) if value else value
+
+    @field_validator("employment_status", mode="before")
+    @classmethod
+    def validate_employment_status(cls, value: Optional[str]):
+        if value is None:
+            return value
+        valid_statuses = ["employed", "unemployed", "student", "transitioning"]
+        if value not in valid_statuses:
+            raise ValueError(f"employment_status must be one of: {', '.join(valid_statuses)}")
+        return value
+
+    @field_validator("education_type", mode="before")
+    @classmethod
+    def validate_education_type(cls, value: Optional[str]):
+        if value is None:
+            return value
+        valid_types = ["wms", "bms", "university", "apprenticeship", "other"]
+        if value not in valid_types:
+            raise ValueError(f"education_type must be one of: {', '.join(valid_types)}")
+        return value
 
 
 class AdminCreditUpdate(BaseModel):
@@ -370,6 +401,13 @@ async def update_user(
         current_user.mother_tongue = user_update.mother_tongue
     if user_update.documentation_language is not None:
         current_user.documentation_language = user_update.documentation_language
+    # Extended profile fields
+    if user_update.employment_status is not None:
+        current_user.employment_status = user_update.employment_status
+    if user_update.education_type is not None:
+        current_user.education_type = user_update.education_type
+    if user_update.additional_profile_context is not None:
+        current_user.additional_profile_context = user_update.additional_profile_context
 
     db.commit()
     db.refresh(current_user)
