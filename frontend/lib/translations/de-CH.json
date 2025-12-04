@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Unbekannte Position",
+    "unknownCompany": "Unbekanntes Unternehmen",
+    "applicationType": "Bewerbungstyp",
+    "fulltime": "Vollzeitstelle",
+    "internship": "Praktikum",
+    "apprenticeship": "Lehrstelle",
+    "internshipHint": "Für Praktikumsstellen",
+    "apprenticeshipHint": "Für Ausbildungsstellen"
   },
   "settings": {
     "title": "Einstellungen",

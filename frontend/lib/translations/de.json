@@ -121,7 +121,13 @@
     "appliedFilter": "Beworben",
     "notAppliedFilter": "Nicht beworben",
     "unknownPosition": "Unbekannte Position",
-    "unknownCompany": "Unbekanntes Unternehmen"
+    "unknownCompany": "Unbekanntes Unternehmen",
+    "applicationType": "Bewerbungstyp",
+    "fulltime": "Vollzeitstelle",
+    "internship": "Praktikum",
+    "apprenticeship": "Lehrstelle",
+    "internshipHint": "Für Praktikumsstellen",
+    "apprenticeshipHint": "Für Ausbildungsstellen"
   },
   "settings": {
     "title": "Einstellungen",

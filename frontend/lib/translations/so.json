@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Jagada aan la garanayn",
+    "unknownCompany": "Shirkadda aan la garanayn",
+    "applicationType": "Nooca codsiga",
+    "fulltime": "Shaqo wakhti buuxa ah",
+    "internship": "Tababar",
+    "apprenticeship": "Barashada xirfadda",
+    "internshipHint": "Jagooyin tababar",
+    "apprenticeshipHint": "Jagooyin tababarka xirfadda"
   },
   "settings": {
     "title": "Dejinta",

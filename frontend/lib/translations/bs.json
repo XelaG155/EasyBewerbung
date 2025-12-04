@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Nepoznata pozicija",
+    "unknownCompany": "Nepoznata kompanija",
+    "applicationType": "Vrsta prijave",
+    "fulltime": "Puno radno vrijeme",
+    "internship": "Praksa",
+    "apprenticeship": "Šegrtovanje",
+    "internshipHint": "Za pozicije prakse",
+    "apprenticeshipHint": "Za pozicije strukovnog osposobljavanja"
   },
   "settings": {
     "title": "Postavke",

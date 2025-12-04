@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "ಅಜ್ಞಾತ ಸ್ಥಾನ",
+    "unknownCompany": "ಅಜ್ಞಾತ ಕಂಪನಿ",
+    "applicationType": "ಅರ್ಜಿ ಪ್ರಕಾರ",
+    "fulltime": "ಪೂರ್ಣ-ಸಮಯದ ಸ್ಥಾನ",
+    "internship": "ಇಂಟರ್ನ್‌ಶಿಪ್",
+    "apprenticeship": "ಅಪ್ರೆಂಟಿಸ್‌ಶಿಪ್",
+    "internshipHint": "ಇಂಟರ್ನ್‌ಶಿಪ್ ಸ್ಥಾನಗಳಿಗೆ",
+    "apprenticeshipHint": "ವೃತ್ತಿಪರ ತರಬೇತಿ ಸ್ಥಾನಗಳಿಗೆ"
   },
   "settings": {
     "title": "ಸೆಟ್ಟಿಂಗ್‌ಗಳು",

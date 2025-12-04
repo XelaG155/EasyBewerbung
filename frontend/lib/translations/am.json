@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "ያልታወቀ ቦታ",
+    "unknownCompany": "ያልታወቀ ኩባንያ",
+    "applicationType": "የማመልከቻ ዓይነት",
+    "fulltime": "ሙሉ ጊዜ ቦታ",
+    "internship": "ተለማማጅነት",
+    "apprenticeship": "ሙያ ተማሪ",
+    "internshipHint": "ለተለማማጅነት ቦታዎች",
+    "apprenticeshipHint": "ለሙያ ስልጠና ቦታዎች"
   },
   "settings": {
     "title": "ቅንብሮች",

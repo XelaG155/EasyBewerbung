@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "తెలియని స్థానం",
+    "unknownCompany": "తెలియని కంపెనీ",
+    "applicationType": "దరఖాస్తు రకం",
+    "fulltime": "పూర్తి-సమయ స్థానం",
+    "internship": "ఇంటర్న్‌షిప్",
+    "apprenticeship": "అప్రెంటిస్‌షిప్",
+    "internshipHint": "ఇంటర్న్‌షిప్ స్థానాల కోసం",
+    "apprenticeshipHint": "వృత్తిపరమైన శిక్షణ స్థానాల కోసం"
   },
   "settings": {
     "title": "సెట్టింగ్‌లు",

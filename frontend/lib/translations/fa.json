@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "موقعیت ناشناخته",
+    "unknownCompany": "شرکت ناشناخته",
+    "applicationType": "نوع درخواست",
+    "fulltime": "شغل تمام وقت",
+    "internship": "کارآموزی",
+    "apprenticeship": "شاگردی",
+    "internshipHint": "برای موقعیت‌های کارآموزی",
+    "apprenticeshipHint": "برای موقعیت‌های آموزش حرفه‌ای"
   },
   "settings": {
     "title": "تنظیمات",

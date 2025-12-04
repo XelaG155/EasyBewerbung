@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "منصب غير معروف",
+    "unknownCompany": "شركة غير معروفة",
+    "applicationType": "نوع الطلب",
+    "fulltime": "وظيفة بدوام كامل",
+    "internship": "تدريب عملي",
+    "apprenticeship": "تدريب مهني",
+    "internshipHint": "للمناصب التدريبية",
+    "apprenticeshipHint": "لمناصب التدريب المهني"
   },
   "settings": {
     "title": "الإعدادات",

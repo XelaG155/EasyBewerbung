@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Неизвестна позиция",
+    "unknownCompany": "Неизвестна компания",
+    "applicationType": "Тип кандидатура",
+    "fulltime": "Пълен работен ден",
+    "internship": "Стаж",
+    "apprenticeship": "Чиракуване",
+    "internshipHint": "За стажантски позиции",
+    "apprenticeshipHint": "За позиции за професионално обучение"
   },
   "settings": {
     "title": "Настройки",

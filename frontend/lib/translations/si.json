@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "නොදන්නා තනතුර",
+    "unknownCompany": "නොදන්නා සමාගම",
+    "applicationType": "අයදුම්පත් වර්ගය",
+    "fulltime": "පූර්ණ කාලීන තනතුර",
+    "internship": "අභ්‍යාසලාභී",
+    "apprenticeship": "ගුරු ශිෂ්‍යත්වය",
+    "internshipHint": "අභ්‍යාසලාභී තනතුරු සඳහා",
+    "apprenticeshipHint": "වෘත්තීය පුහුණු තනතුරු සඳහා"
   },
   "settings": {
     "title": "සැකසුම්",
