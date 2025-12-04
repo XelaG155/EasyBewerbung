@@ -51,7 +51,16 @@
 
       "Only include travel willingness/percentage if explicitly mentioned in the original CV - DO NOT add or infer it",
       "Maintain professional tone appropriate for the industry",
-      "Keep the same level of detail as the original CV"
+      "Keep the same level of detail as the original CV",
+
+      "=== INTERNSHIP/APPRENTICESHIP APPLICATIONS ===",
+      "If the job description indicates this is an INTERNSHIP (Praktikum) or APPRENTICESHIP (Lehrstelle) application:",
+      "  - Adjust the CV to emphasize learning potential, enthusiasm, and relevant coursework/projects",
+      "  - Highlight any relevant school projects, volunteer work, or part-time experience",
+      "  - Focus on soft skills like eagerness to learn, teamwork, and reliability",
+      "  - For WMS/BMS students: emphasize commercial skills, language abilities, and IT proficiency",
+      "  - Keep the tone appropriate for a student/trainee rather than an experienced professional",
+      "  - If applying for a Praktikum, emphasize what the candidate hopes to learn and contribute"
     ],
     "output_format": "ATS-optimized single-column CV with standard sections, starting with candidate name and contact info",
     "length_guideline": "Same as original CV (typically 1-2 pages)",
@@ -177,7 +186,18 @@
       "Professional, enthusiastic, and genuine",
       "Show specific knowledge of company/role (if mentioned in job description)",
       "Quantify achievements where possible (from CV)",
-      "Keep it concise - typically 3/4 to 1 full page"
+      "Keep it concise - typically 3/4 to 1 full page",
+
+      "=== INTERNSHIP/APPRENTICESHIP APPLICATIONS ===",
+      "If the job description indicates this is an INTERNSHIP (Praktikum) or APPRENTICESHIP (Lehrstelle) application:",
+      "  - Adjust tone to reflect that the candidate is a student/trainee seeking practical experience",
+      "  - Express genuine enthusiasm for learning and contributing to the company",
+      "  - Highlight relevant coursework, school projects, and transferable skills",
+      "  - For WMS students in their Praktikumsjahr: mention this is part of their commercial education program",
+      "  - Explain what the candidate hopes to learn during the internship/apprenticeship",
+      "  - Show awareness that this is a learning opportunity, not a senior position",
+      "  - If this is a spontaneous application (Initiativbewerbung): explain why the candidate is interested in this specific company",
+      "  - Keep the letter appropriately modest while still showcasing genuine strengths"
     ],
     "output_format": "ATS-optimized motivational letter with natural keyword integration and proper business letter format",
     "length_guideline": "3/4 to 1 page (concise but comprehensive)",

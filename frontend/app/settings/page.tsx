@@ -26,6 +26,10 @@ export default function SettingsPage() {
   const [preferredLanguage, setPreferredLanguage] = useState("");
   const [motherTongue, setMotherTongue] = useState("");
   const [documentationLanguage, setDocumentationLanguage] = useState("");
+  // Extended profile fields
+  const [employmentStatus, setEmploymentStatus] = useState("");
+  const [educationType, setEducationType] = useState("");
+  const [additionalProfileContext, setAdditionalProfileContext] = useState("");
   const [languageOptions, setLanguageOptions] = useState<LanguageOption[]>(FALLBACK_LANGUAGE_OPTIONS);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -43,6 +47,10 @@ export default function SettingsPage() {
       setPreferredLanguage(user.preferred_language || "en");
       setMotherTongue(user.mother_tongue || "en");
       setDocumentationLanguage(user.documentation_language || "en");
+      // Extended profile fields
+      setEmploymentStatus(user.employment_status || "");
+      setEducationType(user.education_type || "");
+      setAdditionalProfileContext(user.additional_profile_context || "");
 
       api
         .listLanguages()
@@ -64,7 +72,10 @@ export default function SettingsPage() {
         fullName,
         preferredLanguage,
         motherTongue,
-        documentationLanguage
+        documentationLanguage,
+        employmentStatus || undefined,
+        educationType || undefined,
+        additionalProfileContext || undefined
       );
       await refreshUser();
       setSuccess(t("settings.settingsSaved"));
@@ -206,6 +217,72 @@ export default function SettingsPage() {
                   </select>
                   <p className="text-xs text-slate-500 mt-1">
                     {t("settings.documentationLanguageHint")}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Extended Profile Settings */}
+            <div className="space-y-4 pt-4 border-t border-slate-700">
+              <h2 className="text-xl font-semibold">{t("settings.extendedProfile") || "Extended Profile"}</h2>
+              <p className="text-sm text-slate-400">
+                {t("settings.extendedProfileDescription") || "Additional information to help generate more personalized application documents."}
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    {t("settings.employmentStatus") || "Employment Status"}
+                  </label>
+                  <select
+                    value={employmentStatus}
+                    onChange={(e) => setEmploymentStatus(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">{t("settings.selectOption") || "-- Select --"}</option>
+                    <option value="employed">{t("settings.employed") || "Currently employed"}</option>
+                    <option value="unemployed">{t("settings.unemployed") || "Currently unemployed"}</option>
+                    <option value="student">{t("settings.student") || "Student"}</option>
+                    <option value="transitioning">{t("settings.transitioning") || "In career transition"}</option>
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {t("settings.employmentStatusHint") || "Your current employment situation helps tailor the tone of your applications."}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    {t("settings.educationType") || "Education Type"}
+                  </label>
+                  <select
+                    value={educationType}
+                    onChange={(e) => setEducationType(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">{t("settings.selectOption") || "-- Select --"}</option>
+                    <option value="wms">{t("settings.wms") || "WMS (Wirtschaftsmittelschule)"}</option>
+                    <option value="bms">{t("settings.bms") || "BMS (Berufsmaturitätsschule)"}</option>
+                    <option value="university">{t("settings.university") || "University / FH"}</option>
+                    <option value="apprenticeship">{t("settings.apprenticeship") || "Apprenticeship (Berufslehre)"}</option>
+                    <option value="other">{t("settings.other") || "Other"}</option>
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {t("settings.educationTypeHint") || "Your education background helps personalize applications, especially for internship positions."}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    {t("settings.additionalContext") || "Additional Context"}
+                  </label>
+                  <textarea
+                    value={additionalProfileContext}
+                    onChange={(e) => setAdditionalProfileContext(e.target.value)}
+                    placeholder={t("settings.additionalContextPlaceholder") || "e.g., I am in my practical year (Praktikumsjahr) as part of my WMS education..."}
+                    className="w-full px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[100px]"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    {t("settings.additionalContextHint") || "Any additional information relevant to your job applications."}
                   </p>
                 </div>
               </div>

@@ -27,6 +27,11 @@ class User(Base):
     google_id = Column(String, unique=True, nullable=True, index=True)  # Google user ID
     profile_picture = Column(String, nullable=True)  # Profile picture URL
 
+    # Extended profile fields
+    employment_status = Column(String, nullable=True)  # "employed", "unemployed", "student", "transitioning"
+    education_type = Column(String, nullable=True)  # "wms", "bms", "university", "apprenticeship", "other", None
+    additional_profile_context = Column(Text, nullable=True)  # Free text for additional info
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     documents = relationship("Document", back_populates="owner")
@@ -74,6 +79,8 @@ class Application(Base):
     job_offer_url = Column(String, nullable=True)
     is_spontaneous = Column(Boolean, default=False)
     opportunity_context = Column(Text, nullable=True)
+    # Application type: "fulltime", "internship", "apprenticeship" (Praktikum/Lehrstelle)
+    application_type = Column(String, default="fulltime", nullable=False)
     applied = Column(Boolean, default=False)
     applied_at = Column(DateTime, nullable=True)
     result = Column(String, nullable=True)
