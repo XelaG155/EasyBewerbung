@@ -94,7 +94,7 @@ export default function Home() {
             <img src="/logo.png" alt="EasyBewerbung" className="w-8 h-8 rounded-lg flex-shrink-0" />
             <span className="text-lg sm:text-xl font-bold whitespace-nowrap">{t("common.appName")}</span>
           </div>
-          <div className="flex gap-2 sm:gap-3 items-center flex-shrink-0">
+          <div className="flex gap-2 sm:gap-3 items-center">
             <button
               type="button"
               onClick={toggleTheme}
