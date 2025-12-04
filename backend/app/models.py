@@ -175,3 +175,31 @@ class PromptTemplate(Base):
     name = Column(String, nullable=False)
     content = Column(Text, nullable=False)
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+
+class DocumentTemplate(Base):
+    __tablename__ = "document_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    doc_type = Column(String, unique=True, nullable=False)  # e.g. "tailored_cv_pdf"
+    display_name = Column(String, nullable=False)  # e.g. "Tailored CV (PDF)"
+    credit_cost = Column(Integer, default=1, nullable=False)  # 0-10
+
+    # Language configuration
+    language_source = Column(String, default="documentation_language", nullable=False)
+    # Options: "preferred_language", "mother_tongue", "documentation_language"
+
+    # LLM configuration
+    llm_provider = Column(String, default="openai", nullable=False)
+    # Options: "openai", "anthropic", "google"
+    llm_model = Column(String, default="gpt-4", nullable=False)
+    # e.g. "gpt-4", "gpt-3.5-turbo", "claude-3-sonnet-20240229", "gemini-pro"
+
+    # Prompt template with {language} placeholder
+    prompt_template = Column(Text, nullable=False)
+
+    # Status
+    is_active = Column(Boolean, default=True)
+
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

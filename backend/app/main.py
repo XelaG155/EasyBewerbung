@@ -5,7 +5,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.limiter import limiter
 
-from app.api.endpoints import documents, jobs, applications, users, admin
+from app.api.endpoints import documents, jobs, applications, users, admin, document_templates
 from app.database import init_db
 
 app = FastAPI(
@@ -47,3 +47,8 @@ app.include_router(admin.router, tags=["admin"])
 app.include_router(documents.router, prefix="/documents", tags=["documents"])
 app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
 app.include_router(applications.router, prefix="/applications", tags=["applications"])
+app.include_router(
+    document_templates.router,
+    prefix="/admin/document-templates",
+    tags=["admin", "document-templates"]
+)
