@@ -21,7 +21,7 @@ from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
 from app.database import get_db
 from app.document_catalog import ALLOWED_GENERATED_DOC_TYPES
-from app.models import Application, GeneratedDocument, User, Document, JobOffer, MatchingScore, GenerationTask
+from app.models import Application, GeneratedDocument, User, Document, JobOffer, MatchingScore, GenerationTask, DocumentTemplate
 from app.auth import get_current_user
 from app.language_catalog import DEFAULT_LANGUAGE, normalize_language
 
@@ -38,6 +38,73 @@ def get_language_instruction(lang: str) -> str:
     if lang in ["Deutsch (Schweiz)", "de-CH"]:
         return f"{lang} (IMPORTANT: Use Swiss German spelling with 'ss' instead of 'ß', as used in Switzerland)"
     return lang
+
+
+def get_language_from_user(user: User, language_source: str) -> str:
+    """Get the appropriate language from user based on the language_source configuration."""
+    if language_source == "preferred_language":
+        return getattr(user, "preferred_language", None) or DEFAULT_LANGUAGE
+    elif language_source == "mother_tongue":
+        return getattr(user, "mother_tongue", None) or DEFAULT_LANGUAGE
+    elif language_source == "documentation_language":
+        return getattr(user, "documentation_language", None) or DEFAULT_LANGUAGE
+    else:
+        # Fallback to documentation_language
+        return getattr(user, "documentation_language", None) or DEFAULT_LANGUAGE
+
+
+def get_llm_client(provider: str, model: str):
+    """Get the appropriate LLM client based on the provider."""
+    if provider == "openai":
+        return OpenAI(api_key=os.getenv("OPENAI_API_KEY")), model
+    elif provider == "anthropic":
+        # Import anthropic client if needed
+        try:
+            import anthropic
+            return anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY")), model
+        except ImportError:
+            logging.warning("Anthropic client not installed, falling back to OpenAI")
+            return OpenAI(api_key=os.getenv("OPENAI_API_KEY")), "gpt-4"
+    elif provider == "google":
+        # Import google client if needed
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+            return genai, model
+        except ImportError:
+            logging.warning("Google GenAI client not installed, falling back to OpenAI")
+            return OpenAI(api_key=os.getenv("OPENAI_API_KEY")), "gpt-4"
+    else:
+        # Default to OpenAI
+        return OpenAI(api_key=os.getenv("OPENAI_API_KEY")), model
+
+
+def generate_with_llm(client, model: str, provider: str, prompt: str) -> str:
+    """Generate text using the specified LLM provider."""
+    if provider == "openai":
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.choices[0].message.content
+    elif provider == "anthropic":
+        response = client.messages.create(
+            model=model,
+            max_tokens=4096,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.content[0].text
+    elif provider == "google":
+        model_instance = client.GenerativeModel(model)
+        response = model_instance.generate_content(prompt)
+        return response.text
+    else:
+        # Default to OpenAI-style API
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.choices[0].message.content
 
 
 def generate_document_prompt(doc_type: str, job_description: str, cv_text: str, application) -> Optional[str]:
@@ -83,6 +150,66 @@ def generate_document_prompt(doc_type: str, job_description: str, cv_text: str, 
     except KeyError as e:
         logging.error(f"Missing variable in prompt template for {doc_type}: {e}")
         return None
+
+
+def generate_document_prompt_from_template(
+    template: DocumentTemplate,
+    job_description: str,
+    cv_text: str,
+    user: User,
+    application
+) -> Optional[str]:
+    """Generate prompt using a DocumentTemplate from the database."""
+
+    # Get language based on template configuration
+    language_source = template.language_source or "documentation_language"
+    lang = get_language_from_user(user, language_source)
+    lang_instruction = get_language_instruction(lang)
+
+    # For company_intelligence_briefing, use company_profile_language
+    if template.doc_type == "company_intelligence_briefing":
+        language_to_use = get_language_instruction(application.company_profile_language or lang)
+    else:
+        language_to_use = lang_instruction
+
+    # Get prompt configuration from JSON for role, task, instructions
+    prompt_config = DOCUMENT_PROMPTS.get(template.doc_type, {})
+
+    # Prepare input variables
+    inputs = {
+        "job_description": job_description,
+        "cv_text": cv_text,
+        "cv_summary": cv_text[:500] if len(cv_text) > 500 else cv_text,
+        "language": language_to_use,
+        "company_profile_language": get_language_instruction(application.company_profile_language or lang),
+        "role": prompt_config.get("role", ""),
+        "task": prompt_config.get("task", ""),
+        "reference_letters": cv_text,  # For reference_summary document type
+    }
+
+    # Format instructions from JSON config
+    instructions_list = prompt_config.get("instructions", [])
+    instructions_text = "\n".join([f"{i+1}. {instr}" for i, instr in enumerate(instructions_list)])
+    inputs["instructions"] = instructions_text
+
+    # Build prompt from database template
+    try:
+        prompt = template.prompt_template.format(**inputs)
+        return prompt
+    except KeyError as e:
+        logging.error(f"Missing variable in prompt template for {template.doc_type}: {e}")
+        # Try to return a basic version without the missing variable
+        try:
+            # Try with a simpler approach, replacing missing vars with empty strings
+            import re
+            simple_prompt = template.prompt_template
+            for match in re.findall(r'\{(\w+)\}', simple_prompt):
+                if match not in inputs:
+                    inputs[match] = ""
+            prompt = simple_prompt.format(**inputs)
+            return prompt
+        except Exception:
+            return None
 
 
 def generate_documents_background(task_id: int, application_id: int, doc_types: List[str], user_id: int):
@@ -186,23 +313,51 @@ def generate_documents_background(task_id: int, application_id: int, doc_types: 
 
                 job_description += user_context
 
-        # Generate documents
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        # Pre-load document templates from database for all doc_types
+        templates_map = {}
+        db_templates = db.query(DocumentTemplate).filter(
+            DocumentTemplate.doc_type.in_(doc_types),
+            DocumentTemplate.is_active == True
+        ).all()
+        for t in db_templates:
+            templates_map[t.doc_type] = t
+
+        # Default fallback client for documents without templates
+        default_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
         for idx, doc_type in enumerate(doc_types):
             try:
-                # Generate prompt based on document type
-                prompt = generate_document_prompt(doc_type, job_description, cv_doc.content_text, application)
+                # Check if we have a template configuration in the database
+                template = templates_map.get(doc_type)
 
-                if not prompt:
-                    continue  # Skip unsupported types
+                if template:
+                    # Use template configuration from database
+                    prompt = generate_document_prompt_from_template(
+                        template, job_description, cv_doc.content_text, user, application
+                    )
+                    if not prompt:
+                        # Fallback to JSON prompt
+                        prompt = generate_document_prompt(doc_type, job_description, cv_doc.content_text, application)
 
-                response = client.chat.completions.create(
-                    model="gpt-5-nano",
-                    messages=[{"role": "user", "content": prompt}],
-                )
+                    if not prompt:
+                        logging.warning(f"Could not generate prompt for {doc_type}, skipping...")
+                        continue
 
-                content = response.choices[0].message.content
+                    # Get LLM client based on template configuration
+                    llm_client, model = get_llm_client(template.llm_provider, template.llm_model)
+                    content = generate_with_llm(llm_client, model, template.llm_provider, prompt)
+                else:
+                    # Fallback to original behavior with JSON prompts
+                    prompt = generate_document_prompt(doc_type, job_description, cv_doc.content_text, application)
+
+                    if not prompt:
+                        continue  # Skip unsupported types
+
+                    response = default_client.chat.completions.create(
+                        model="gpt-4",
+                        messages=[{"role": "user", "content": prompt}],
+                    )
+                    content = response.choices[0].message.content
 
                 # Save generated document
                 gen_doc = GeneratedDocument(
@@ -221,6 +376,7 @@ def generate_documents_background(task_id: int, application_id: int, doc_types: 
 
             except Exception as e:
                 # Log error but continue with other documents
+                logging.error(f"Error generating {doc_type}: {str(e)}")
                 print(f"Error generating {doc_type}: {str(e)}")
                 task.error_message = f"Partial failure: Error generating {doc_type}: {str(e)}"
                 db.commit()
@@ -232,6 +388,7 @@ def generate_documents_background(task_id: int, application_id: int, doc_types: 
 
     except Exception as e:
         # Fatal error
+        logging.error(f"Fatal error in generate_documents_background: {str(e)}")
         if task:
             task.status = "failed"
             task.error_message = str(e)
@@ -826,9 +983,23 @@ async def generate_documents(
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
 
+    # Calculate total cost based on template configurations
+    templates = db.query(DocumentTemplate).filter(
+        DocumentTemplate.doc_type.in_(doc_types),
+        DocumentTemplate.is_active == True
+    ).all()
+    templates_map = {t.doc_type: t for t in templates}
+
+    total_cost = 0
+    for doc_type in doc_types:
+        template = templates_map.get(doc_type)
+        if template:
+            total_cost += template.credit_cost
+        else:
+            # Default cost if no template found
+            total_cost += 1
+
     # Check credits
-    cost_per_doc = 1
-    total_cost = len(doc_types) * cost_per_doc
     if current_user.credits < total_cost:
         raise HTTPException(status_code=402, detail=f"Insufficient credits. Need {total_cost}, have {current_user.credits}")
 

@@ -120,6 +120,30 @@ export interface PromptTemplate {
   updated_at: string;
 }
 
+export interface DocumentTemplate {
+  id: number;
+  doc_type: string;
+  display_name: string;
+  credit_cost: number;
+  language_source: 'preferred_language' | 'mother_tongue' | 'documentation_language';
+  llm_provider: string;
+  llm_model: string;
+  prompt_template: string;
+  is_active: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface DocumentTemplateUpdate {
+  display_name?: string;
+  credit_cost?: number;
+  language_source?: 'preferred_language' | 'mother_tongue' | 'documentation_language';
+  llm_provider?: string;
+  llm_model?: string;
+  prompt_template?: string;
+  is_active?: boolean;
+}
+
 class ApiClient {
   private baseUrl: string;
   private token: string | null = null;
@@ -468,6 +492,36 @@ class ApiClient {
       method: "PUT",
       body: JSON.stringify({ name, content }),
     });
+  }
+
+  // Document Template endpoints
+  async getDocumentTemplates() {
+    return this.request<DocumentTemplate[]>("/admin/document-templates/");
+  }
+
+  async getDocumentTemplate(id: number) {
+    return this.request<DocumentTemplate>(`/admin/document-templates/${id}`);
+  }
+
+  async updateDocumentTemplate(id: number, data: DocumentTemplateUpdate) {
+    return this.request<DocumentTemplate>(`/admin/document-templates/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteDocumentTemplate(id: number) {
+    return this.request<{ message: string }>(`/admin/document-templates/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async seedDocumentTemplates(forceUpdate: boolean = false) {
+    const params = forceUpdate ? "?force_update=true" : "";
+    return this.request<{ message: string; created: number; updated: number; skipped: number; total: number }>(
+      `/admin/document-templates/seed${params}`,
+      { method: "POST" }
+    );
   }
 
   async downloadJobDescriptionPDF(applicationId: number) {
