@@ -114,6 +114,7 @@ export default function DashboardPage() {
 
   // Active generations tracking
   const [hasActiveGenerations, setHasActiveGenerations] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState<{ completed: number; total: number } | null>(null);
 
   // Filtering and sorting
   const [filterApplied, setFilterApplied] = useState<string>("all"); // "all", "applied", "not-applied"
@@ -190,6 +191,8 @@ export default function DashboardPage() {
 
         // Check status of each task
         const stillActive: { appId: number; taskId: number }[] = [];
+        let currentProgress: { completed: number; total: number } | null = null;
+
         for (const task of activeTasks) {
           try {
             const token = api.getToken();
@@ -207,6 +210,15 @@ export default function DashboardPage() {
             );
             if (response.ok) {
               const status = await response.json();
+
+              // Track progress - for dashboard, show any active task's progress
+              if (status.total_docs && status.completed_docs !== undefined) {
+                currentProgress = {
+                  completed: status.completed_docs,
+                  total: status.total_docs
+                };
+              }
+
               // Keep task if still processing
               if (status.status === "pending" || status.status === "processing") {
                 stillActive.push(task);
@@ -227,9 +239,11 @@ export default function DashboardPage() {
         if (stillActive.length > 0) {
           localStorage.setItem("activeGenerationTasks", JSON.stringify(stillActive));
           setHasActiveGenerations(true);
+          setGenerationProgress(currentProgress);
         } else {
           localStorage.removeItem("activeGenerationTasks");
           setHasActiveGenerations(false);
+          setGenerationProgress(null);
         }
       } catch (error) {
         console.error("Error checking active generations:", error);
@@ -542,11 +556,16 @@ export default function DashboardPage() {
                   {user.full_name || user.email}
                   {hasActiveGenerations && (
                     <svg
-                      className="animate-spin h-5 w-5 text-emerald-400"
+                      className="animate-spin h-5 w-5 text-emerald-400 cursor-help"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
                     >
+                      <title>
+                        {generationProgress
+                          ? `Generating documents: ${generationProgress.completed} of ${generationProgress.total} completed`
+                          : "Generating documents..."}
+                      </title>
                       <circle
                         className="opacity-25"
                         cx="12"

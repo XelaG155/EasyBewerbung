@@ -40,6 +40,7 @@ export default function ApplicationDetailPage() {
 
   // Active generations tracking
   const [hasActiveGenerations, setHasActiveGenerations] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState<{ completed: number; total: number } | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -75,6 +76,8 @@ export default function ApplicationDetailPage() {
 
         // Check status of each task
         const stillActive: { appId: number; taskId: number }[] = [];
+        let currentProgress: { completed: number; total: number } | null = null;
+
         for (const task of activeTasks) {
           try {
             const token = api.getToken();
@@ -93,6 +96,15 @@ export default function ApplicationDetailPage() {
             if (response.ok) {
               const status = await response.json();
               console.log(`📊 Task ${task.taskId} status:`, status.status);
+
+              // Track progress for this application's task
+              if (task.appId === applicationId && status.total_docs && status.completed_docs !== undefined) {
+                currentProgress = {
+                  completed: status.completed_docs,
+                  total: status.total_docs
+                };
+              }
+
               // Keep task if still processing
               if (status.status === "pending" || status.status === "processing") {
                 stillActive.push(task);
@@ -118,10 +130,12 @@ export default function ApplicationDetailPage() {
         if (stillActive.length > 0) {
           localStorage.setItem("activeGenerationTasks", JSON.stringify(stillActive));
           setHasActiveGenerations(true);
+          setGenerationProgress(currentProgress);
           console.log("🔄 Spinner should be visible now");
         } else {
           localStorage.removeItem("activeGenerationTasks");
           setHasActiveGenerations(false);
+          setGenerationProgress(null);
           console.log("✔️ All tasks completed, hiding spinner");
         }
       } catch (error) {
@@ -260,11 +274,16 @@ export default function ApplicationDetailPage() {
               {user.full_name || user.email}
               {hasActiveGenerations && (
                 <svg
-                  className="animate-spin h-5 w-5 text-emerald-400"
+                  className="animate-spin h-5 w-5 text-emerald-400 cursor-help"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
                 >
+                  <title>
+                    {generationProgress
+                      ? `Generating documents: ${generationProgress.completed} of ${generationProgress.total} completed`
+                      : "Generating documents..."}
+                  </title>
                   <circle
                     className="opacity-25"
                     cx="12"
