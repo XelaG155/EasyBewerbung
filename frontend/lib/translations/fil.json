@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Hindi kilalang posisyon",
+    "unknownCompany": "Hindi kilalang kumpanya",
+    "applicationType": "Uri ng aplikasyon",
+    "fulltime": "Full-time na posisyon",
+    "internship": "Internship",
+    "apprenticeship": "Apprenticeship",
+    "internshipHint": "Para sa mga posisyong internship",
+    "apprenticeshipHint": "Para sa mga posisyong pang-bokasyonal na pagsasanay"
   },
   "settings": {
     "title": "Mga Setting",

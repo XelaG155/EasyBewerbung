@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "അജ്ഞാത തസ്തിക",
+    "unknownCompany": "അജ്ഞാത കമ്പനി",
+    "applicationType": "അപേക്ഷ തരം",
+    "fulltime": "മുഴുവൻ സമയ തസ്തിക",
+    "internship": "ഇന്റേൺഷിപ്പ്",
+    "apprenticeship": "അപ്രന്റിസ്ഷിപ്പ്",
+    "internshipHint": "ഇന്റേൺഷിപ്പ് തസ്തികകൾക്ക്",
+    "apprenticeshipHint": "തൊഴിൽ പരിശീലന തസ്തികകൾക്ക്"
   },
   "settings": {
     "title": "ക്രമീകരണങ്ങൾ",

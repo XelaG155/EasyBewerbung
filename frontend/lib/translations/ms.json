@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Jawatan tidak diketahui",
+    "unknownCompany": "Syarikat tidak diketahui",
+    "applicationType": "Jenis permohonan",
+    "fulltime": "Jawatan sepenuh masa",
+    "internship": "Latihan praktikal",
+    "apprenticeship": "Perantisan",
+    "internshipHint": "Untuk jawatan latihan praktikal",
+    "apprenticeshipHint": "Untuk jawatan latihan vokasional"
   },
   "settings": {
     "title": "Tetapan",

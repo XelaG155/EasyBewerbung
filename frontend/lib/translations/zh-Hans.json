@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "未知职位",
+    "unknownCompany": "未知公司",
+    "applicationType": "申请类型",
+    "fulltime": "全职职位",
+    "internship": "实习",
+    "apprenticeship": "学徒",
+    "internshipHint": "用于实习职位",
+    "apprenticeshipHint": "用于职业培训职位"
   },
   "settings": {
     "title": "设置",

@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Неизвестная должность",
+    "unknownCompany": "Неизвестная компания",
+    "applicationType": "Тип заявки",
+    "fulltime": "Полная занятость",
+    "internship": "Стажировка",
+    "apprenticeship": "Ученичество",
+    "internshipHint": "Для стажировок",
+    "apprenticeshipHint": "Для позиций профессионального обучения"
   },
   "settings": {
     "title": "Настройки",

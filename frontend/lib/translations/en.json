@@ -121,7 +121,13 @@
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
     "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownCompany": "Unknown Company",
+    "applicationType": "Application Type",
+    "fulltime": "Full-time Position",
+    "internship": "Internship",
+    "apprenticeship": "Apprenticeship",
+    "internshipHint": "For practical training positions",
+    "apprenticeshipHint": "For vocational training positions"
   },
   "settings": {
     "title": "Settings",

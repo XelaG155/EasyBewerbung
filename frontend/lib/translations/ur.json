@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "نامعلوم عہدہ",
+    "unknownCompany": "نامعلوم کمپنی",
+    "applicationType": "درخواست کی قسم",
+    "fulltime": "کل وقتی عہدہ",
+    "internship": "انٹرن شپ",
+    "apprenticeship": "شاگردی",
+    "internshipHint": "انٹرن شپ عہدوں کے لیے",
+    "apprenticeshipHint": "پیشہ ورانہ تربیت کے عہدوں کے لیے"
   },
   "settings": {
     "title": "ترتیبات",

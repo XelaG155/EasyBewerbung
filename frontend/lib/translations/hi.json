@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "अज्ञात पद",
+    "unknownCompany": "अज्ञात कंपनी",
+    "applicationType": "आवेदन प्रकार",
+    "fulltime": "पूर्णकालिक पद",
+    "internship": "इंटर्नशिप",
+    "apprenticeship": "शिक्षुता",
+    "internshipHint": "इंटर्नशिप पदों के लिए",
+    "apprenticeshipHint": "व्यावसायिक प्रशिक्षण पदों के लिए"
   },
   "settings": {
     "title": "सेटिंग",

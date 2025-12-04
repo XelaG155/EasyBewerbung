@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "משרה לא ידועה",
+    "unknownCompany": "חברה לא ידועה",
+    "applicationType": "סוג בקשה",
+    "fulltime": "משרה מלאה",
+    "internship": "התמחות",
+    "apprenticeship": "חניכות",
+    "internshipHint": "למשרות התמחות",
+    "apprenticeshipHint": "למשרות הכשרה מקצועית"
   },
   "settings": {
     "title": "הגדרות",

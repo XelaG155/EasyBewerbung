@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Pozicion i panjohur",
+    "unknownCompany": "Kompani e panjohur",
+    "applicationType": "Lloji i aplikimit",
+    "fulltime": "Pozicion me kohë të plotë",
+    "internship": "Praktikë",
+    "apprenticeship": "Mësim zanati",
+    "internshipHint": "Për pozicione praktike",
+    "apprenticeshipHint": "Për pozicione trajnimi profesional"
   },
   "settings": {
     "title": "Cilësimet",

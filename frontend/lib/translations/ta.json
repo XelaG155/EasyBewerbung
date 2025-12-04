@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "அறியப்படாத பதவி",
+    "unknownCompany": "அறியப்படாத நிறுவனம்",
+    "applicationType": "விண்ணப்ப வகை",
+    "fulltime": "முழுநேர பதவி",
+    "internship": "பயிற்சி",
+    "apprenticeship": "தொழில் பயிற்சி",
+    "internshipHint": "பயிற்சி பதவிகளுக்கு",
+    "apprenticeshipHint": "தொழில்முறை பயிற்சி பதவிகளுக்கு"
   },
   "settings": {
     "title": "அமைப்புகள்",

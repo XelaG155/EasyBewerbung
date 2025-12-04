@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Nieznane stanowisko",
+    "unknownCompany": "Nieznana firma",
+    "applicationType": "Typ aplikacji",
+    "fulltime": "Pełny etat",
+    "internship": "Praktyka",
+    "apprenticeship": "Nauka zawodu",
+    "internshipHint": "Dla stanowisk praktyk",
+    "apprenticeshipHint": "Dla stanowisk nauki zawodu"
   },
   "settings": {
     "title": "Ustawienia",
