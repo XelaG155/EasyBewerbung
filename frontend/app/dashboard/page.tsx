@@ -192,11 +192,16 @@ export default function DashboardPage() {
         const stillActive: { appId: number; taskId: number }[] = [];
         for (const task of activeTasks) {
           try {
+            const token = api.getToken();
+            if (!token) {
+              console.warn("No token available for polling");
+              continue;
+            }
             const response = await fetch(
               `${process.env.NEXT_PUBLIC_API_URL}/applications/${task.appId}/generation-status/${task.taskId}`,
               {
                 headers: {
-                  Authorization: `Bearer ${localStorage.getItem("token")}`,
+                  Authorization: `Bearer ${token}`,
                 },
               }
             );
@@ -206,8 +211,13 @@ export default function DashboardPage() {
               if (status.status === "pending" || status.status === "processing") {
                 stillActive.push(task);
               }
+            } else {
+              console.error(`Status check failed for task ${task.taskId}:`, response.status);
+              // If error, keep task in list (will retry next poll)
+              stillActive.push(task);
             }
           } catch (error) {
+            console.error(`Exception checking task ${task.taskId}:`, error);
             // If error, keep task in list (will retry next poll)
             stillActive.push(task);
           }
