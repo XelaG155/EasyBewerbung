@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import api, {
   ActivityEntry,
   AdminLanguageSetting,
@@ -23,6 +24,7 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const [languages, setLanguages] = useState<AdminLanguageSetting[]>([]);
   const [users, setUsers] = useState<AdminUserSummary[]>([]);
   const [selectedUser, setSelectedUser] = useState<AdminUserDetail | null>(null);
@@ -184,6 +186,19 @@ export default function AdminPage() {
           {status}
         </div>
       )}
+
+      {/* Document Templates Navigation Card */}
+      <SectionCard title="Document Templates">
+        <p className="text-gray-600 dark:text-gray-400 mb-4">
+          Konfiguriere Credit-Kosten, Sprachquellen, LLM Provider und Prompts für die Dokumentgenerierung.
+        </p>
+        <button
+          onClick={() => router.push("/admin/documents")}
+          className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+        >
+          Document Templates verwalten
+        </button>
+      </SectionCard>
 
       <SectionCard title="Sprachen verwalten">
         <div className="space-y-2">
