@@ -90,9 +90,9 @@ export default function Home() {
       {/* Header */}
       <header className="border-b border-muted backdrop-blur nav-surface">
         <div className="container mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0 flex-shrink">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <img src="/logo.png" alt="EasyBewerbung" className="w-8 h-8 rounded-lg flex-shrink-0" />
-            <span className="text-lg sm:text-xl font-bold truncate">{t("common.appName")}</span>
+            <span className="text-lg sm:text-xl font-bold whitespace-nowrap">{t("common.appName")}</span>
           </div>
           <div className="flex gap-2 sm:gap-3 items-center flex-shrink-0">
             <button
