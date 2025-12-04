@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Neznáma pozícia",
+    "unknownCompany": "Neznáma spoločnosť",
+    "applicationType": "Typ žiadosti",
+    "fulltime": "Plný úväzok",
+    "internship": "Stáž",
+    "apprenticeship": "Učňovstvo",
+    "internshipHint": "Pre stážistické pozície",
+    "apprenticeshipHint": "Pre pozície odborného vzdelávania"
   },
   "settings": {
     "title": "Nastavenia",

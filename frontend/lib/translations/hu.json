@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Ismeretlen pozíció",
+    "unknownCompany": "Ismeretlen cég",
+    "applicationType": "Jelentkezés típusa",
+    "fulltime": "Teljes munkaidős állás",
+    "internship": "Szakmai gyakorlat",
+    "apprenticeship": "Tanulószerződés",
+    "internshipHint": "Gyakorlati pozíciókhoz",
+    "apprenticeshipHint": "Szakmai képzési pozíciókhoz"
   },
   "settings": {
     "title": "Beállítások",

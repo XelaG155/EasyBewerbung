@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "不明な職位",
+    "unknownCompany": "不明な会社",
+    "applicationType": "応募種類",
+    "fulltime": "正社員",
+    "internship": "インターンシップ",
+    "apprenticeship": "見習い",
+    "internshipHint": "インターンシップ職位向け",
+    "apprenticeshipHint": "職業訓練職位向け"
   },
   "settings": {
     "title": "設定",

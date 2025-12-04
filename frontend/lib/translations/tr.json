@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Bilinmeyen Pozisyon",
+    "unknownCompany": "Bilinmeyen Şirket",
+    "applicationType": "Başvuru Türü",
+    "fulltime": "Tam zamanlı pozisyon",
+    "internship": "Staj",
+    "apprenticeship": "Çıraklık",
+    "internshipHint": "Staj pozisyonları için",
+    "apprenticeshipHint": "Mesleki eğitim pozisyonları için"
   },
   "settings": {
     "title": "Ayarlar",

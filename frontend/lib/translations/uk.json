@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Невідома посада",
+    "unknownCompany": "Невідома компанія",
+    "applicationType": "Тип заявки",
+    "fulltime": "Повна зайнятість",
+    "internship": "Стажування",
+    "apprenticeship": "Учнівство",
+    "internshipHint": "Для стажувань",
+    "apprenticeshipHint": "Для позицій професійного навчання"
   },
   "settings": {
     "title": "Налаштування",

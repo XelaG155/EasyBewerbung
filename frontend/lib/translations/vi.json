@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Vị trí không xác định",
+    "unknownCompany": "Công ty không xác định",
+    "applicationType": "Loại đơn xin việc",
+    "fulltime": "Toàn thời gian",
+    "internship": "Thực tập",
+    "apprenticeship": "Học việc",
+    "internshipHint": "Cho vị trí thực tập",
+    "apprenticeshipHint": "Cho vị trí đào tạo nghề"
   },
   "settings": {
     "title": "Cài đặt",

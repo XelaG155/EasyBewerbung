@@ -120,8 +120,14 @@
     "allApplications": "All Applications",
     "appliedFilter": "Applied",
     "notAppliedFilter": "Not Applied",
-    "unknownPosition": "Unknown Position",
-    "unknownCompany": "Unknown Company"
+    "unknownPosition": "Pozîsyona nenas",
+    "unknownCompany": "Pargîdaniya nenas",
+    "applicationType": "Cureya daxwazê",
+    "fulltime": "Pozîsyona wextê tevahî",
+    "internship": "Stajyerî",
+    "apprenticeship": "Şagirtî",
+    "internshipHint": "Ji bo pozîsyonên stajyeriyê",
+    "apprenticeshipHint": "Ji bo pozîsyonên perwerdehiya pîşeyî"
   },
   "settings": {
     "title": "Mîhengî",
