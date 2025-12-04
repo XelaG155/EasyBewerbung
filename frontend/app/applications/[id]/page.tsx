@@ -60,12 +60,14 @@ export default function ApplicationDetailPage() {
     const checkActiveGenerations = async () => {
       try {
         const activeTasksStr = localStorage.getItem("activeGenerationTasks");
+        console.log("🔍 Checking active tasks:", activeTasksStr);
         if (!activeTasksStr) {
           setHasActiveGenerations(false);
           return;
         }
 
         const activeTasks: { appId: number; taskId: number }[] = JSON.parse(activeTasksStr);
+        console.log("📋 Active tasks parsed:", activeTasks);
         if (activeTasks.length === 0) {
           setHasActiveGenerations(false);
           return;
@@ -79,7 +81,7 @@ export default function ApplicationDetailPage() {
               `${process.env.NEXT_PUBLIC_API_URL}/applications/${task.appId}/generation-status/${task.taskId}`,
               {
                 headers: {
-                  Authorization: `Bearer ${localStorage.getItem("token")}`,
+                  Authorization: `Bearer ${localStorage.getItem("access_token")}`,
                 },
               }
             );
@@ -100,12 +102,15 @@ export default function ApplicationDetailPage() {
         }
 
         // Update localStorage and state
+        console.log("✅ Still active tasks:", stillActive.length);
         if (stillActive.length > 0) {
           localStorage.setItem("activeGenerationTasks", JSON.stringify(stillActive));
           setHasActiveGenerations(true);
+          console.log("🔄 Spinner should be visible now");
         } else {
           localStorage.removeItem("activeGenerationTasks");
           setHasActiveGenerations(false);
+          console.log("✔️ All tasks completed, hiding spinner");
         }
       } catch (error) {
         console.error("Error checking active generations:", error);
@@ -171,6 +176,7 @@ export default function ApplicationDetailPage() {
       const response = await api.generateDocuments(applicationId, selectedDocs);
 
       // Track the generation task in localStorage for polling
+      console.log("📤 Generation response:", response);
       if (response && response.task_id) {
         const activeTasksStr = localStorage.getItem("activeGenerationTasks");
         const activeTasks: { appId: number; taskId: number }[] = activeTasksStr
@@ -178,6 +184,9 @@ export default function ApplicationDetailPage() {
           : [];
         activeTasks.push({ appId: applicationId, taskId: response.task_id });
         localStorage.setItem("activeGenerationTasks", JSON.stringify(activeTasks));
+        console.log("💾 Saved task to localStorage:", activeTasks);
+      } else {
+        console.warn("⚠️ No task_id in response!");
       }
 
       // Reload application to show new documents
