@@ -94,7 +94,7 @@ export default function Home() {
             <img src="/logo.png" alt="EasyBewerbung" className="w-8 h-8 rounded-lg flex-shrink-0" />
             <span className="text-lg sm:text-xl font-bold whitespace-nowrap">{t("common.appName")}</span>
           </div>
-          <div className="flex gap-2 sm:gap-3 items-center">
+          <div className="flex gap-1.5 sm:gap-2 md:gap-3 items-center flex-shrink-0">
             <button
               type="button"
               onClick={toggleTheme}
@@ -106,18 +106,20 @@ export default function Home() {
                 {theme === "light" ? t("common.darkMode") : t("common.lightMode")}
               </span>
             </button>
-            <div className="relative hidden lg:flex items-center">
-              <label className="text-sm text-muted mr-2">{t("common.language")}:</label>
+            {/* Language selector - compact on mobile, full on desktop */}
+            <div className="relative flex items-center">
+              <label className="text-sm text-muted mr-2 hidden lg:inline">{t("common.language")}:</label>
               <select
                 value={locale}
                 onChange={(e) => handleLanguageChange(e.target.value)}
-                className="px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2"
+                className="px-2 sm:px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2"
                 style={{
                   background: "var(--card-background)",
                   color: "var(--foreground)",
                   borderColor: "var(--border)",
                   boxShadow: "none",
                 }}
+                aria-label={t("common.language")}
               >
                 {languageOptions.map((lang) => (
                   <option key={lang.code} value={lang.code}>
@@ -126,10 +128,10 @@ export default function Home() {
                 ))}
               </select>
             </div>
-            <Button href="/login" variant="outline" className="hidden sm:inline-flex">
+            <Button href="/login" variant="outline" className="hidden sm:inline-flex flex-shrink-0">
               {t("common.login")}
             </Button>
-            <Button href="/register" variant="primary">
+            <Button href="/register" variant="primary" className="flex-shrink-0">
               <span className="hidden sm:inline">{t("common.getStarted")}</span>
               <span className="sm:hidden">→</span>
             </Button>
