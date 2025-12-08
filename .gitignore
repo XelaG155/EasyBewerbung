@@ -18,6 +18,13 @@ node_modules/
 .next/
 out/
 
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+frontend/playwright/.cache/
+frontend/e2e/**/*.png
+!frontend/e2e/**/*-snapshots/
+
 # Editor and OS files
 .DS_Store
 .vscode/
