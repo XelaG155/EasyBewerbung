@@ -418,6 +418,17 @@ export default function DashboardPage() {
     }
   };
 
+  const handleDeleteApplication = async (id: number, jobTitle: string) => {
+    if (!confirm(`Are you sure you want to delete the application "${jobTitle}"? This will also delete all generated documents for this application.`)) return;
+
+    try {
+      await api.deleteApplication(id);
+      await loadData();
+    } catch (error: any) {
+      alert("Failed to delete application: " + error.message);
+    }
+  };
+
   const handleUpdateApplicationStatus = async (
     id: number,
     applied: boolean,
@@ -1154,6 +1165,13 @@ export default function DashboardPage() {
                             📄 Download Job PDF
                           </button>
                         )}
+                        <button
+                          onClick={() => handleDeleteApplication(app.id, app.job_title)}
+                          className="text-sm px-3 py-1 rounded bg-red-700 hover:bg-red-600 text-white"
+                          title="Delete this application"
+                        >
+                          🗑️ Delete
+                        </button>
                       </div>
                     </div>
                   </Card>

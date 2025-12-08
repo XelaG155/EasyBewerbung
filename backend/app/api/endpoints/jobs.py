@@ -374,6 +374,33 @@ def scrape_job_offer(url: str) -> dict:
         )
 
 
+@router.get("/")
+async def list_job_offers(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    List all job offers for the current user.
+    """
+    job_offers = db.query(JobOffer).filter(
+        JobOffer.user_id == current_user.id
+    ).order_by(JobOffer.created_at.desc()).all()
+
+    return [
+        {
+            "id": job.id,
+            "url": job.url,
+            "title": job.title,
+            "company": job.company,
+            "location": job.location,
+            "description": job.description,
+            "has_pdf": job.original_pdf_path is not None,
+            "created_at": job.created_at.isoformat() if job.created_at else None,
+        }
+        for job in job_offers
+    ]
+
+
 @router.post("/analyze", response_model=JobAnalysisResponse)
 @limiter.limit("5/minute")
 async def analyze_job_offer(
@@ -455,6 +482,40 @@ async def analyze_job_offer(
             status_code=500,
             detail="Error analyzing job offer. Please try again later.",
         )
+
+
+@router.delete("/{job_offer_id}")
+async def delete_job_offer(
+    job_offer_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Delete a job offer and its associated PDF file.
+    """
+    # Get the job offer
+    job_offer = db.query(JobOffer).filter(
+        JobOffer.id == job_offer_id,
+        JobOffer.user_id == current_user.id
+    ).first()
+
+    if not job_offer:
+        raise HTTPException(status_code=404, detail="Job offer not found")
+
+    # Delete the PDF file if it exists
+    if job_offer.original_pdf_path and os.path.exists(job_offer.original_pdf_path):
+        try:
+            os.remove(job_offer.original_pdf_path)
+            print(f"🗑️ Deleted PDF file: {job_offer.original_pdf_path}")
+        except Exception as e:
+            print(f"⚠️ Warning: Failed to delete PDF file: {str(e)}")
+
+    # Delete the job offer from database
+    db.delete(job_offer)
+    db.commit()
+    print(f"🗑️ Deleted job offer ID: {job_offer_id}")
+
+    return {"message": "Job offer deleted successfully", "id": job_offer_id}
 
 
 @router.get("/{job_offer_id}/original-pdf")
