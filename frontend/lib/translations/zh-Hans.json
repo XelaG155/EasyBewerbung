@@ -56,16 +56,7 @@
     "loggingIn": "登录中...",
     "creatingAccount": "创建帐户中...",
     "welcomeBack": "欢迎回来",
-    "loginSubtitle": "登录以管理您的申请",
-    "privacyPolicyRequired": "You must accept the privacy policy to register",
-    "googleSignupFailed": "Google sign-up failed",
-    "googleInitFailed": "Google initialization failed",
-    "passwordMinLength": "Password must be at least 8 characters",
-    "registrationFailed": "Registration failed. Please try again.",
-    "acceptPrivacyPrefix": "I accept the",
-    "privacyPolicy": "Privacy Policy",
-    "acceptPrivacySuffix": "and consent to the collection of my IP address for security purposes",
-    "close": "Close"
+    "loginSubtitle": "登录以管理您的申请"
   },
   "dashboard": {
     "uploadDocuments": "上传文档",
@@ -98,36 +89,7 @@
     "referenceLetter": "推荐信",
     "diploma": "文凭/证书",
     "coverLetter": "求职信",
-    "other": "其他",
-    "uploadFailed": "Upload failed",
-    "analysisFailed": "Analysis failed",
-    "noCredits": "You do not have enough credits. Please ask an admin to top up your account.",
-    "deleteFailed": "Delete failed",
-    "deleteConfirm": "Delete this document?",
-    "updateFailed": "Update failed",
-    "downloadFailed": "Failed to generate report",
-    "downloadPdfFailed": "Failed to download PDF",
-    "saveSpontaneous": "Save Spontaneous Application",
-    "saving": "Saving...",
-    "spontaneousApplication": "Spontaneous Application",
-    "targetCompany": "Target company",
-    "targetRole": "Role or team you want",
-    "rolePlaceholder": "Product Manager, Zurich",
-    "opportunityContext": "How did you hear about this opportunity?",
-    "opportunityPlaceholder": "LinkedIn, company website, referral...",
-    "viewDetails": "View Details",
-    "viewOriginalPosting": "View Original Posting",
-    "allApplications": "All Applications",
-    "appliedFilter": "Applied",
-    "notAppliedFilter": "Not Applied",
-    "unknownPosition": "未知职位",
-    "unknownCompany": "未知公司",
-    "applicationType": "申请类型",
-    "fulltime": "全职职位",
-    "internship": "实习",
-    "apprenticeship": "学徒",
-    "internshipHint": "用于实习职位",
-    "apprenticeshipHint": "用于职业培训职位"
+    "other": "其他"
   },
   "settings": {
     "title": "设置",
@@ -146,7 +108,6 @@
     "settingsSaved": "设置保存成功！",
     "accountInformation": "帐户信息",
     "accountCreated": "帐户已创建",
-    "cancel": "取消",
-    "saveFailed": "Failed to save settings"
+    "cancel": "取消"
   }
 }
