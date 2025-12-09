@@ -499,12 +499,24 @@ def generate_documents_background(task_id: int, application_id: int, doc_types: 
                     )
                     content = response.choices[0].message.content
 
+                # Persist generated content to disk for traceability/downloads
+                storage_dir = os.path.join("generated", str(user_id))
+                os.makedirs(storage_dir, exist_ok=True)
+                storage_path = os.path.join(storage_dir, f"app_{application_id}_{doc_type}.txt")
+                try:
+                    with open(storage_path, "w", encoding="utf-8") as f:
+                        f.write(content or "")
+                except Exception as e:
+                    # Do not fail the whole generation if filesystem write fails
+                    print(f"Warning: could not write generated doc to {storage_path}: {e}")
+                    storage_path = f"unpersisted:{doc_type}"
+
                 # Save generated document
                 gen_doc = GeneratedDocument(
                     application_id=application_id,
                     doc_type=doc_type,
                     format="TEXT",
-                    storage_path=f"generated/app_{application_id}_{doc_type}.txt",
+                    storage_path=storage_path,
                     content=content,
                 )
                 db.add(gen_doc)
