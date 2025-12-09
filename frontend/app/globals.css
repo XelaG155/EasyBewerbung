@@ -86,8 +86,19 @@ body {
   overflow-x: hidden;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 * {
   max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ensure text never extends beyond viewport */
+h1, h2, h3, h4, h5, h6, p, span, div, section, header, footer {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .page-shell {
