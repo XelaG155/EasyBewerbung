@@ -360,6 +360,16 @@ class ApiClient {
     });
   }
 
+  async listJobs() {
+    return this.request<any[]>("/jobs/");
+  }
+
+  async deleteJob(jobOfferId: number) {
+    return this.request<{ message: string; id: number }>(`/jobs/${jobOfferId}`, {
+      method: "DELETE",
+    });
+  }
+
   // Applications
   async createApplication(data: {
     job_title: string;
@@ -410,6 +420,12 @@ class ApiClient {
     });
   }
 
+  async deleteApplication(id: number) {
+    return this.request<{ message: string; id: number }>(`/applications/${id}`, {
+      method: "DELETE",
+    });
+  }
+
   async getApplication(id: number) {
     return this.request<Application>(`/applications/${id}`);
   }
@@ -429,9 +445,19 @@ class ApiClient {
     });
   }
 
-  async getMatchingScore(applicationId: number, recalculate: boolean = false) {
+  async getMatchingScore(applicationId: number) {
+    return this.request<any>(`/applications/${applicationId}/matching-score`);
+  }
+
+  async calculateMatchingScore(applicationId: number, recalculate: boolean = false) {
     const params = recalculate ? "?recalculate=true" : "";
-    return this.request<any>(`/applications/${applicationId}/matching-score${params}`);
+    return this.request<any>(`/applications/${applicationId}/matching-score/calculate${params}`, {
+      method: "POST",
+    });
+  }
+
+  async getMatchingScoreStatus(applicationId: number, taskId: number) {
+    return this.request<any>(`/applications/${applicationId}/matching-score-status/${taskId}`);
   }
 
   async generateDocuments(applicationId: number, docTypes: string[]) {

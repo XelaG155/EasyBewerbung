@@ -21,7 +21,7 @@ from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
 from app.database import get_db
 from app.document_catalog import ALLOWED_GENERATED_DOC_TYPES
-from app.models import Application, GeneratedDocument, User, Document, JobOffer, MatchingScore, GenerationTask, DocumentTemplate
+from app.models import Application, GeneratedDocument, User, Document, JobOffer, MatchingScore, GenerationTask, DocumentTemplate, MatchingScoreTask
 from app.auth import get_current_user
 from app.language_catalog import DEFAULT_LANGUAGE, normalize_language
 
@@ -210,6 +210,146 @@ def generate_document_prompt_from_template(
             return prompt
         except Exception:
             return None
+
+
+def calculate_matching_score_background(task_id: int, application_id: int, user_id: int, recalculate: bool = False):
+    """Background task to calculate matching score asynchronously."""
+    from app.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        # Get the task
+        task = db.query(MatchingScoreTask).filter(MatchingScoreTask.id == task_id).first()
+        if not task:
+            return
+
+        # Update status to processing
+        task.status = "processing"
+        db.commit()
+
+        # Get application
+        application = db.query(Application).filter(Application.id == application_id).first()
+        if not application:
+            task.status = "failed"
+            task.error_message = "Application not found"
+            db.commit()
+            return
+
+        # Get user's CV
+        cv_doc = (
+            db.query(Document)
+            .filter(Document.user_id == user_id, Document.doc_type == "CV")
+            .order_by(Document.created_at.desc())
+            .first()
+        )
+        if not cv_doc or not cv_doc.content_text:
+            task.status = "failed"
+            task.error_message = "No CV found with text content"
+            db.commit()
+            return
+
+        # Get job offer details
+        job_offer = (
+            db.query(JobOffer)
+            .filter(JobOffer.url == application.job_offer_url)
+            .first()
+        )
+
+        job_description = ""
+        if job_offer:
+            job_description = f"Title: {job_offer.title}\nCompany: {job_offer.company}\nDescription: {job_offer.description}"
+        else:
+            job_description = f"Title: {application.job_title}\nCompany: {application.company}"
+
+        if application.opportunity_context:
+            job_description += f"\nOpportunity Context: {application.opportunity_context}"
+
+        if application.is_spontaneous:
+            job_description += "\nThis is a spontaneous application without a specific posting."
+
+        # Use OpenAI to calculate matching score
+        try:
+            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+            prompt = f"""Analyze how well this CV matches the job requirements. Provide a detailed matching analysis.
+
+Job Details:
+{job_description}
+
+Candidate CV (Full):
+{cv_doc.content_text}
+
+Please provide a JSON response with:
+1. overall_score: A number from 0-100 representing the overall match
+2. strengths: Array of 3-5 key strengths/matches
+3. gaps: Array of 2-4 areas where the candidate may not fully meet requirements
+4. recommendations: Array of 2-3 recommendations for the application
+5. story: A concise, 3-6 sentence narrative that addresses potential fit concerns. If the candidate appears overqualified, craft a respectful rationale for stepping into the role that focuses on positive motivations (e.g., desire to mentor, deliver impact quickly, appreciate stability or hands-on work) without criticizing their current employer or manager. If their current role, title, or experience differs from the job requirements, highlight transferable skills, relevant achievements, and a credible motivation for the transition that would reassure ATS/HR and hiring managers. If neither applies, provide a brief storyline that frames their profile positively for the role.
+
+IMPORTANT: Read the ENTIRE CV carefully, including any language skills section, before identifying gaps.
+
+Format your response as valid JSON only, no additional text."""
+
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+            )
+
+            content = response.choices[0].message.content
+
+            # Try to parse JSON, handle cases where OpenAI adds markdown formatting
+            if content.startswith("```json"):
+                content = content.replace("```json", "").replace("```", "").strip()
+            elif content.startswith("```"):
+                content = content.replace("```", "").strip()
+
+            result = json.loads(content)
+
+            # Save or update the matching score in the database
+            existing_score = (
+                db.query(MatchingScore)
+                .filter(MatchingScore.application_id == application_id)
+                .first()
+            )
+
+            if existing_score and recalculate:
+                # Update existing score
+                existing_score.overall_score = result.get("overall_score", 0)
+                existing_score.strengths = json.dumps(result.get("strengths", []))
+                existing_score.gaps = json.dumps(result.get("gaps", []))
+                existing_score.recommendations = json.dumps(result.get("recommendations", []))
+                existing_score.story = result.get("story")
+                existing_score.updated_at = datetime.now(timezone.utc)
+            elif not existing_score:
+                # Create new score
+                new_score = MatchingScore(
+                    application_id=application_id,
+                    overall_score=result.get("overall_score", 0),
+                    strengths=json.dumps(result.get("strengths", [])),
+                    gaps=json.dumps(result.get("gaps", [])),
+                    recommendations=json.dumps(result.get("recommendations", [])),
+                    story=result.get("story"),
+                )
+                db.add(new_score)
+
+            # Mark task as completed
+            task.status = "completed"
+            db.commit()
+
+        except Exception as e:
+            logging.error(f"Matching score calculation error: {e}")
+            task.status = "failed"
+            task.error_message = str(e)
+            db.commit()
+
+    except Exception as e:
+        logging.error(f"Fatal error in calculate_matching_score_background: {str(e)}")
+        if task:
+            task.status = "failed"
+            task.error_message = str(e)
+            db.commit()
+    finally:
+        db.close()
 
 
 def generate_documents_background(task_id: int, application_id: int, doc_types: List[str], user_id: int):
@@ -547,6 +687,7 @@ def serialize_application(app: Application, db: Session = None, include_job_desc
 @router.post("/", response_model=ApplicationResponse)
 async def create_application(
     payload: ApplicationCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -613,6 +754,35 @@ async def create_application(
 
     db.refresh(application)
     db.refresh(user_for_update)
+
+    # Check if user has a CV - if so, automatically start matching score calculation in background
+    cv_doc = (
+        db.query(Document)
+        .filter(Document.user_id == current_user.id, Document.doc_type == "CV")
+        .order_by(Document.created_at.desc())
+        .first()
+    )
+    if cv_doc and cv_doc.content_text:
+        # Create matching score task
+        matching_task = MatchingScoreTask(
+            application_id=application.id,
+            user_id=current_user.id,
+            status="pending",
+        )
+        db.add(matching_task)
+        db.commit()
+        db.refresh(matching_task)
+
+        # Queue background job for matching score calculation
+        background_tasks.add_task(
+            calculate_matching_score_background,
+            matching_task.id,
+            application.id,
+            current_user.id,
+            False,  # not a recalculate
+        )
+        print(f"📊 Queued matching score calculation for application {application.id}")
+
     return serialize_application(application, db)
 
 
@@ -817,14 +987,46 @@ async def get_application(
         raise HTTPException(status_code=404, detail="Application not found")
     return serialize_application(application, db)
 
-@router.get("/{application_id}/matching-score")
-async def get_matching_score(
+
+@router.delete("/{application_id}")
+async def delete_application(
     application_id: int,
-    recalculate: bool = False,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Get or calculate matching score between user's CV and job requirements."""
+    """Delete an application and all its associated data (only for the current user)."""
+    application = (
+        db.query(Application)
+        .filter(Application.id == application_id, Application.user_id == current_user.id)
+        .first()
+    )
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    # Delete associated matching scores
+    db.query(MatchingScore).filter(MatchingScore.application_id == application_id).delete()
+
+    # Delete associated generation tasks
+    db.query(GenerationTask).filter(GenerationTask.application_id == application_id).delete()
+
+    # Delete associated generated documents
+    db.query(GeneratedDocument).filter(GeneratedDocument.application_id == application_id).delete()
+
+    # Delete the application itself
+    db.delete(application)
+    db.commit()
+
+    print(f"🗑️ Deleted application ID: {application_id} for user {current_user.id}")
+
+    return {"message": "Application deleted successfully", "id": application_id}
+
+@router.get("/{application_id}/matching-score")
+async def get_matching_score(
+    application_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get existing matching score for an application (returns null if not yet calculated)."""
     # Get application
     application = (
         db.query(Application)
@@ -834,7 +1036,54 @@ async def get_matching_score(
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
 
-    # Check if we already have a matching score (unless recalculate is requested)
+    # Check if we already have a matching score
+    existing_score = (
+        db.query(MatchingScore)
+        .filter(MatchingScore.application_id == application_id)
+        .first()
+    )
+
+    if existing_score:
+        return {
+            "application_id": application_id,
+            "job_title": application.job_title,
+            "company": application.company,
+            "overall_score": existing_score.overall_score,
+            "strengths": json.loads(existing_score.strengths),
+            "gaps": json.loads(existing_score.gaps),
+            "recommendations": json.loads(existing_score.recommendations),
+            "story": existing_score.story,
+            "status": "completed",
+        }
+
+    # No score yet - return null status
+    return {
+        "application_id": application_id,
+        "job_title": application.job_title,
+        "company": application.company,
+        "status": "not_calculated",
+    }
+
+
+@router.post("/{application_id}/matching-score/calculate")
+async def calculate_matching_score(
+    application_id: int,
+    recalculate: bool = False,
+    background_tasks: BackgroundTasks = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Start asynchronous matching score calculation."""
+    # Get application
+    application = (
+        db.query(Application)
+        .filter(Application.id == application_id, Application.user_id == current_user.id)
+        .first()
+    )
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    # Check if score already exists and not recalculating
     if not recalculate:
         existing_score = (
             db.query(MatchingScore)
@@ -843,17 +1092,13 @@ async def get_matching_score(
         )
         if existing_score:
             return {
+                "task_id": None,
+                "status": "already_calculated",
                 "application_id": application_id,
-                "job_title": application.job_title,
-                "company": application.company,
-                "overall_score": existing_score.overall_score,
-                "strengths": json.loads(existing_score.strengths),
-                "gaps": json.loads(existing_score.gaps),
-                "recommendations": json.loads(existing_score.recommendations),
-                "story": existing_score.story,
+                "message": "Matching score already exists. Use recalculate=true to recalculate.",
             }
 
-    # Get user's CV
+    # Check for CV
     cv_doc = (
         db.query(Document)
         .filter(Document.user_id == current_user.id, Document.doc_type == "CV")
@@ -863,106 +1108,86 @@ async def get_matching_score(
     if not cv_doc or not cv_doc.content_text:
         raise HTTPException(status_code=400, detail="No CV found with text content")
 
-    # Get job offer details
-    job_offer = (
-        db.query(JobOffer)
-        .filter(JobOffer.url == application.job_offer_url)
+    # Create task
+    task = MatchingScoreTask(
+        application_id=application_id,
+        user_id=current_user.id,
+        status="pending",
+    )
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+
+    # Queue background job
+    background_tasks.add_task(
+        calculate_matching_score_background,
+        task.id,
+        application_id,
+        current_user.id,
+        recalculate,
+    )
+
+    return {
+        "task_id": task.id,
+        "status": "queued",
+        "application_id": application_id,
+        "message": "Matching score calculation has been queued.",
+    }
+
+
+@router.get("/{application_id}/matching-score-status/{task_id}")
+async def get_matching_score_status(
+    application_id: int,
+    task_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get the status of a matching score calculation task."""
+    task = (
+        db.query(MatchingScoreTask)
+        .filter(
+            MatchingScoreTask.id == task_id,
+            MatchingScoreTask.application_id == application_id,
+            MatchingScoreTask.user_id == current_user.id,
+        )
         .first()
     )
 
-    job_description = ""
-    if job_offer:
-        job_description = f"Title: {job_offer.title}\nCompany: {job_offer.company}\nDescription: {job_offer.description}"
-    else:
-        job_description = f"Title: {application.job_title}\nCompany: {application.company}"
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
 
-    if application.opportunity_context:
-        job_description += f"\nOpportunity Context: {application.opportunity_context}"
+    response = {
+        "task_id": task.id,
+        "application_id": task.application_id,
+        "status": task.status,
+        "created_at": task.created_at.isoformat() if task.created_at else None,
+        "updated_at": task.updated_at.isoformat() if task.updated_at else None,
+    }
 
-    if application.is_spontaneous:
-        job_description += "\nThis is a spontaneous application without a specific posting."
+    if task.error_message:
+        response["error_message"] = task.error_message
 
-    # Use OpenAI to calculate matching score
-    try:
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-        prompt = f"""Analyze how well this CV matches the job requirements. Provide a detailed matching analysis.
-
-Job Details:
-{job_description}
-
-Candidate CV (Full):
-{cv_doc.content_text}
-
-Please provide a JSON response with:
-1. overall_score: A number from 0-100 representing the overall match
-2. strengths: Array of 3-5 key strengths/matches
-3. gaps: Array of 2-4 areas where the candidate may not fully meet requirements
-4. recommendations: Array of 2-3 recommendations for the application
-5. story: A concise, 3-6 sentence narrative that addresses potential fit concerns. If the candidate appears overqualified, craft a respectful rationale for stepping into the role that focuses on positive motivations (e.g., desire to mentor, deliver impact quickly, appreciate stability or hands-on work) without criticizing their current employer or manager. If their current role, title, or experience differs from the job requirements, highlight transferable skills, relevant achievements, and a credible motivation for the transition that would reassure ATS/HR and hiring managers. If neither applies, provide a brief storyline that frames their profile positively for the role.
-
-IMPORTANT: Read the ENTIRE CV carefully, including any language skills section, before identifying gaps.
-
-Format your response as valid JSON only, no additional text."""
-
-        response = client.chat.completions.create(
-            model="gpt-5-nano",
-            messages=[{"role": "user", "content": prompt}],
-        )
-
-        content = response.choices[0].message.content
-
-        # Try to parse JSON, handle cases where OpenAI adds markdown formatting
-        if content.startswith("```json"):
-            content = content.replace("```json", "").replace("```", "").strip()
-        elif content.startswith("```"):
-            content = content.replace("```", "").strip()
-
-        result = json.loads(content)
-
-        # Save or update the matching score in the database
-        existing_score = (
+    # If completed, include the matching score
+    if task.status == "completed":
+        application = db.query(Application).filter(Application.id == application_id).first()
+        score = (
             db.query(MatchingScore)
             .filter(MatchingScore.application_id == application_id)
             .first()
         )
+        if score and application:
+            response["matching_score"] = {
+                "application_id": application_id,
+                "job_title": application.job_title,
+                "company": application.company,
+                "overall_score": score.overall_score,
+                "strengths": json.loads(score.strengths),
+                "gaps": json.loads(score.gaps),
+                "recommendations": json.loads(score.recommendations),
+                "story": score.story,
+            }
 
-        if existing_score:
-            # Update existing score
-            existing_score.overall_score = result.get("overall_score", 0)
-            existing_score.strengths = json.dumps(result.get("strengths", []))
-            existing_score.gaps = json.dumps(result.get("gaps", []))
-            existing_score.recommendations = json.dumps(result.get("recommendations", []))
-            existing_score.story = result.get("story")
-            existing_score.updated_at = datetime.now(timezone.utc)
-        else:
-            # Create new score
-            new_score = MatchingScore(
-                application_id=application_id,
-                overall_score=result.get("overall_score", 0),
-                strengths=json.dumps(result.get("strengths", [])),
-                gaps=json.dumps(result.get("gaps", [])),
-                recommendations=json.dumps(result.get("recommendations", [])),
-                story=result.get("story"),
-            )
-            db.add(new_score)
-
-        db.commit()
-
-        return {
-            "application_id": application_id,
-            "job_title": application.job_title,
-            "company": application.company,
-            "overall_score": result.get("overall_score", 0),
-            "strengths": result.get("strengths", []),
-            "gaps": result.get("gaps", []),
-            "recommendations": result.get("recommendations", []),
-            "story": result.get("story"),
-        }
-
-    except Exception as e:
-        logging.error(f"Matching score calculation error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to calculate matching score. Please try again.")
+    return response
 
 
 @router.post("/{application_id}/generate")

@@ -12,6 +12,8 @@ type MatchingScore = {
   strengths: string[];
   gaps: string[];
   recommendations: string[];
+  story?: string;
+  status?: string;
 };
 
 type GeneratedDoc = {
@@ -30,6 +32,8 @@ export default function ApplicationDetailPage() {
 
   const [application, setApplication] = useState<any>(null);
   const [matchingScore, setMatchingScore] = useState<MatchingScore | null>(null);
+  const [matchingScoreStatus, setMatchingScoreStatus] = useState<string>("not_calculated");
+  const [matchingScoreTaskId, setMatchingScoreTaskId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [generatingScore, setGeneratingScore] = useState(false);
   const [generatingDocs, setGeneratingDocs] = useState(false);
@@ -177,18 +181,74 @@ export default function ApplicationDetailPage() {
     }
   };
 
-  const loadMatchingScore = async (recalculate: boolean = false) => {
+  const loadMatchingScore = async () => {
+    try {
+      const response = await api.getMatchingScore(applicationId);
+      if (response.status === "completed") {
+        setMatchingScore(response);
+        setMatchingScoreStatus("completed");
+      } else {
+        setMatchingScoreStatus(response.status || "not_calculated");
+      }
+    } catch (error: any) {
+      console.error("Failed to load matching score:", error);
+    }
+  };
+
+  const startMatchingScoreCalculation = async (recalculate: boolean = false) => {
     setGeneratingScore(true);
     setError("");
     try {
-      const score = await api.getMatchingScore(applicationId, recalculate);
-      setMatchingScore(score);
+      const response = await api.calculateMatchingScore(applicationId, recalculate);
+      if (response.status === "already_calculated") {
+        // Score already exists, just load it
+        await loadMatchingScore();
+        setGeneratingScore(false);
+      } else if (response.task_id) {
+        // Task started, set up polling
+        setMatchingScoreTaskId(response.task_id);
+        setMatchingScoreStatus("pending");
+      }
     } catch (error: any) {
-      setError(error.message || "Failed to calculate matching score");
-    } finally {
+      setError(error.message || "Failed to start matching score calculation");
       setGeneratingScore(false);
     }
   };
+
+  // Poll for matching score task status
+  useEffect(() => {
+    if (!matchingScoreTaskId || matchingScoreStatus === "completed" || matchingScoreStatus === "failed") {
+      return;
+    }
+
+    const pollStatus = async () => {
+      try {
+        const status = await api.getMatchingScoreStatus(applicationId, matchingScoreTaskId);
+        setMatchingScoreStatus(status.status);
+
+        if (status.status === "completed") {
+          if (status.matching_score) {
+            setMatchingScore(status.matching_score);
+          }
+          setGeneratingScore(false);
+          setMatchingScoreTaskId(null);
+        } else if (status.status === "failed") {
+          setError(status.error_message || "Matching score calculation failed");
+          setGeneratingScore(false);
+          setMatchingScoreTaskId(null);
+        }
+      } catch (error) {
+        console.error("Error polling matching score status:", error);
+      }
+    };
+
+    // Poll every 2 seconds
+    const interval = setInterval(pollStatus, 2000);
+    // Initial poll
+    pollStatus();
+
+    return () => clearInterval(interval);
+  }, [matchingScoreTaskId, matchingScoreStatus, applicationId]);
 
   const handleGenerateDocuments = async () => {
     if (selectedDocs.length === 0) {
@@ -365,17 +425,27 @@ export default function ApplicationDetailPage() {
         <section>
           <h2 className="text-2xl font-bold mb-4">Matching Score</h2>
           <Card>
-            {!matchingScore ? (
+            {generatingScore ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto mb-4"></div>
+                <p className="text-muted">
+                  {matchingScoreStatus === "pending" && "Waiting to start calculation..."}
+                  {matchingScoreStatus === "processing" && "Calculating matching score..."}
+                  {!["pending", "processing"].includes(matchingScoreStatus) && "Processing..."}
+                </p>
+                <p className="text-sm text-muted mt-2">This may take a few seconds</p>
+              </div>
+            ) : !matchingScore ? (
               <div className="text-center py-8">
                 <p className="text-muted mb-4">
                   Calculate how well your CV matches this job's requirements
                 </p>
                 <Button
-                  onClick={loadMatchingScore}
+                  onClick={() => startMatchingScoreCalculation(false)}
                   disabled={generatingScore}
                   variant="primary"
                 >
-                  {generatingScore ? "Calculating..." : "Calculate Matching Score"}
+                  Calculate Matching Score
                 </Button>
               </div>
             ) : (
@@ -414,8 +484,15 @@ export default function ApplicationDetailPage() {
                   </ul>
                 </div>
 
+                {matchingScore.story && (
+                  <div>
+                    <h3 className="font-semibold text-indigo-400 mb-2">📖 Story</h3>
+                    <p className="text-sm text-muted">{matchingScore.story}</p>
+                  </div>
+                )}
+
                 <Button
-                  onClick={() => loadMatchingScore(true)}
+                  onClick={() => startMatchingScoreCalculation(true)}
                   disabled={generatingScore}
                   variant="outline"
                   className="w-full mt-4"
