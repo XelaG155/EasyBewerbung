@@ -5,6 +5,35 @@ This document describes all pages, components, and user flows that must be teste
 
 ---
 
+## 0. Layout-Grundregeln (Base Layout Rules)
+
+**Siehe auch: [LAYOUT_RULES.md](./LAYOUT_RULES.md)** für detaillierte Dokumentation.
+
+Diese Regeln gelten für **alle Seiten** und werden automatisch in `e2e/layout/base-layout.spec.ts` getestet:
+
+### Regel 1: Logo und Anwendungsname
+- [ ] Logo oben links sichtbar
+- [ ] Vollständiger Name "EasyBewerbung" sichtbar (nie abgekürzt)
+- [ ] Gilt für alle Viewports (Desktop, Tablet, Mobile)
+
+### Regel 2: Kein horizontaler Überlauf
+- [ ] Keine horizontale Scrollbar
+- [ ] `scrollWidth <= clientWidth` auf allen Seiten
+
+### Regel 3: Theme-Toggle
+- [ ] Theme-Toggle (🌙/☀️) auf allen Seiten sichtbar
+- [ ] Funktioniert auf allen Viewports
+
+### Regel 4: Benutzerinformationen (nur authentifizierte Seiten)
+- [ ] Benutzername oder E-Mail oben rechts sichtbar
+- [ ] Credits-Anzeige sichtbar
+- [ ] Grüner Spinner bei aktiver Dokumentgenerierung
+
+### Ausnahmen
+- Landing, Login, Register: Keine Benutzerinformationen (nicht authentifiziert)
+
+---
+
 ## 1. Landing Page (`/`)
 
 ### Visual Elements
@@ -418,6 +447,8 @@ When making changes:
 e2e/
 ├── fixtures/           # Test data and setup
 │   └── auth.ts        # Authentication helpers
+├── layout/            # Base layout rule tests
+│   └── base-layout.spec.ts  # Tests for all layout rules
 ├── pages/             # Page-specific tests
 │   ├── landing.spec.ts
 │   ├── login.spec.ts
@@ -437,5 +468,6 @@ e2e/
 │   └── ...
 ├── utils/             # Test utilities
 │   └── helpers.ts
+├── LAYOUT_RULES.md    # Layout base rules documentation
 └── TEST_SPECIFICATION.md
 ```
