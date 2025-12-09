@@ -143,6 +143,21 @@ class GenerationTask(Base):
     user = relationship("User")
 
 
+class MatchingScoreTask(Base):
+    __tablename__ = "matching_score_tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("applications.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status = Column(String, nullable=False, default="pending")  # pending, processing, completed, failed
+    error_message = Column(Text, nullable=True)  # Error details if failed
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    application = relationship("Application")
+    user = relationship("User")
+
+
 class UserActivityLog(Base):
     __tablename__ = "user_activity_logs"
 
