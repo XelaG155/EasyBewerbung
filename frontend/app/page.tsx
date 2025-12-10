@@ -89,52 +89,107 @@ export default function Home() {
     <div className="page-shell min-h-screen">
       {/* Header */}
       <header className="border-b border-muted backdrop-blur nav-surface">
-        <div className="container mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
-            <img src="/logo.png" alt="EasyBewerbung" className="w-8 h-8 rounded-lg flex-shrink-0" />
-            <span className="text-lg sm:text-xl font-bold whitespace-nowrap">{t("common.appName")}</span>
-          </div>
-          <div className="flex gap-1.5 sm:gap-2 md:gap-3 items-center flex-shrink-0 min-w-0">
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="btn-base btn-secondary flex items-center gap-1 sm:gap-2 px-2 sm:px-4 flex-shrink-0"
-              aria-pressed={theme === "light"}
-            >
-              <span aria-hidden>{theme === "light" ? "🌙" : "☀️"}</span>
-              <span className="text-sm hidden md:inline">
-                {theme === "light" ? t("common.darkMode") : t("common.lightMode")}
-              </span>
-            </button>
-            {/* Language selector - compact on mobile, full on desktop */}
-            <div className="relative flex items-center flex-shrink-0 min-w-0">
-              <label className="text-sm text-muted mr-2 hidden lg:inline">{t("common.language")}:</label>
-              <select
-                value={locale}
-                onChange={(e) => handleLanguageChange(e.target.value)}
-                className="px-2 sm:px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 max-w-full"
-                style={{
-                  background: "var(--card-background)",
-                  color: "var(--foreground)",
-                  borderColor: "var(--border)",
-                  boxShadow: "none",
-                  minWidth: "0",
-                }}
-                aria-label={t("common.language")}
-              >
-                {languageOptions.map((lang) => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.label}
-                  </option>
-                ))}
-              </select>
+        <div className="container mx-auto px-4 sm:px-6 py-4">
+          {/* Desktop: Single row */}
+          <div className="hidden sm:flex items-center justify-between gap-2">
+            {/* Logo and App Name */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <img src="/logo.png" alt="EasyBewerbung" className="w-8 h-8 rounded-lg flex-shrink-0" />
+              <span className="text-xl font-bold whitespace-nowrap">{t("common.appName")}</span>
             </div>
-            <Button href="/login" variant="outline" className="flex-shrink-0 px-3 py-2 text-sm sm:px-4 sm:text-base whitespace-nowrap">
-              {t("common.login")}
-            </Button>
-            <Button href="/register" variant="primary" className="flex-shrink-0 px-3 py-2 text-sm sm:px-4 sm:text-base whitespace-nowrap">
-              {t("common.getStarted")}
-            </Button>
+
+            {/* Controls */}
+            <div className="flex gap-2 md:gap-3 items-center">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="btn-base btn-secondary flex items-center gap-2 px-4 flex-shrink-0"
+                aria-pressed={theme === "light"}
+              >
+                <span aria-hidden>{theme === "light" ? "🌙" : "☀️"}</span>
+                <span className="text-sm hidden md:inline">
+                  {theme === "light" ? t("common.darkMode") : t("common.lightMode")}
+                </span>
+              </button>
+
+              <div className="relative flex items-center flex-shrink-0">
+                <label className="text-sm text-muted mr-2 hidden lg:inline">{t("common.language")}:</label>
+                <select
+                  value={locale}
+                  onChange={(e) => handleLanguageChange(e.target.value)}
+                  className="px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2"
+                  style={{
+                    background: "var(--card-background)",
+                    color: "var(--foreground)",
+                    borderColor: "var(--border)",
+                    boxShadow: "none",
+                  }}
+                  aria-label={t("common.language")}
+                >
+                  {languageOptions.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <Button href="/login" variant="outline" className="flex-shrink-0 px-4 text-base whitespace-nowrap">
+                {t("common.login")}
+              </Button>
+              <Button href="/register" variant="primary" className="flex-shrink-0 px-4 text-base whitespace-nowrap">
+                {t("common.getStarted")}
+              </Button>
+            </div>
+          </div>
+
+          {/* Mobile: Two rows with left/right alignment */}
+          <div className="flex sm:hidden flex-col gap-2">
+            {/* Row 1: Logo/Title left, Login right */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <img src="/logo.png" alt="EasyBewerbung" className="w-8 h-8 rounded-lg flex-shrink-0" />
+                <span className="text-lg font-bold whitespace-nowrap">{t("common.appName")}</span>
+              </div>
+              <Button href="/login" variant="outline" className="flex-shrink-0 px-3 py-2 text-sm whitespace-nowrap">
+                {t("common.login")}
+              </Button>
+            </div>
+
+            {/* Row 2: Language/Theme left, Get Started right */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <select
+                  value={locale}
+                  onChange={(e) => handleLanguageChange(e.target.value)}
+                  className="px-2 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2"
+                  style={{
+                    background: "var(--card-background)",
+                    color: "var(--foreground)",
+                    borderColor: "var(--border)",
+                    boxShadow: "none",
+                  }}
+                  aria-label={t("common.language")}
+                >
+                  {languageOptions.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="btn-base btn-secondary flex items-center gap-1 px-2 py-2 flex-shrink-0"
+                  aria-pressed={theme === "light"}
+                >
+                  <span aria-hidden>{theme === "light" ? "🌙" : "☀️"}</span>
+                </button>
+              </div>
+              <Button href="/register" variant="primary" className="flex-shrink-0 px-3 py-2 text-sm whitespace-nowrap">
+                {t("common.getStarted")}
+              </Button>
+            </div>
           </div>
         </div>
       </header>
