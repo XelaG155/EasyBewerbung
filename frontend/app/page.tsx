@@ -129,13 +129,11 @@ export default function Home() {
                 ))}
               </select>
             </div>
-            <Button href="/login" variant="outline" className="flex-shrink-0 px-2 sm:px-4">
-              <span className="hidden sm:inline">{t("common.login")}</span>
-              <span className="sm:hidden text-sm">Login</span>
+            <Button href="/login" variant="outline" className="flex-shrink-0 px-3 py-2 text-sm sm:px-4 sm:text-base whitespace-nowrap">
+              {t("common.login")}
             </Button>
-            <Button href="/register" variant="primary" className="flex-shrink-0 px-2 sm:px-4">
-              <span className="hidden sm:inline">{t("common.getStarted")}</span>
-              <span className="sm:hidden text-sm">Sign Up</span>
+            <Button href="/register" variant="primary" className="flex-shrink-0 px-3 py-2 text-sm sm:px-4 sm:text-base whitespace-nowrap">
+              {t("common.getStarted")}
             </Button>
           </div>
         </div>
