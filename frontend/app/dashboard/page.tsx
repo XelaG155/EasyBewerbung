@@ -191,7 +191,9 @@ export default function DashboardPage() {
 
         // Check status of each task
         const stillActive: { appId: number; taskId: number }[] = [];
-        let currentProgress: { completed: number; total: number } | null = null;
+        // Aggregate progress across ALL active tasks
+        let totalCompleted = 0;
+        let totalDocs = 0;
 
         for (const task of activeTasks) {
           try {
@@ -211,12 +213,10 @@ export default function DashboardPage() {
             if (response.ok) {
               const status = await response.json();
 
-              // Track progress - for dashboard, show any active task's progress
-              if (status.total_docs && status.completed_docs !== undefined) {
-                currentProgress = {
-                  completed: status.completed_docs,
-                  total: status.total_docs
-                };
+              // Aggregate progress from ALL active tasks
+              if (status.total_docs && (status.status === "pending" || status.status === "processing")) {
+                totalCompleted += status.completed_docs || 0;
+                totalDocs += status.total_docs;
               }
 
               // Keep task if still processing
@@ -239,7 +239,8 @@ export default function DashboardPage() {
         if (stillActive.length > 0) {
           localStorage.setItem("activeGenerationTasks", JSON.stringify(stillActive));
           setHasActiveGenerations(true);
-          setGenerationProgress(currentProgress);
+          // Show aggregated progress across all active tasks
+          setGenerationProgress(totalDocs > 0 ? { completed: totalCompleted, total: totalDocs } : null);
         } else {
           localStorage.removeItem("activeGenerationTasks");
           setHasActiveGenerations(false);

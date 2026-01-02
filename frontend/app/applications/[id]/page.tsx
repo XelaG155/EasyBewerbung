@@ -163,7 +163,9 @@ export default function ApplicationDetailPage() {
         setHasActiveGenerations(true); // Show spinner while checking
 
         const stillActive: { appId: number; taskId: number }[] = [];
-        let currentProgress: { completed: number; total: number } | null = null;
+        // Aggregate progress across ALL active tasks, not just current application
+        let totalCompleted = 0;
+        let totalDocs = 0;
 
         for (const task of activeTasks) {
           try {
@@ -185,11 +187,10 @@ export default function ApplicationDetailPage() {
               console.log(`📊 Task ${task.taskId} status:`, status.status, `(${status.completed_docs}/${status.total_docs})`);
               retryCount[task.taskId] = 0;
 
-              if (task.appId === applicationId && status.total_docs) {
-                currentProgress = {
-                  completed: status.completed_docs || 0,
-                  total: status.total_docs
-                };
+              // Aggregate progress from ALL active tasks
+              if (status.total_docs && (status.status === "pending" || status.status === "processing")) {
+                totalCompleted += status.completed_docs || 0;
+                totalDocs += status.total_docs;
               }
 
               if (status.status === "pending" || status.status === "processing") {
@@ -221,7 +222,8 @@ export default function ApplicationDetailPage() {
         if (stillActive.length > 0) {
           localStorage.setItem("activeGenerationTasks", JSON.stringify(stillActive));
           setHasActiveGenerations(true);
-          setGenerationProgress(currentProgress);
+          // Show aggregated progress across all active tasks
+          setGenerationProgress(totalDocs > 0 ? { completed: totalCompleted, total: totalDocs } : null);
         } else {
           console.log("✔️ All tasks completed, clearing localStorage");
           localStorage.removeItem("activeGenerationTasks");

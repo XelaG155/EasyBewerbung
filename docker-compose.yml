@@ -20,7 +20,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"  # Use 5433 externally to avoid conflicts
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U easybewerbung"]
       interval: 5s
@@ -32,7 +32,7 @@ services:
     image: redis:7-alpine
     container_name: easybewerbung-redis
     ports:
-      - "6379:6379"
+      - "6380:6379"  # Use 6380 externally to avoid conflicts
     volumes:
       - redis_data:/data
     healthcheck:
@@ -53,12 +53,12 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      CORS_ORIGINS: http://localhost:3000,http://localhost:3001,http://frontend:3000
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3001,http://frontend:3000,https://app.easybewerbung.ch
     volumes:
       - uploads_data:/app/uploads
       - generated_data:/app/generated
     ports:
-      - "8000:8000"
+      - "8002:8000"  # Use 8002 externally to avoid conflicts
     depends_on:
       db:
         condition: service_healthy
@@ -100,10 +100,10 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_API_URL: https://app.easybewerbung.ch/api
     container_name: easybewerbung-frontend
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_API_URL: https://app.easybewerbung.ch/api
     ports:
       - "3001:3000"  # Use 3001 externally if 3000 is in use
     depends_on:

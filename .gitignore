@@ -30,3 +30,15 @@ frontend/e2e/**/*.png
 .vscode/
 *.swp
 *.swo
+
+# Backup files
+*.backup
+
+# Generated files
+backend/generated/
+
+# Test files
+backend/test_token.py
+
+# Logs
+logs/
