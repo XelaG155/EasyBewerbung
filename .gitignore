@@ -8,10 +8,16 @@ uploads/
 venv/
 .venv/
 
-# Environment files
+# Environment files - NEVER commit secrets!
 .env
+.env.*
+!.env.example
+!.env.docker
 .env.local
 .env.*.local
+*.pem
+*.key
+secrets/
 
 # Node artifacts
 node_modules/
@@ -35,7 +41,10 @@ frontend/e2e/**/*.png
 *.backup
 
 # Generated files
+generated/
 backend/generated/
+*.sqlite
+*.sqlite3
 
 # Test files
 backend/test_token.py
