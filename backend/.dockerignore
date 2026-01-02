@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Database (SQLite - not needed in Docker)
+*.db
+*.sqlite3
+
+# Uploads (mounted as volume)
+uploads/
+
+# Git
+.git/
+.gitignore
+
+# Misc
+*.log
+*.tmp
+.DS_Store

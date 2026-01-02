@@ -6,6 +6,7 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { useAuth } from "@/lib/auth-context";
 import api from "@/lib/api";
+import { formatUserDate } from "@/lib/date-utils";
 
 type MatchingScore = {
   overall_score: number;
@@ -45,6 +46,57 @@ export default function ApplicationDetailPage() {
   // Active generations tracking
   const [hasActiveGenerations, setHasActiveGenerations] = useState(false);
   const [generationProgress, setGenerationProgress] = useState<{ completed: number; total: number } | null>(null);
+  const [newDocsAvailable, setNewDocsAvailable] = useState(false);
+
+  // Language settings
+  const [languageOptions, setLanguageOptions] = useState<{ code: string; label: string }[]>([]);
+  const [savingLanguage, setSavingLanguage] = useState(false);
+
+  // Document deletion
+  const [selectedDocsToDelete, setSelectedDocsToDelete] = useState<number[]>([]);
+  const [deletingDocs, setDeletingDocs] = useState(false);
+  const [showDeleteMode, setShowDeleteMode] = useState(false);
+
+  const toggleDocToDelete = (docId: number) => {
+    setSelectedDocsToDelete(prev =>
+      prev.includes(docId)
+        ? prev.filter(id => id !== docId)
+        : [...prev, docId]
+    );
+  };
+
+  const handleDeleteSelectedDocuments = async () => {
+    if (selectedDocsToDelete.length === 0) return;
+
+    const confirmMessage = `Are you sure you want to delete ${selectedDocsToDelete.length} document(s)? This action cannot be undone.`;
+    if (!confirm(confirmMessage)) return;
+
+    setDeletingDocs(true);
+    setError("");
+    try {
+      await api.deleteGeneratedDocuments(applicationId, selectedDocsToDelete);
+      // Deletion is now async via Celery, wait a moment then reload
+      setTimeout(async () => {
+        await loadApplication();
+        setSelectedDocsToDelete([]);
+        setShowDeleteMode(false);
+        setDeletingDocs(false);
+      }, 1500);
+    } catch (error: any) {
+      setError(error.message || "Failed to delete documents");
+      setDeletingDocs(false);
+    }
+  };
+
+  const selectAllDocsToDelete = () => {
+    if (application?.generated_documents) {
+      setSelectedDocsToDelete(application.generated_documents.map((doc: GeneratedDoc) => doc.id));
+    }
+  };
+
+  const deselectAllDocsToDelete = () => {
+    setSelectedDocsToDelete([]);
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -55,30 +107,61 @@ export default function ApplicationDetailPage() {
   useEffect(() => {
     if (user && applicationId) {
       loadApplication();
-      loadMatchingScore(); // Also load matching score on mount
+      loadMatchingScore();
       loadAvailableDocs();
+      loadLanguageOptions();
     }
   }, [user, applicationId]);
 
+  const loadLanguageOptions = async () => {
+    try {
+      const langs = await api.listLanguages();
+      setLanguageOptions(langs);
+    } catch (error) {
+      console.error("Failed to load languages:", error);
+    }
+  };
+
+  const handleLanguageChange = async (newLanguage: string) => {
+    if (!application) return;
+    setSavingLanguage(true);
+    try {
+      const updated = await api.updateApplication(applicationId, {
+        documentation_language: newLanguage,
+      });
+      setApplication(updated);
+    } catch (error: any) {
+      setError(error.message || "Failed to update language");
+    } finally {
+      setSavingLanguage(false);
+    }
+  };
+
   // Poll for active generations
   useEffect(() => {
+    let retryCount: { [key: number]: number } = {};
+    const MAX_RETRIES = 5;
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
     const checkActiveGenerations = async () => {
       try {
         const activeTasksStr = localStorage.getItem("activeGenerationTasks");
-        console.log("🔍 Checking active tasks:", activeTasksStr);
         if (!activeTasksStr) {
           setHasActiveGenerations(false);
+          setGenerationProgress(null);
           return;
         }
 
         const activeTasks: { appId: number; taskId: number }[] = JSON.parse(activeTasksStr);
-        console.log("📋 Active tasks parsed:", activeTasks);
         if (activeTasks.length === 0) {
           setHasActiveGenerations(false);
+          setGenerationProgress(null);
           return;
         }
 
-        // Check status of each task
+        console.log("🔍 Polling active tasks:", activeTasks);
+        setHasActiveGenerations(true); // Show spinner while checking
+
         const stillActive: { appId: number; taskId: number }[] = [];
         let currentProgress: { completed: number; total: number } | null = null;
 
@@ -86,73 +169,74 @@ export default function ApplicationDetailPage() {
           try {
             const token = api.getToken();
             if (!token) {
-              console.warn("No token available for polling");
+              console.warn("⚠️ No auth token");
               continue;
             }
-            const response = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL}/applications/${task.appId}/generation-status/${task.taskId}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            );
+
+            const url = `${API_URL}/applications/${task.appId}/generation-status/${task.taskId}`;
+            console.log("📡 Checking:", url);
+
+            const response = await fetch(url, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+
             if (response.ok) {
               const status = await response.json();
-              console.log(`📊 Task ${task.taskId} status:`, status.status);
+              console.log(`📊 Task ${task.taskId} status:`, status.status, `(${status.completed_docs}/${status.total_docs})`);
+              retryCount[task.taskId] = 0;
 
-              // Track progress for this application's task
-              if (task.appId === applicationId && status.total_docs && status.completed_docs !== undefined) {
+              if (task.appId === applicationId && status.total_docs) {
                 currentProgress = {
-                  completed: status.completed_docs,
+                  completed: status.completed_docs || 0,
                   total: status.total_docs
                 };
               }
 
-              // Keep task if still processing
               if (status.status === "pending" || status.status === "processing") {
                 stillActive.push(task);
-              } else if (task.appId === applicationId) {
-                // If task for this application completed, reload documents
-                console.log("✅ Task completed, reloading application");
-                loadApplication();
+              } else {
+                console.log(`✅ Task ${task.taskId} finished with status: ${status.status}`);
+                if (task.appId === applicationId) {
+                  setNewDocsAvailable(true);
+                  loadApplication();
+                  setTimeout(() => setNewDocsAvailable(false), 5000);
+                }
               }
             } else {
-              console.error(`❌ Status check failed for task ${task.taskId}:`, response.status, response.statusText);
-              // If error, keep task in list (will retry next poll)
+              console.error(`❌ Status check failed: ${response.status}`);
+              retryCount[task.taskId] = (retryCount[task.taskId] || 0) + 1;
+              if (retryCount[task.taskId] < MAX_RETRIES) {
+                stillActive.push(task);
+              }
+            }
+          } catch (err) {
+            console.error(`❌ Exception checking task:`, err);
+            retryCount[task.taskId] = (retryCount[task.taskId] || 0) + 1;
+            if (retryCount[task.taskId] < MAX_RETRIES) {
               stillActive.push(task);
             }
-          } catch (error) {
-            console.error(`❌ Exception checking task ${task.taskId}:`, error);
-            // If error, keep task in list (will retry next poll)
-            stillActive.push(task);
           }
         }
 
-        // Update localStorage and state
-        console.log("✅ Still active tasks:", stillActive.length);
         if (stillActive.length > 0) {
           localStorage.setItem("activeGenerationTasks", JSON.stringify(stillActive));
           setHasActiveGenerations(true);
           setGenerationProgress(currentProgress);
-          console.log("🔄 Spinner should be visible now");
         } else {
+          console.log("✔️ All tasks completed, clearing localStorage");
           localStorage.removeItem("activeGenerationTasks");
           setHasActiveGenerations(false);
           setGenerationProgress(null);
-          console.log("✔️ All tasks completed, hiding spinner");
         }
-      } catch (error) {
-        console.error("Error checking active generations:", error);
+      } catch (err) {
+        console.error("❌ Polling error:", err);
+        setHasActiveGenerations(false);
+        setGenerationProgress(null);
       }
     };
 
-    // Initial check
     checkActiveGenerations();
-
-    // Poll every 5 seconds
-    const interval = setInterval(checkActiveGenerations, 5000);
-
+    const interval = setInterval(checkActiveGenerations, 2000);
     return () => clearInterval(interval);
   }, [applicationId]);
 
@@ -421,6 +505,13 @@ export default function ApplicationDetailPage() {
           </div>
         )}
 
+        {newDocsAvailable && (
+          <div className="p-4 rounded-lg bg-emerald-900/20 border border-emerald-700 text-emerald-400 flex items-center gap-2">
+            <span className="text-xl">✨</span>
+            <span>New documents have been generated! Check the documents section below.</span>
+          </div>
+        )}
+
         {/* Matching Score */}
         <section>
           <h2 className="text-2xl font-bold mb-4">Matching Score</h2>
@@ -506,19 +597,91 @@ export default function ApplicationDetailPage() {
 
         {/* Document Generation */}
         <section>
-          <h2 className="text-2xl font-bold mb-4">Generated Documents</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold">Generated Documents</h2>
+            <div className="flex items-center gap-3">
+              <label className="text-sm text-muted">Document Language:</label>
+              <select
+                value={application.documentation_language || "en"}
+                onChange={(e) => handleLanguageChange(e.target.value)}
+                disabled={savingLanguage}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                {languageOptions.map((lang) => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.label}
+                  </option>
+                ))}
+              </select>
+              {savingLanguage && (
+                <span className="text-xs text-muted animate-pulse">Saving...</span>
+              )}
+            </div>
+          </div>
           <Card>
             {application.generated_documents && application.generated_documents.length > 0 ? (
               <div className="space-y-4">
+                {/* Delete mode controls */}
+                <div className="flex items-center justify-between pb-2 border-b border-muted">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setShowDeleteMode(!showDeleteMode);
+                        if (showDeleteMode) {
+                          setSelectedDocsToDelete([]);
+                        }
+                      }}
+                      className={`px-3 py-1 text-sm rounded ${showDeleteMode ? 'bg-red-700 text-white' : 'btn-secondary'}`}
+                    >
+                      {showDeleteMode ? "Cancel Delete Mode" : "🗑️ Manage Documents"}
+                    </button>
+                    {showDeleteMode && (
+                      <>
+                        <button
+                          onClick={selectAllDocsToDelete}
+                          className="btn-secondary px-3 py-1 text-sm rounded"
+                        >
+                          Select All
+                        </button>
+                        <button
+                          onClick={deselectAllDocsToDelete}
+                          className="btn-secondary px-3 py-1 text-sm rounded"
+                        >
+                          Deselect All
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  {showDeleteMode && selectedDocsToDelete.length > 0 && (
+                    <button
+                      onClick={handleDeleteSelectedDocuments}
+                      disabled={deletingDocs}
+                      className="px-3 py-1 text-sm rounded bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                    >
+                      {deletingDocs ? "Deleting..." : `Delete ${selectedDocsToDelete.length} Selected`}
+                    </button>
+                  )}
+                </div>
+
                 {application.generated_documents.map((doc: GeneratedDoc) => (
                   <div
                     key={doc.id}
-                    className="p-4 chip rounded-lg"
+                    className={`p-4 chip rounded-lg ${showDeleteMode && selectedDocsToDelete.includes(doc.id) ? 'ring-2 ring-red-500' : ''}`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold">
-                        {doc.doc_type.replace(/_/g, " ").toUpperCase()}
-                      </h3>
+                      <div className="flex items-center gap-3">
+                        {showDeleteMode && (
+                          <input
+                            type="checkbox"
+                            checked={selectedDocsToDelete.includes(doc.id)}
+                            onChange={() => toggleDocToDelete(doc.id)}
+                            className="w-4 h-4 accent-red-500"
+                          />
+                        )}
+                        <h3 className="font-semibold">
+                          {doc.doc_type.replace(/_/g, " ").toUpperCase()}
+                        </h3>
+                      </div>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => {
@@ -537,14 +700,7 @@ export default function ApplicationDetailPage() {
                           📥 Download
                         </button>
                         <span className="text-sm text-muted">
-                          {new Date(doc.created_at + 'Z').toLocaleString(undefined, {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
-                          })}
+                          {formatUserDate(doc.created_at, user?.date_format)}
                         </span>
                       </div>
                     </div>

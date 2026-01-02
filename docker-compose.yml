@@ -1,0 +1,121 @@
+# Docker Compose for EasyBewerbung
+# Run with: docker compose up --build
+#
+# Services:
+#   - db: PostgreSQL database
+#   - redis: Message broker for Celery
+#   - backend: FastAPI application (API server)
+#   - worker: Celery worker (processes background jobs)
+#   - frontend: Next.js application
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: easybewerbung-db
+    environment:
+      POSTGRES_USER: easybewerbung
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-localdev123}
+      POSTGRES_DB: easybewerbung
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U easybewerbung"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis (Message Broker for Celery)
+  redis:
+    image: redis:7-alpine
+    container_name: easybewerbung-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend (API Server)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: easybewerbung-backend
+    environment:
+      DATABASE_URL: postgresql://easybewerbung:${POSTGRES_PASSWORD:-localdev123}@db:5432/easybewerbung
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3001,http://frontend:3000
+    volumes:
+      - uploads_data:/app/uploads
+      - generated_data:/app/generated
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Celery Worker (Background Job Processor)
+  # Scales to 4 workers by default, each with 4 concurrent tasks (16 parallel tasks total)
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    # No container_name to allow scaling with replicas
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=4 -Q celery,matching,generation
+    environment:
+      DATABASE_URL: postgresql://easybewerbung:${POSTGRES_PASSWORD:-localdev123}@db:5432/easybewerbung
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    volumes:
+      - uploads_data:/app/uploads
+      - generated_data:/app/generated
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      replicas: 5
+      resources:
+        limits:
+          memory: 512M
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    container_name: easybewerbung-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3001:3000"  # Use 3001 externally if 3000 is in use
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    name: easybewerbung_postgres_data
+  redis_data:
+    name: easybewerbung_redis_data
+  uploads_data:
+    name: easybewerbung_uploads_data
+  generated_data:
+    name: easybewerbung_generated_data

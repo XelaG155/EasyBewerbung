@@ -15,6 +15,8 @@ export interface User {
   employment_status?: string | null; // "employed", "unemployed", "student", "transitioning"
   education_type?: string | null; // "wms", "bms", "university", "apprenticeship", "other"
   additional_profile_context?: string | null; // Free text for additional info
+  // Display preferences
+  date_format: string; // "DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD", etc.
   credits: number;
   created_at: string;
   is_admin: boolean;
@@ -284,6 +286,7 @@ class ApiClient {
     employmentStatus?: string,
     educationType?: string,
     additionalProfileContext?: string,
+    dateFormat?: string,
   ) {
     return this.request<User>("/users/me", {
       method: "PATCH",
@@ -295,6 +298,7 @@ class ApiClient {
         employment_status: employmentStatus,
         education_type: educationType,
         additional_profile_context: additionalProfileContext,
+        date_format: dateFormat,
       }),
     });
   }
@@ -412,6 +416,8 @@ class ApiClient {
       applied?: boolean;
       applied_at?: string;
       result?: string;
+      documentation_language?: string;
+      company_profile_language?: string;
     }
   ) {
     return this.request<Application>(`/applications/${id}`, {
@@ -465,6 +471,16 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(docTypes),
     });
+  }
+
+  async deleteGeneratedDocuments(applicationId: number, documentIds: number[]) {
+    return this.request<{ message: string; deleted_count: number }>(
+      `/applications/${applicationId}/documents`,
+      {
+        method: "DELETE",
+        body: JSON.stringify({ document_ids: documentIds }),
+      }
+    );
   }
 
   // Admin endpoints

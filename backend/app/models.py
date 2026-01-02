@@ -32,6 +32,9 @@ class User(Base):
     education_type = Column(String, nullable=True)  # "wms", "bms", "university", "apprenticeship", "other", None
     additional_profile_context = Column(Text, nullable=True)  # Free text for additional info
 
+    # Display preferences
+    date_format = Column(String, default="DD/MM/YYYY", nullable=False)  # "DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     documents = relationship("Document", back_populates="owner")

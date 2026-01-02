@@ -23,7 +23,6 @@ LANGUAGE_OPTIONS: List[LanguageOption] = [
     LanguageOption("it", "Italiano (Italian)"),
     LanguageOption("es", "Español (Spanish)"),
     LanguageOption("pt", "Português (Portuguese)"),
-    LanguageOption("gsw", "Svizzeru / Schweizerdeutsch (Swiss German)"),
     LanguageOption("rm", "Rumantsch (Romansh)"),
     LanguageOption("sq", "Albanian"),
     LanguageOption("bs", "Bosnian"),
@@ -79,15 +78,15 @@ LANGUAGE_OPTIONS: List[LanguageOption] = [
     LanguageOption("sn", "Shona"),
 ]
 
-SUPPORTED_LANGUAGES = [option.label for option in LANGUAGE_OPTIONS]
+SUPPORTED_LANGUAGES = [option.code for option in LANGUAGE_OPTIONS]
 SUPPORTED_LANGUAGES_SET = set(SUPPORTED_LANGUAGES)
-DEFAULT_LANGUAGE = SUPPORTED_LANGUAGES[0]
+DEFAULT_LANGUAGE = SUPPORTED_LANGUAGES[0]  # "en"
 
-# Minimal alias map to bridge ISO codes and UI-friendly names. Keys are lower-cased.
+# Alias map: maps both codes and labels (lowercased) to the canonical code
 LANGUAGE_ALIASES = {
-    option.code.lower(): option.label for option in LANGUAGE_OPTIONS
+    option.code.lower(): option.code for option in LANGUAGE_OPTIONS
 }
-LANGUAGE_ALIASES.update({option.label.lower(): option.label for option in LANGUAGE_OPTIONS})
+LANGUAGE_ALIASES.update({option.label.lower(): option.code for option in LANGUAGE_OPTIONS})
 
 
 def normalize_language(value: Optional[str], field_name: str = "language") -> str:

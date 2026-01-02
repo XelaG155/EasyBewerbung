@@ -91,6 +91,8 @@ class UserResponse(BaseModel):
     employment_status: Optional[str]
     education_type: Optional[str]
     additional_profile_context: Optional[str]
+    # Display preferences
+    date_format: str
     credits: int
     created_at: str
     is_admin: bool
@@ -113,6 +115,7 @@ def serialize_user(user: User) -> UserResponse:
         employment_status=getattr(user, "employment_status", None),
         education_type=getattr(user, "education_type", None),
         additional_profile_context=getattr(user, "additional_profile_context", None),
+        date_format=getattr(user, "date_format", "DD/MM/YYYY"),
         credits=user.credits,
         created_at=user.created_at.isoformat(),
         is_admin=bool(getattr(user, "is_admin", False)),
@@ -354,6 +357,8 @@ class UserUpdate(BaseModel):
     employment_status: Optional[str] = None  # "employed", "unemployed", "student", "transitioning"
     education_type: Optional[str] = None  # "wms", "bms", "university", "apprenticeship", "other"
     additional_profile_context: Optional[str] = None  # Free text for additional info
+    # Display preferences
+    date_format: Optional[str] = None  # "DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD", etc.
 
     @field_validator("preferred_language", "mother_tongue", "documentation_language", mode="before")
     @classmethod
@@ -378,6 +383,16 @@ class UserUpdate(BaseModel):
         valid_types = ["wms", "bms", "university", "apprenticeship", "other"]
         if value not in valid_types:
             raise ValueError(f"education_type must be one of: {', '.join(valid_types)}")
+        return value
+
+    @field_validator("date_format", mode="before")
+    @classmethod
+    def validate_date_format(cls, value: Optional[str]):
+        if value is None:
+            return value
+        valid_formats = ["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD", "DD.MM.YYYY", "DD-MM-YYYY"]
+        if value not in valid_formats:
+            raise ValueError(f"date_format must be one of: {', '.join(valid_formats)}")
         return value
 
 
@@ -408,6 +423,9 @@ async def update_user(
         current_user.education_type = user_update.education_type
     if user_update.additional_profile_context is not None:
         current_user.additional_profile_context = user_update.additional_profile_context
+    # Display preferences
+    if user_update.date_format is not None:
+        current_user.date_format = user_update.date_format
 
     db.commit()
     db.refresh(current_user)

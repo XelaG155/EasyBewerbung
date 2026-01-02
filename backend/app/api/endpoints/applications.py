@@ -8,7 +8,7 @@ import traceback
 from io import BytesIO
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session, joinedload
@@ -24,6 +24,7 @@ from app.document_catalog import ALLOWED_GENERATED_DOC_TYPES
 from app.models import Application, GeneratedDocument, User, Document, JobOffer, MatchingScore, GenerationTask, DocumentTemplate, MatchingScoreTask
 from app.auth import get_current_user
 from app.language_catalog import DEFAULT_LANGUAGE, normalize_language
+from app.tasks import calculate_matching_score_task, generate_documents_task, delete_documents_task
 
 router = APIRouter()
 
@@ -212,343 +213,6 @@ def generate_document_prompt_from_template(
             return None
 
 
-def calculate_matching_score_background(task_id: int, application_id: int, user_id: int, recalculate: bool = False):
-    """Background task to calculate matching score asynchronously."""
-    from app.database import SessionLocal
-
-    db = SessionLocal()
-    try:
-        # Get the task
-        task = db.query(MatchingScoreTask).filter(MatchingScoreTask.id == task_id).first()
-        if not task:
-            return
-
-        # Update status to processing
-        task.status = "processing"
-        db.commit()
-
-        # Get application
-        application = db.query(Application).filter(Application.id == application_id).first()
-        if not application:
-            task.status = "failed"
-            task.error_message = "Application not found"
-            db.commit()
-            return
-
-        # Get user's CV
-        cv_doc = (
-            db.query(Document)
-            .filter(Document.user_id == user_id, Document.doc_type == "CV")
-            .order_by(Document.created_at.desc())
-            .first()
-        )
-        if not cv_doc or not cv_doc.content_text:
-            task.status = "failed"
-            task.error_message = "No CV found with text content"
-            db.commit()
-            return
-
-        # Get job offer details
-        job_offer = (
-            db.query(JobOffer)
-            .filter(JobOffer.url == application.job_offer_url)
-            .first()
-        )
-
-        job_description = ""
-        if job_offer:
-            job_description = f"Title: {job_offer.title}\nCompany: {job_offer.company}\nDescription: {job_offer.description}"
-        else:
-            job_description = f"Title: {application.job_title}\nCompany: {application.company}"
-
-        if application.opportunity_context:
-            job_description += f"\nOpportunity Context: {application.opportunity_context}"
-
-        if application.is_spontaneous:
-            job_description += "\nThis is a spontaneous application without a specific posting."
-
-        # Use OpenAI to calculate matching score
-        try:
-            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-            prompt = f"""Analyze how well this CV matches the job requirements. Provide a detailed matching analysis.
-
-Job Details:
-{job_description}
-
-Candidate CV (Full):
-{cv_doc.content_text}
-
-Please provide a JSON response with:
-1. overall_score: A number from 0-100 representing the overall match
-2. strengths: Array of 3-5 key strengths/matches
-3. gaps: Array of 2-4 areas where the candidate may not fully meet requirements
-4. recommendations: Array of 2-3 recommendations for the application
-5. story: A concise, 3-6 sentence narrative that addresses potential fit concerns. If the candidate appears overqualified, craft a respectful rationale for stepping into the role that focuses on positive motivations (e.g., desire to mentor, deliver impact quickly, appreciate stability or hands-on work) without criticizing their current employer or manager. If their current role, title, or experience differs from the job requirements, highlight transferable skills, relevant achievements, and a credible motivation for the transition that would reassure ATS/HR and hiring managers. If neither applies, provide a brief storyline that frames their profile positively for the role.
-
-IMPORTANT: Read the ENTIRE CV carefully, including any language skills section, before identifying gaps.
-
-Format your response as valid JSON only, no additional text."""
-
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}],
-            )
-
-            content = response.choices[0].message.content
-
-            # Try to parse JSON, handle cases where OpenAI adds markdown formatting
-            if content.startswith("```json"):
-                content = content.replace("```json", "").replace("```", "").strip()
-            elif content.startswith("```"):
-                content = content.replace("```", "").strip()
-
-            result = json.loads(content)
-
-            # Save or update the matching score in the database
-            existing_score = (
-                db.query(MatchingScore)
-                .filter(MatchingScore.application_id == application_id)
-                .first()
-            )
-
-            if existing_score and recalculate:
-                # Update existing score
-                existing_score.overall_score = result.get("overall_score", 0)
-                existing_score.strengths = json.dumps(result.get("strengths", []))
-                existing_score.gaps = json.dumps(result.get("gaps", []))
-                existing_score.recommendations = json.dumps(result.get("recommendations", []))
-                existing_score.story = result.get("story")
-                existing_score.updated_at = datetime.now(timezone.utc)
-            elif not existing_score:
-                # Create new score
-                new_score = MatchingScore(
-                    application_id=application_id,
-                    overall_score=result.get("overall_score", 0),
-                    strengths=json.dumps(result.get("strengths", [])),
-                    gaps=json.dumps(result.get("gaps", [])),
-                    recommendations=json.dumps(result.get("recommendations", [])),
-                    story=result.get("story"),
-                )
-                db.add(new_score)
-
-            # Mark task as completed
-            task.status = "completed"
-            db.commit()
-
-        except Exception as e:
-            logging.error(f"Matching score calculation error: {e}")
-            task.status = "failed"
-            task.error_message = str(e)
-            db.commit()
-
-    except Exception as e:
-        logging.error(f"Fatal error in calculate_matching_score_background: {str(e)}")
-        if task:
-            task.status = "failed"
-            task.error_message = str(e)
-            db.commit()
-    finally:
-        db.close()
-
-
-def generate_documents_background(task_id: int, application_id: int, doc_types: List[str], user_id: int):
-    """Background task to generate documents asynchronously."""
-    from app.database import SessionLocal
-
-    db = SessionLocal()
-    try:
-        # Get the task
-        task = db.query(GenerationTask).filter(GenerationTask.id == task_id).first()
-        if not task:
-            return
-
-        # Update status to processing
-        task.status = "processing"
-        task.total_docs = len(doc_types)
-        db.commit()
-
-        # Get application and user data
-        application = db.query(Application).filter(Application.id == application_id).first()
-        if not application:
-            task.status = "failed"
-            task.error_message = "Application not found"
-            db.commit()
-            return
-
-        # Get user profile for extended context
-        user = db.query(User).filter(User.id == user_id).first()
-
-        # Get user's CV
-        cv_doc = (
-            db.query(Document)
-            .filter(Document.user_id == user_id, Document.doc_type == "CV")
-            .order_by(Document.created_at.desc())
-            .first()
-        )
-        if not cv_doc or not cv_doc.content_text:
-            task.status = "failed"
-            task.error_message = "No CV found with text content"
-            db.commit()
-            return
-
-        # Get job offer details
-        job_offer = (
-            db.query(JobOffer)
-            .filter(JobOffer.url == application.job_offer_url)
-            .first()
-        )
-
-        job_description = ""
-        if job_offer:
-            job_description = f"Title: {job_offer.title}\nCompany: {job_offer.company}\nDescription: {job_offer.description}"
-        else:
-            job_description = f"Title: {application.job_title}\nCompany: {application.company}"
-
-        if application.opportunity_context:
-            job_description += f"\nOpportunity Context: {application.opportunity_context}"
-
-        if application.is_spontaneous:
-            job_description += "\nThis is a spontaneous application without a specific posting."
-
-        # Add application type context
-        app_type = getattr(application, "application_type", "fulltime")
-        if app_type == "internship":
-            job_description += "\n\n=== APPLICATION TYPE: INTERNSHIP (Praktikum) ==="
-            job_description += "\nThis is an application for an INTERNSHIP position (Praktikum), not a full-time job."
-            job_description += "\nThe tone should reflect that the candidate is seeking a learning opportunity and practical experience."
-        elif app_type == "apprenticeship":
-            job_description += "\n\n=== APPLICATION TYPE: APPRENTICESHIP (Lehrstelle) ==="
-            job_description += "\nThis is an application for an APPRENTICESHIP position (Lehrstelle/Berufslehre), not a full-time job."
-            job_description += "\nThe candidate is seeking vocational training combined with practical work experience."
-
-        # Add user profile context if available
-        user_context = ""
-        if user:
-            employment_status = getattr(user, "employment_status", None)
-            education_type = getattr(user, "education_type", None)
-            additional_context = getattr(user, "additional_profile_context", None)
-
-            if employment_status or education_type or additional_context:
-                user_context = "\n\n=== CANDIDATE PROFILE CONTEXT ==="
-                if employment_status:
-                    status_labels = {
-                        "employed": "Currently employed (in a position, looking to change)",
-                        "unemployed": "Currently unemployed (actively job seeking)",
-                        "student": "Currently a student",
-                        "transitioning": "In career transition"
-                    }
-                    user_context += f"\nEmployment Status: {status_labels.get(employment_status, employment_status)}"
-                if education_type:
-                    edu_labels = {
-                        "wms": "WMS (Wirtschaftsmittelschule) student - in practical year (Praktikumsjahr)",
-                        "bms": "BMS (Berufsmaturitätsschule) student",
-                        "university": "University/FH student",
-                        "apprenticeship": "Currently in an apprenticeship (Berufslehre)",
-                        "other": "Other educational background"
-                    }
-                    user_context += f"\nEducation Type: {edu_labels.get(education_type, education_type)}"
-                if additional_context:
-                    user_context += f"\nAdditional Context: {additional_context}"
-
-                job_description += user_context
-
-        # Pre-load document templates from database for all doc_types
-        templates_map = {}
-        db_templates = db.query(DocumentTemplate).filter(
-            DocumentTemplate.doc_type.in_(doc_types),
-            DocumentTemplate.is_active == True
-        ).all()
-        for t in db_templates:
-            templates_map[t.doc_type] = t
-
-        # Default fallback client for documents without templates
-        default_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-        for idx, doc_type in enumerate(doc_types):
-            try:
-                # Check if we have a template configuration in the database
-                template = templates_map.get(doc_type)
-
-                if template:
-                    # Use template configuration from database
-                    prompt = generate_document_prompt_from_template(
-                        template, job_description, cv_doc.content_text, user, application
-                    )
-                    if not prompt:
-                        # Fallback to JSON prompt
-                        prompt = generate_document_prompt(doc_type, job_description, cv_doc.content_text, application)
-
-                    if not prompt:
-                        logging.warning(f"Could not generate prompt for {doc_type}, skipping...")
-                        continue
-
-                    # Get LLM client based on template configuration
-                    llm_client, model = get_llm_client(template.llm_provider, template.llm_model)
-                    content = generate_with_llm(llm_client, model, template.llm_provider, prompt)
-                else:
-                    # Fallback to original behavior with JSON prompts
-                    prompt = generate_document_prompt(doc_type, job_description, cv_doc.content_text, application)
-
-                    if not prompt:
-                        continue  # Skip unsupported types
-
-                    response = default_client.chat.completions.create(
-                        model="gpt-4",
-                        messages=[{"role": "user", "content": prompt}],
-                    )
-                    content = response.choices[0].message.content
-
-                # Persist generated content to disk for traceability/downloads
-                storage_dir = os.path.join("generated", str(user_id))
-                os.makedirs(storage_dir, exist_ok=True)
-                storage_path = os.path.join(storage_dir, f"app_{application_id}_{doc_type}.txt")
-                try:
-                    with open(storage_path, "w", encoding="utf-8") as f:
-                        f.write(content or "")
-                except Exception as e:
-                    # Do not fail the whole generation if filesystem write fails
-                    print(f"Warning: could not write generated doc to {storage_path}: {e}")
-                    storage_path = f"unpersisted:{doc_type}"
-
-                # Save generated document
-                gen_doc = GeneratedDocument(
-                    application_id=application_id,
-                    doc_type=doc_type,
-                    format="TEXT",
-                    storage_path=storage_path,
-                    content=content,
-                )
-                db.add(gen_doc)
-
-                # Update progress
-                task.completed_docs = idx + 1
-                task.progress = int((task.completed_docs / task.total_docs) * 100)
-                db.commit()
-
-            except Exception as e:
-                # Log error but continue with other documents
-                logging.error(f"Error generating {doc_type}: {str(e)}")
-                print(f"Error generating {doc_type}: {str(e)}")
-                task.error_message = f"Partial failure: Error generating {doc_type}: {str(e)}"
-                db.commit()
-
-        # Mark as completed
-        task.status = "completed"
-        task.progress = 100
-        db.commit()
-
-    except Exception as e:
-        # Fatal error
-        logging.error(f"Fatal error in generate_documents_background: {str(e)}")
-        if task:
-            task.status = "failed"
-            task.error_message = str(e)
-            db.commit()
-    finally:
-        db.close()
-
-
 class ApplicationCreate(BaseModel):
     job_title: str = Field(..., description="Role the candidate is targeting")
     company: str = Field(..., description="Company name for the application")
@@ -585,6 +249,13 @@ class ApplicationUpdate(BaseModel):
     applied: Optional[bool] = None
     applied_at: Optional[datetime] = None
     result: Optional[str] = None
+    documentation_language: Optional[str] = None
+    company_profile_language: Optional[str] = None
+
+    @field_validator("documentation_language", "company_profile_language", mode="before")
+    @classmethod
+    def validate_language(cls, value: Optional[str], info):
+        return normalize_language(value, field_name=info.field_name) if value else value
 
 
 class GeneratedDocumentCreate(BaseModel):
@@ -699,7 +370,6 @@ def serialize_application(app: Application, db: Session = None, include_job_desc
 @router.post("/", response_model=ApplicationResponse)
 async def create_application(
     payload: ApplicationCreate,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -785,9 +455,8 @@ async def create_application(
         db.commit()
         db.refresh(matching_task)
 
-        # Queue background job for matching score calculation
-        background_tasks.add_task(
-            calculate_matching_score_background,
+        # Queue Celery task for matching score calculation
+        calculate_matching_score_task.delay(
             matching_task.id,
             application.id,
             current_user.id,
@@ -820,6 +489,10 @@ async def update_application(
         application.applied_at = payload.applied_at
     if payload.result is not None:
         application.result = payload.result
+    if payload.documentation_language is not None:
+        application.documentation_language = payload.documentation_language
+    if payload.company_profile_language is not None:
+        application.company_profile_language = payload.company_profile_language
 
     db.commit()
     db.refresh(application)
@@ -866,6 +539,41 @@ async def attach_generated_documents(
         .get(application.id)
     )
     return serialize_application(reloaded, db)
+
+
+class DeleteDocumentsRequest(BaseModel):
+    document_ids: List[int] = Field(..., description="List of document IDs to delete")
+
+
+@router.delete("/{application_id}/documents")
+async def delete_generated_documents(
+    application_id: int,
+    payload: DeleteDocumentsRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete generated documents from an application using Celery worker."""
+    # Verify application belongs to user
+    application = (
+        db.query(Application)
+        .filter(Application.id == application_id, Application.user_id == current_user.id)
+        .first()
+    )
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    # Queue Celery task for deletion
+    delete_documents_task.delay(
+        application_id,
+        payload.document_ids,
+        current_user.id,
+    )
+
+    return {
+        "message": f"Deletion of {len(payload.document_ids)} document(s) has been queued",
+        "status": "queued",
+        "application_id": application_id
+    }
 
 
 @router.get("/history", response_model=List[ApplicationResponse])
@@ -1015,6 +723,9 @@ async def delete_application(
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
 
+    # Delete associated matching score tasks
+    db.query(MatchingScoreTask).filter(MatchingScoreTask.application_id == application_id).delete()
+
     # Delete associated matching scores
     db.query(MatchingScore).filter(MatchingScore.application_id == application_id).delete()
 
@@ -1081,7 +792,6 @@ async def get_matching_score(
 async def calculate_matching_score(
     application_id: int,
     recalculate: bool = False,
-    background_tasks: BackgroundTasks = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -1130,9 +840,8 @@ async def calculate_matching_score(
     db.commit()
     db.refresh(task)
 
-    # Queue background job
-    background_tasks.add_task(
-        calculate_matching_score_background,
+    # Queue Celery task
+    calculate_matching_score_task.delay(
         task.id,
         application_id,
         current_user.id,
@@ -1206,7 +915,6 @@ async def get_matching_score_status(
 async def generate_documents(
     application_id: int,
     doc_types: List[str],
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -1266,9 +974,8 @@ async def generate_documents(
     db.commit()
     db.refresh(task)
 
-    # Queue background job
-    background_tasks.add_task(
-        generate_documents_background,
+    # Queue Celery task
+    generate_documents_task.delay(
         task.id,
         application_id,
         doc_types,

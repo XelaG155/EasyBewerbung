@@ -24,16 +24,25 @@ export default function SettingsPage() {
 
   const [fullName, setFullName] = useState("");
   const [preferredLanguage, setPreferredLanguage] = useState("");
-  const [motherTongue, setMotherTongue] = useState("");
   const [documentationLanguage, setDocumentationLanguage] = useState("");
   // Extended profile fields
   const [employmentStatus, setEmploymentStatus] = useState("");
   const [educationType, setEducationType] = useState("");
   const [additionalProfileContext, setAdditionalProfileContext] = useState("");
+  // Display preferences
+  const [dateFormat, setDateFormat] = useState("DD/MM/YYYY");
   const [languageOptions, setLanguageOptions] = useState<LanguageOption[]>(FALLBACK_LANGUAGE_OPTIONS);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const DATE_FORMAT_OPTIONS = [
+    { value: "DD/MM/YYYY", label: "DD/MM/YYYY (31/12/2024)" },
+    { value: "MM/DD/YYYY", label: "MM/DD/YYYY (12/31/2024)" },
+    { value: "YYYY-MM-DD", label: "YYYY-MM-DD (2024-12-31)" },
+    { value: "DD.MM.YYYY", label: "DD.MM.YYYY (31.12.2024)" },
+    { value: "DD-MM-YYYY", label: "DD-MM-YYYY (31-12-2024)" },
+  ];
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -45,12 +54,13 @@ export default function SettingsPage() {
     if (user) {
       setFullName(user.full_name || "");
       setPreferredLanguage(user.preferred_language || "en");
-      setMotherTongue(user.mother_tongue || "en");
       setDocumentationLanguage(user.documentation_language || "en");
       // Extended profile fields
       setEmploymentStatus(user.employment_status || "");
       setEducationType(user.education_type || "");
       setAdditionalProfileContext(user.additional_profile_context || "");
+      // Display preferences
+      setDateFormat(user.date_format || "DD/MM/YYYY");
 
       api
         .listLanguages()
@@ -71,11 +81,12 @@ export default function SettingsPage() {
       await api.updateUser(
         fullName,
         preferredLanguage,
-        motherTongue,
+        undefined, // motherTongue - not used anymore
         documentationLanguage,
         employmentStatus || undefined,
         educationType || undefined,
-        additionalProfileContext || undefined
+        additionalProfileContext || undefined,
+        dateFormat
       );
       await refreshUser();
       setSuccess(t("settings.settingsSaved"));
@@ -182,26 +193,6 @@ export default function SettingsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-200 mb-2">
-                    {t("settings.motherTongue")}
-                  </label>
-                  <select
-                    value={motherTongue}
-                    onChange={(e) => setMotherTongue(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    {languageOptions.map((lang) => (
-                      <option key={lang.code} value={lang.code}>
-                        {lang.label}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {t("settings.motherTongueHint")}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-200 mb-2">
                     {t("settings.documentationLanguage")}
                   </label>
                   <select
@@ -285,6 +276,34 @@ export default function SettingsPage() {
                     {t("settings.additionalContextHint") || "Any additional information relevant to your job applications."}
                   </p>
                 </div>
+              </div>
+            </div>
+
+            {/* Display Preferences */}
+            <div className="space-y-4 pt-4 border-t border-slate-700">
+              <h2 className="text-xl font-semibold">{t("settings.displayPreferences") || "Display Preferences"}</h2>
+              <p className="text-sm text-slate-400">
+                {t("settings.displayPreferencesDescription") || "Customize how information is displayed throughout the app."}
+              </p>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-200 mb-2">
+                  {t("settings.dateFormat") || "Date Format"}
+                </label>
+                <select
+                  value={dateFormat}
+                  onChange={(e) => setDateFormat(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {DATE_FORMAT_OPTIONS.map((fmt) => (
+                    <option key={fmt.value} value={fmt.value}>
+                      {fmt.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500 mt-1">
+                  {t("settings.dateFormatHint") || "Choose how dates are displayed throughout the application."}
+                </p>
               </div>
             </div>
 
