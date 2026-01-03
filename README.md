@@ -1,4 +1,4 @@
-# EasyBewerbung
+# EasyBewerbung <3
 
 Job application management platform for multilingual workers. Upload documents, track applications, and generate reports in 33+ languages.
 
