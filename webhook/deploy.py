@@ -238,8 +238,9 @@ def deploy(commit: str, author: str, message: str) -> tuple[bool, str]:
 
     notify_build_result(True, build_duration)
 
-    # Step 4: Restart Docker containers
+    # Step 4: Restart Docker containers (down + up to avoid ContainerConfig bug)
     logger.info("Restarting Docker containers...")
+    run_shell("docker-compose down", cwd=REPO_PATH)
     success, output = run_shell("docker-compose up -d", cwd=REPO_PATH)
     if not success:
         steps.append("docker up: FAILED")
