@@ -11,6 +11,7 @@ import os
 import subprocess
 import sys
 import time
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -292,16 +293,21 @@ def webhook():
     author = head_commit.get("author", {}).get("name", "Unknown")
     message = head_commit.get("message", "No message")
 
-    # Deploy
-    logger.info(f"Deploying commit: {commit[:7]} by {author}")
-    success, output = deploy(commit, author, message)
+    # Deploy in background thread (so GitHub doesn't timeout)
+    logger.info(f"Starting deployment for commit: {commit[:7]} by {author}")
 
-    if success:
-        logger.info("Deployment successful!")
-        return jsonify({"status": "success", "output": output[:1000]}), 200
-    else:
-        logger.error(f"Deployment failed: {output}")
-        return jsonify({"status": "failed", "output": output[:1000]}), 500
+    def run_deploy():
+        success, output = deploy(commit, author, message)
+        if success:
+            logger.info("Deployment successful!")
+        else:
+            logger.error(f"Deployment failed: {output}")
+
+    thread = threading.Thread(target=run_deploy)
+    thread.start()
+
+    # Return immediately so GitHub doesn't timeout
+    return jsonify({"status": "accepted", "commit": commit[:7]}), 202
 
 
 @app.route("/webhook/health", methods=["GET"])
