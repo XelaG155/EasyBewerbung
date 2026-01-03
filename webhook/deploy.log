@@ -1,0 +1,39 @@
+2026-01-03 17:49:07,408 - INFO - Starting webhook server...
+2026-01-03 17:49:07,430 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:9002
+2026-01-03 17:49:07,430 - INFO - [33mPress CTRL+C to quit[0m
+2026-01-03 17:49:16,746 - INFO - Telegram notification sent
+2026-01-03 17:49:16,748 - INFO - 127.0.0.1 - - [03/Jan/2026 17:49:16] "GET /webhook/test HTTP/1.1" 200 -
+2026-01-03 17:49:28,361 - INFO - 127.0.0.1 - - [03/Jan/2026 17:49:28] "GET /webhook/health HTTP/1.1" 200 -
+2026-01-03 17:53:41,161 - INFO - Ignoring event: ping
+2026-01-03 17:53:41,162 - INFO - 127.0.0.1 - - [03/Jan/2026 17:53:41] "POST /webhook HTTP/1.1" 200 -
+2026-01-03 17:54:46,744 - INFO - Deploying commit: 41d22a2 by XelaG155
+2026-01-03 17:54:46,947 - INFO - Telegram notification sent
+2026-01-03 17:54:46,948 - INFO - Pulling latest code...
+2026-01-03 17:54:49,060 - INFO - Telegram notification sent
+2026-01-03 17:54:49,295 - INFO - Telegram notification sent
+2026-01-03 17:54:49,297 - INFO - Stopping PM2 services...
+2026-01-03 17:54:50,655 - INFO - Updating backend dependencies...
+2026-01-03 17:54:50,871 - INFO - Telegram notification sent
+2026-01-03 17:54:51,145 - INFO - Telegram notification sent
+2026-01-03 17:54:51,146 - ERROR - Deployment failed: git pull: OK
+pip install: FAILED
+2026-01-03 17:54:51,147 - INFO - 127.0.0.1 - - [03/Jan/2026 17:54:51] "[35m[1mPOST /webhook HTTP/1.1[0m" 500 -
+2026-01-03 18:00:14,506 - INFO - Starting webhook server...
+2026-01-03 18:00:14,513 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:9002
+2026-01-03 18:00:14,513 - INFO - [33mPress CTRL+C to quit[0m
+2026-01-03 18:02:35,170 - INFO - Deploying commit: 60afb17 by XelaG155
+2026-01-03 18:02:35,384 - INFO - Telegram notification sent
+2026-01-03 18:02:35,385 - INFO - Pulling latest code...
+2026-01-03 18:02:37,336 - INFO - Telegram notification sent
+2026-01-03 18:02:37,545 - INFO - Telegram notification sent
+2026-01-03 18:02:37,547 - INFO - Stopping PM2 services...
+2026-01-03 18:02:38,838 - INFO - Updating backend dependencies...
+2026-01-03 18:02:49,025 - INFO - Running database migrations...
+2026-01-03 18:02:49,770 - INFO - Building frontend...
+2026-01-03 18:03:20,780 - INFO - Telegram notification sent
+2026-01-03 18:03:20,782 - INFO - Restarting PM2 services...
+2026-01-03 18:03:27,651 - INFO - Telegram notification sent
+2026-01-03 18:03:27,652 - INFO - Deployment successful!
+2026-01-03 18:03:27,653 - INFO - 127.0.0.1 - - [03/Jan/2026 18:03:27] "POST /webhook HTTP/1.1" 200 -
