@@ -15,16 +15,20 @@ from datetime import datetime
 from pathlib import Path
 
 import requests
+from dotenv import load_dotenv
 from flask import Flask, request, jsonify
+
+# Load environment variables from .env file
+load_dotenv(Path(__file__).parent / ".env")
 
 # Configuration
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "easybewerbung-webhook-secret-change-me")
 REPO_PATH = Path("/home/alexgiss/EasyBewerbung")
 LOG_FILE = REPO_PATH / "webhook" / "deploy.log"
 
-# Telegram Configuration
-TELEGRAM_BOT_TOKEN = "REDACTED_TOKEN"
-TELEGRAM_CHAT_ID = "673209167"
+# Telegram Configuration (from environment variables)
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 APP_NAME = "EasyBewerbung"
 
 # Setup logging
