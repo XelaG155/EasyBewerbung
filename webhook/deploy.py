@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 GitHub Webhook Receiver for EasyBewerbung automatic deployment with Telegram notifications.
-Listens for push events and triggers git pull + npm build + PM2 restart.
+Listens for push events and triggers git pull + docker compose rebuild.
 """
 
 import hashlib
@@ -98,8 +98,8 @@ def notify_pull_result(success: bool, output: str = ""):
 def notify_build_start():
     """Step 3: Notify that build is starting."""
     text = (
-        f"🔨 <b>{APP_NAME}: Build wird gestartet...</b>\n\n"
-        f"⏳ Backend Dependencies + Frontend Build\n"
+        f"🐳 <b>{APP_NAME}: Docker Build wird gestartet...</b>\n\n"
+        f"⏳ Container werden neu gebaut\n"
         f"🕐 {datetime.now().strftime('%H:%M:%S')}"
     )
     send_telegram(text)
@@ -202,7 +202,7 @@ def run_shell(cmd: str, cwd: Path = REPO_PATH) -> tuple[bool, str]:
 
 
 def deploy(commit: str, author: str, message: str) -> tuple[bool, str]:
-    """Pull latest code and rebuild/restart services with notifications."""
+    """Pull latest code and rebuild/restart Docker containers with notifications."""
     start_time = time.time()
     steps = []
 
@@ -223,79 +223,44 @@ def deploy(commit: str, author: str, message: str) -> tuple[bool, str]:
     notify_build_start()
     build_start = time.time()
 
-    # Step 3a: Stop PM2 services
-    logger.info("Stopping PM2 services...")
-    run_shell("pm2 stop EASYBEWERBUNG_SRV || true")
-    run_shell("pm2 stop easybewerbung-frontend || true")
-
-    # Step 3b: Update backend dependencies
-    logger.info("Updating backend dependencies...")
-    backend_path = REPO_PATH / "backend"
-    success, output = run_shell(
-        "venv/bin/pip install -q -r requirements.txt",
-        cwd=backend_path
-    )
-    if not success:
-        steps.append(f"pip install: FAILED")
-        build_duration = time.time() - build_start
-        notify_build_result(False, build_duration, output[-500:])
-        notify_deployment_complete(False, commit, time.time() - start_time, output[-300:])
-        return False, "\n".join(steps)
-    steps.append("pip install: OK")
-
-    # Step 3c: Run database migrations
-    logger.info("Running database migrations...")
-    success, output = run_shell(
-        "venv/bin/alembic upgrade head",
-        cwd=backend_path
-    )
-    # Migrations might fail if there are none, so we continue
-    steps.append(f"alembic: {'OK' if success else 'SKIPPED'}")
-
-    # Step 3d: Build frontend
-    logger.info("Building frontend...")
-    frontend_path = REPO_PATH / "frontend"
-    success, output = run_shell("npm install --silent && npm run build", cwd=frontend_path)
+    # Step 3a: Build Docker containers
+    logger.info("Building Docker containers...")
+    success, output = run_shell("docker compose build --no-cache", cwd=REPO_PATH)
     build_duration = time.time() - build_start
 
     if not success:
-        steps.append(f"npm build: FAILED")
+        steps.append("docker build: FAILED")
         notify_build_result(False, build_duration, output[-500:])
         notify_deployment_complete(False, commit, time.time() - start_time, output[-300:])
         return False, "\n".join(steps)
-    steps.append("npm build: OK")
+    steps.append("docker build: OK")
 
     notify_build_result(True, build_duration)
 
-    # Step 4: Restart PM2 services
-    logger.info("Restarting PM2 services...")
-    success, output = run_shell("pm2 restart EASYBEWERBUNG_SRV")
+    # Step 4: Restart Docker containers
+    logger.info("Restarting Docker containers...")
+    success, output = run_shell("docker compose up -d", cwd=REPO_PATH)
     if not success:
-        steps.append("pm2 backend: FAILED")
+        steps.append("docker up: FAILED")
         notify_deployment_complete(False, commit, time.time() - start_time, output)
         return False, "\n".join(steps)
-    steps.append("pm2 backend: OK")
-
-    success, output = run_shell("pm2 restart easybewerbung-frontend")
-    if not success:
-        steps.append("pm2 frontend: FAILED")
-        notify_deployment_complete(False, commit, time.time() - start_time, output)
-        return False, "\n".join(steps)
-    steps.append("pm2 frontend: OK")
-
-    # Save PM2 config
-    run_shell("pm2 save")
+    steps.append("docker up: OK")
 
     # Wait for services to start
-    time.sleep(5)
+    time.sleep(10)
 
-    # Health check - check if PM2 processes are online
-    success, output = run_shell("pm2 jlist")
-    if success and "online" in output.lower():
+    # Health check - check if containers are running
+    success, output = run_shell("docker compose ps --format json", cwd=REPO_PATH)
+    if success and "running" in output.lower():
         notify_deployment_complete(True, commit, time.time() - start_time)
         return True, "\n".join(steps)
     else:
-        notify_deployment_complete(False, commit, time.time() - start_time, "PM2 services not online")
+        # Fallback check
+        success, output = run_shell("docker ps | grep easybewerbung", cwd=REPO_PATH)
+        if success and "Up" in output:
+            notify_deployment_complete(True, commit, time.time() - start_time)
+            return True, "\n".join(steps)
+        notify_deployment_complete(False, commit, time.time() - start_time, "Docker containers not running")
         return False, "\n".join(steps)
 
 

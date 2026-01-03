@@ -44,15 +44,24 @@ EasyBewerbung is a job application platform with AI-powered features for resume 
 - Alembic for migrations: `alembic upgrade head`
 - Connection via environment variables
 
-## PM2 Services
-- `EASYBEWERBUNG_SRV` - Backend FastAPI
-- `easybewerbung-frontend` - Next.js frontend
+## Docker Services
+EasyBewerbung runs as a Docker Compose stack:
+- `easybewerbung-backend` - FastAPI backend (port 8002)
+- `easybewerbung-frontend` - Next.js frontend (port 3001)
+- `easybewerbung_worker` - Celery workers (5 replicas)
+- `easybewerbung-db` - PostgreSQL database (port 5433)
+- `easybewerbung-redis` - Redis message broker (port 6380)
+
+Commands:
+- Start: `docker compose up -d`
+- Stop: `docker compose down`
+- Rebuild: `docker compose build --no-cache`
+- Logs: `docker compose logs -f [service]`
 
 ## Deployment
 - Pushes to `main` trigger automatic deployment via GitHub webhook
-- Backend: pip install + alembic migrations
-- Frontend: npm install + npm run build
-- PM2 restarts both services
+- Webhook pulls code and runs `docker compose build --no-cache`
+- Then runs `docker compose up -d` to restart containers
 - Telegram notifications for deployment status
 
 ## Security
