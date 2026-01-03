@@ -7,7 +7,7 @@ EasyBewerbung is a job application platform with AI-powered features for resume 
 - **Frontend**: Next.js (React) on port 3001
 - **Backend**: FastAPI (Python) on port 8002
 - **Database**: PostgreSQL with Alembic migrations
-- **Process Manager**: PM2
+- **Containerization**: Docker Compose
 - **Domain**: https://app.easybewerbung.ch
 
 ## Code Style

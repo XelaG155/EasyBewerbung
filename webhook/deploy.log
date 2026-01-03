@@ -1154,3 +1154,5 @@ docker up: FAILED
 2026-01-03 21:41:34,100 - INFO - [33mPress CTRL+C to quit[0m
 2026-01-03 21:41:34,564 - INFO - Starting webhook server...
 2026-01-03 21:41:36,439 - INFO - 127.0.0.1 - - [03/Jan/2026 21:41:36] "GET /webhook/health HTTP/1.1" 200 -
+2026-01-03 21:42:00,187 - WARNING - Invalid webhook signature
+2026-01-03 21:42:00,188 - INFO - 127.0.0.1 - - [03/Jan/2026 21:42:00] "[31m[1mPOST /webhook HTTP/1.1[0m" 401 -

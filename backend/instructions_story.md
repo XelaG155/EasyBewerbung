@@ -532,7 +532,7 @@ backend/app/document_prompts.json
 
 **Änderungen vornehmen:**
 1. JSON-Datei editieren
-2. Backend neu starten (PM2 restart)
+2. Backend Container neu starten (`docker-compose restart backend`)
 3. Änderungen sind sofort aktiv
 
 **Neue Dokumenttypen hinzufügen:**
