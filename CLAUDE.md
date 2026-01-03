@@ -53,15 +53,15 @@ EasyBewerbung runs as a Docker Compose stack:
 - `easybewerbung-redis` - Redis message broker (port 6380)
 
 Commands:
-- Start: `docker compose up -d`
-- Stop: `docker compose down`
-- Rebuild: `docker compose build --no-cache`
-- Logs: `docker compose logs -f [service]`
+- Start: `docker-compose up -d`
+- Stop: `docker-compose down`
+- Rebuild: `docker-compose build --no-cache`
+- Logs: `docker-compose logs -f [service]`
 
 ## Deployment
 - Pushes to `main` trigger automatic deployment via GitHub webhook
-- Webhook pulls code and runs `docker compose build --no-cache`
-- Then runs `docker compose up -d` to restart containers
+- Webhook pulls code and runs `docker-compose build --no-cache`
+- Then runs `docker-compose up -d` to restart containers
 - Telegram notifications for deployment status
 
 ## Security

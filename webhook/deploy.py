@@ -225,7 +225,7 @@ def deploy(commit: str, author: str, message: str) -> tuple[bool, str]:
 
     # Step 3a: Build Docker containers
     logger.info("Building Docker containers...")
-    success, output = run_shell("docker compose build --no-cache", cwd=REPO_PATH)
+    success, output = run_shell("docker-compose build --no-cache", cwd=REPO_PATH)
     build_duration = time.time() - build_start
 
     if not success:
@@ -239,7 +239,7 @@ def deploy(commit: str, author: str, message: str) -> tuple[bool, str]:
 
     # Step 4: Restart Docker containers
     logger.info("Restarting Docker containers...")
-    success, output = run_shell("docker compose up -d", cwd=REPO_PATH)
+    success, output = run_shell("docker-compose up -d", cwd=REPO_PATH)
     if not success:
         steps.append("docker up: FAILED")
         notify_deployment_complete(False, commit, time.time() - start_time, output)
@@ -250,7 +250,7 @@ def deploy(commit: str, author: str, message: str) -> tuple[bool, str]:
     time.sleep(10)
 
     # Health check - check if containers are running
-    success, output = run_shell("docker compose ps --format json", cwd=REPO_PATH)
+    success, output = run_shell("docker-compose ps", cwd=REPO_PATH)
     if success and "running" in output.lower():
         notify_deployment_complete(True, commit, time.time() - start_time)
         return True, "\n".join(steps)
