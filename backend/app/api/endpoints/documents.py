@@ -4,6 +4,8 @@ from typing import List, Optional
 from datetime import timezone
 import shutil
 import os
+import re
+import uuid
 from pathlib import Path
 from pypdf import PdfReader
 import magic
@@ -23,10 +25,45 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # File validation constants
 ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx", ".txt"}
-ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx", ".txt"}
 MAX_FILE_SIZE_MB = 25
 MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024
 CHUNK_SIZE = 8192
+
+
+def sanitize_filename(filename: str) -> str:
+    """
+    Sanitize a filename to prevent path traversal and other security issues.
+    Removes path separators, null bytes, and restricts to safe characters.
+    """
+    if not filename:
+        return "unnamed_file"
+
+    # Get just the filename without any path components
+    filename = os.path.basename(filename)
+
+    # Remove null bytes and other dangerous characters
+    filename = filename.replace('\x00', '')
+
+    # Remove path traversal patterns
+    filename = filename.replace('..', '')
+    filename = filename.replace('/', '')
+    filename = filename.replace('\\', '')
+
+    # Only allow safe characters: alphanumeric, underscore, hyphen, period
+    # Preserve the file extension
+    name, ext = os.path.splitext(filename)
+    name = re.sub(r'[^\w\-]', '_', name)
+    ext = re.sub(r'[^\w.]', '', ext)
+
+    # Ensure filename is not empty after sanitization
+    if not name:
+        name = "unnamed_file"
+
+    # Limit filename length to prevent issues
+    if len(name) > 100:
+        name = name[:100]
+
+    return f"{name}{ext}"
 
 
 def extract_text_from_pdf(file_path: str) -> str:
@@ -79,9 +116,9 @@ async def upload_document(
     user_dir = os.path.join(UPLOAD_DIR, str(current_user.id))
     os.makedirs(user_dir, exist_ok=True)
 
-    # Generate unique filename
-    import uuid
-    unique_filename = f"{uuid.uuid4()}_{file.filename}"
+    # Generate unique filename with sanitization
+    safe_filename = sanitize_filename(file.filename)
+    unique_filename = f"{uuid.uuid4()}_{safe_filename}"
     file_location = os.path.join(user_dir, unique_filename)
 
     # Save file and check size

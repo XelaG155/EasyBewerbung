@@ -51,3 +51,12 @@ backend/test_token.py
 
 # Logs
 logs/
+*.log
+
+# Webhook deployment files (contain sensitive data)
+webhook/
+!webhook/.env.example
+
+# OS and editor files
+.DS_Store
+.vscode/
