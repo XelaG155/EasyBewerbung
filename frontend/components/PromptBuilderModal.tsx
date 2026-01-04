@@ -77,27 +77,33 @@ export default function PromptBuilderModal({
       return;
     }
 
-    // Sample data for preview
-    const sampleData = {
-      role: "professional career consultant and CV/resume expert",
-      task: "Help this candidate create compelling, honest, and effective job application documents",
-      job_description: "Senior Software Engineer at TechCorp\n\nWe are looking for an experienced software engineer with 5+ years of experience in Python and web development. The ideal candidate should have strong problem-solving skills and experience with modern frameworks.",
-      cv_text: "John Doe\nSoftware Engineer\n\nExperience:\n- 6 years of Python development\n- Expert in Django and FastAPI\n- Led team of 4 developers\n\nEducation:\n- M.Sc. Computer Science, ETH Zurich\n\nSkills: Python, JavaScript, React, PostgreSQL, Docker",
-      cv_summary: "John Doe - Software Engineer with 6 years of Python development experience, expert in Django and FastAPI, led team of 4 developers...",
-      language: "German - Write all content in German language",
-      documentation_language: "German - Write all content in German language",
-      company_profile_language: "German - Write all content in German language",
-      instructions: "1. Focus on relevant experience\n2. Use professional tone\n3. Keep it concise\n4. Highlight key achievements\n5. Tailor to job requirements",
-      reference_letters: "--- Reference Letter 1 ---\nJohn was an exceptional employee who consistently delivered high-quality work...\n\n--- Reference Letter 2 ---\nI highly recommend John for any senior engineering position..."
-    };
+    try {
+      // Sample data for preview
+      const sampleData: Record<string, string> = {
+        role: "professional career consultant and CV/resume expert",
+        task: "Help this candidate create compelling, honest, and effective job application documents",
+        job_description: "Senior Software Engineer at TechCorp\n\nWe are looking for an experienced software engineer with 5+ years of experience in Python and web development. The ideal candidate should have strong problem-solving skills and experience with modern frameworks.",
+        cv_text: "John Doe\nSoftware Engineer\n\nExperience:\n- 6 years of Python development\n- Expert in Django and FastAPI\n- Led team of 4 developers\n\nEducation:\n- M.Sc. Computer Science, ETH Zurich\n\nSkills: Python, JavaScript, React, PostgreSQL, Docker",
+        cv_summary: "John Doe - Software Engineer with 6 years of Python development experience, expert in Django and FastAPI, led team of 4 developers...",
+        language: "German - Write all content in German language",
+        documentation_language: "German - Write all content in German language",
+        company_profile_language: "German - Write all content in German language",
+        instructions: "1. Focus on relevant experience\n2. Use professional tone\n3. Keep it concise\n4. Highlight key achievements\n5. Tailor to job requirements",
+        reference_letters: "--- Reference Letter 1 ---\nJohn was an exceptional employee who consistently delivered high-quality work...\n\n--- Reference Letter 2 ---\nI highly recommend John for any senior engineering position..."
+      };
 
-    let preview = generatedPrompt;
-    Object.entries(sampleData).forEach(([key, value]) => {
-      preview = preview.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
-    });
+      let preview = generatedPrompt;
+      Object.entries(sampleData).forEach(([key, value]) => {
+        preview = preview.replaceAll(`{${key}}`, value);
+      });
 
-    setPreviewPrompt(preview);
-    setShowPreview(true);
+      setPreviewPrompt(preview);
+      setShowPreview(true);
+      setError(null);
+    } catch (err) {
+      setError("Fehler beim Erstellen der Vorschau.");
+      console.error("Preview error:", err);
+    }
   };
 
   const handleProviderChange = (provider: string) => {
