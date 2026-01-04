@@ -328,7 +328,7 @@ async def login(request: Request, user_data: UserLogin, db: Session = Depends(ge
             detail="Incorrect email or password",
         )
 
-    # Check if account is locked (don't reset here - only check)
+    # Check if account is locked
     if getattr(user, "account_locked_until", None):
         # Convert to timezone-aware datetime for comparison
         now_utc = datetime.now(timezone.utc)
@@ -345,6 +345,12 @@ async def login(request: Request, user_data: UserLogin, db: Session = Depends(ge
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Account is temporarily locked due to too many failed login attempts. Try again in {lock_minutes} minutes.",
             )
+        else:
+            # Lockout has expired - reset the fields to clean up database
+            user.account_locked_until = None
+            user.failed_login_attempts = 0
+            db.commit()
+            db.refresh(user)
 
     # Check if user registered with OAuth (no password)
     if user.oauth_provider == "google" and not user.hashed_password:
@@ -363,12 +369,24 @@ async def login(request: Request, user_data: UserLogin, db: Session = Depends(ge
         db.refresh(user)
 
         # Lock account after 5 failed attempts for 15 minutes
+        # Use atomic UPDATE to prevent race condition where multiple concurrent requests
+        # could each set the lockout timestamp
         if user.failed_login_attempts >= 5:
-            user.account_locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
+            lockout_time = datetime.now(timezone.utc) + timedelta(minutes=15)
+            # Only set lockout if not already locked (WHERE clause prevents race condition)
+            rows_updated = db.query(User).filter(
+                User.id == user.id,
+                User.account_locked_until.is_(None)
+            ).update({
+                "account_locked_until": lockout_time
+            })
             db.commit()
-            logger.warning(
-                f"Account locked for user {user.email} after {user.failed_login_attempts} failed attempts"
-            )
+
+            if rows_updated > 0:
+                logger.warning(
+                    f"Account locked for user {user.email} after {user.failed_login_attempts} failed attempts"
+                )
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Account locked due to too many failed login attempts. Please try again in 15 minutes.",
