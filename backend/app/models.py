@@ -22,6 +22,10 @@ class User(Base):
     password_changed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     privacy_policy_accepted_at = Column(DateTime, nullable=True)
 
+    # Account security fields
+    failed_login_attempts = Column(Integer, default=0)
+    account_locked_until = Column(DateTime, nullable=True)
+
     # OAuth fields
     oauth_provider = Column(String, nullable=True)  # "google", "email", etc.
     google_id = Column(String, unique=True, nullable=True, index=True)  # Google user ID

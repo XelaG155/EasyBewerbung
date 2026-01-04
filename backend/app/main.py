@@ -4,6 +4,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.limiter import limiter
+# from app.csrf import CSRFMiddleware  # Uncomment to enable CSRF protection
 
 from app.api.endpoints import documents, jobs, applications, users, admin, document_templates
 from app.database import init_db
@@ -17,6 +18,9 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+
+# CSRF Protection - Uncomment to enable (requires frontend to send X-CSRF-Token header)
+# app.add_middleware(CSRFMiddleware)
 
 
 # Configure CORS

@@ -8,7 +8,7 @@ import traceback
 from io import BytesIO
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session, joinedload
@@ -25,6 +25,7 @@ from app.models import Application, GeneratedDocument, User, Document, JobOffer,
 from app.auth import get_current_user
 from app.language_catalog import DEFAULT_LANGUAGE, normalize_language
 from app.tasks import calculate_matching_score_task, generate_documents_task, delete_documents_task
+from app.limiter import limiter
 
 router = APIRouter()
 
@@ -368,7 +369,9 @@ def serialize_application(app: Application, db: Session = None, include_job_desc
 
 
 @router.post("/", response_model=ApplicationResponse)
+@limiter.limit("20/minute")
 async def create_application(
+    request: Request,
     payload: ApplicationCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -912,7 +915,9 @@ async def get_matching_score_status(
 
 
 @router.post("/{application_id}/generate")
+@limiter.limit("10/minute")
 async def generate_documents(
+    request: Request,
     application_id: int,
     doc_types: List[str],
     current_user: User = Depends(get_current_user),

@@ -131,3 +131,15 @@ def get_current_user_optional(
         return get_current_user(credentials, db)
     except HTTPException:
         return None
+
+
+def get_current_admin_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Get the current user and verify they have admin privileges."""
+    if not getattr(current_user, "is_admin", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required",
+        )
+    return current_user
