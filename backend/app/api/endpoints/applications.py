@@ -24,7 +24,7 @@ from app.document_catalog import ALLOWED_GENERATED_DOC_TYPES
 from app.models import Application, GeneratedDocument, User, Document, JobOffer, MatchingScore, GenerationTask, DocumentTemplate, MatchingScoreTask
 from app.auth import get_current_user
 from app.language_catalog import DEFAULT_LANGUAGE, normalize_language
-from app.tasks import calculate_matching_score_task, generate_documents_task, delete_documents_task
+from app.tasks import calculate_matching_score_task, generate_documents_task, delete_documents_task, get_doc_type_display
 from app.limiter import limiter
 
 router = APIRouter()
@@ -128,8 +128,9 @@ def generate_document_prompt(doc_type: str, job_description: str, cv_text: str, 
     else:
         language_to_use = lang_instruction
 
-    # Get display name from prompt config
-    doc_type_display = prompt_config.get("document_type", doc_type).replace("_", " ").title()
+    # Get localized display name for the document type
+    fallback_display = prompt_config.get("document_type", doc_type).replace("_", " ").title()
+    doc_type_display = get_doc_type_display(doc_type.upper(), lang, fallback_display)
 
     # Prepare input variables
     inputs = {
@@ -193,7 +194,7 @@ def generate_document_prompt_from_template(
         "task": prompt_config.get("task", ""),
         "reference_letters": cv_text,  # For reference_summary document type
         "doc_type": template.doc_type,
-        "doc_type_display": template.display_name or template.doc_type.replace("_", " ").title(),
+        "doc_type_display": get_doc_type_display(template.doc_type, lang, template.display_name),
     }
 
     # Format instructions from JSON config

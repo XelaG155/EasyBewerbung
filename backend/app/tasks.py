@@ -63,6 +63,103 @@ def get_language_instruction(lang_code: str) -> str:
     return language_instructions.get(lang_code, lang_code)
 
 
+# Document type translations for multi-language support
+DOC_TYPE_TRANSLATIONS = {
+    "COVER_LETTER": {
+        "en": "Cover Letter",
+        "de": "Bewerbungsschreiben",
+        "de-CH": "Bewerbungsschreiben",
+        "de-DE": "Bewerbungsschreiben",
+        "fr": "Lettre de motivation",
+        "it": "Lettera di presentazione",
+        "es": "Carta de presentación",
+        "pt": "Carta de apresentação",
+    },
+    "CV": {
+        "en": "CV / Resume",
+        "de": "Lebenslauf",
+        "de-CH": "Lebenslauf",
+        "de-DE": "Lebenslauf",
+        "fr": "CV",
+        "it": "Curriculum Vitae",
+        "es": "Currículum Vitae",
+        "pt": "Currículo",
+    },
+    "MOTIVATION_LETTER": {
+        "en": "Motivation Letter",
+        "de": "Motivationsschreiben",
+        "de-CH": "Motivationsschreiben",
+        "de-DE": "Motivationsschreiben",
+        "fr": "Lettre de motivation",
+        "it": "Lettera motivazionale",
+        "es": "Carta de motivación",
+        "pt": "Carta de motivação",
+    },
+    "FOLLOW_UP": {
+        "en": "Follow-up Email",
+        "de": "Nachfass-E-Mail",
+        "de-CH": "Nachfass-E-Mail",
+        "de-DE": "Nachfass-E-Mail",
+        "fr": "E-mail de relance",
+        "it": "Email di follow-up",
+        "es": "Correo de seguimiento",
+        "pt": "Email de acompanhamento",
+    },
+    "THANK_YOU": {
+        "en": "Thank You Letter",
+        "de": "Dankschreiben",
+        "de-CH": "Dankschreiben",
+        "de-DE": "Dankschreiben",
+        "fr": "Lettre de remerciement",
+        "it": "Lettera di ringraziamento",
+        "es": "Carta de agradecimiento",
+        "pt": "Carta de agradecimento",
+    },
+    "REFERENCE_REQUEST": {
+        "en": "Reference Request",
+        "de": "Referenzanfrage",
+        "de-CH": "Referenzanfrage",
+        "de-DE": "Referenzanfrage",
+        "fr": "Demande de référence",
+        "it": "Richiesta di referenze",
+        "es": "Solicitud de referencia",
+        "pt": "Pedido de referência",
+    },
+}
+
+
+def get_doc_type_display(doc_type: str, lang_code: str, fallback_display_name: str = None) -> str:
+    """Get localized display name for a document type.
+
+    Args:
+        doc_type: The document type key (e.g., 'COVER_LETTER')
+        lang_code: The language code (e.g., 'de', 'de-CH', 'en')
+        fallback_display_name: Optional fallback from template.display_name
+
+    Returns:
+        Localized display name for the document type
+    """
+    # Normalize language code (e.g., 'de-CH' -> check 'de-CH' first, then 'de')
+    base_lang = lang_code.split("-")[0] if "-" in lang_code else lang_code
+
+    if doc_type in DOC_TYPE_TRANSLATIONS:
+        translations = DOC_TYPE_TRANSLATIONS[doc_type]
+        # Try exact match first (e.g., 'de-CH')
+        if lang_code in translations:
+            return translations[lang_code]
+        # Try base language (e.g., 'de')
+        if base_lang in translations:
+            return translations[base_lang]
+        # Fall back to English
+        if "en" in translations:
+            return translations["en"]
+
+    # If no translation found, use fallback or format doc_type
+    if fallback_display_name:
+        return fallback_display_name
+    return doc_type.replace("_", " ").title()
+
+
 def generate_document_prompt_from_template(
     template, job_description: str, cv_text: str, user, application, db=None
 ) -> str:
@@ -105,9 +202,10 @@ def generate_document_prompt_from_template(
         # CV summary is the first ~2000 chars of CV (for templates that need a brief version)
         cv_summary = cv_text[:2000] + "..." if len(cv_text) > 2000 else cv_text
 
-        # Get document type info
+        # Get document type info with localized display name
         doc_type = getattr(template, "doc_type", "document")
-        doc_type_display = getattr(template, "display_name", doc_type.replace("_", " ").title())
+        fallback_display = getattr(template, "display_name", None)
+        doc_type_display = get_doc_type_display(doc_type, doc_lang, fallback_display)
 
         # Replace all placeholders (single braces - matching template format)
         prompt = prompt.replace("{job_description}", job_description)

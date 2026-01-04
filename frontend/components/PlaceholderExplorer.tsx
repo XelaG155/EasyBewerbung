@@ -110,18 +110,26 @@ linkedin_message`,
   },
   {
     name: "{doc_type_display}",
-    description: "Benutzerfreundlicher Anzeigename des Dokuments",
-    source: "template_admin",
-    sourceDescription: "Aus DocumentTemplate.display_name in der Datenbank",
-    editable: "admin_ui",
-    editLocation: "Admin UI → Documents → Template bearbeiten → Display Name",
-    example: `Anschreiben / Cover Letter
-Tailored CV (PDF)
-Motivationsschreiben
-Company Intelligence Briefing
-Interview-Vorbereitung
-LinkedIn Nachricht`,
-    color: "red"
+    description: "Benutzerfreundlicher Anzeigename des Dokuments (MEHRSPRACHIG!)",
+    source: "system",
+    sourceDescription: "Automatisch lokalisiert basierend auf Dokumentsprache (documentation_language)",
+    editable: "no",
+    editLocation: "backend/app/tasks.py → DOC_TYPE_TRANSLATIONS (bei neuen Dokumenttypen)",
+    example: `Wird automatisch in der Zielsprache ausgegeben:
+
+Deutsch (de/de-CH): "Bewerbungsschreiben", "Lebenslauf", "Motivationsschreiben"
+Englisch (en): "Cover Letter", "CV / Resume", "Motivation Letter"
+Französisch (fr): "Lettre de motivation", "CV", "Lettre de motivation"
+Italienisch (it): "Lettera di presentazione", "Curriculum Vitae"
+Spanisch (es): "Carta de presentación", "Currículum Vitae"
+Portugiesisch (pt): "Carta de apresentação", "Currículo"
+
+Unterstützte Dokumenttypen:
+- COVER_LETTER, CV, MOTIVATION_LETTER
+- FOLLOW_UP, THANK_YOU, REFERENCE_REQUEST
+
+Falls der Dokumenttyp keine Übersetzung hat, wird template.display_name verwendet.`,
+    color: "gray"
   },
 
   // === USER DATA (from user profile) ===
@@ -479,7 +487,8 @@ export default function PlaceholderExplorer() {
           </p>
           <p>
             <strong>Für {"{doc_type_display}"}:</strong><br/>
-            Admin UI → Documents → Template bearbeiten → &quot;Display Name&quot; Feld
+            Automatisch mehrsprachig! Wird basierend auf <code>documentation_language</code> des Benutzers/Bewerbung übersetzt.
+            Neue Dokumenttypen können in <code>backend/app/tasks.py → DOC_TYPE_TRANSLATIONS</code> hinzugefügt werden.
           </p>
         </div>
       </div>
