@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import api, { DocumentTemplate, DocumentTemplateUpdate } from "@/lib/api";
 import PromptBuilderModal from "@/components/PromptBuilderModal";
+import PlaceholderExplorer from "@/components/PlaceholderExplorer";
 
 export default function AdminDocumentsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -414,118 +415,8 @@ export default function AdminDocumentsPage() {
         </div>
       </section>
 
-      {/* Placeholder Reference Section */}
-      <section className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-800">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Verfügbare Platzhalter für Prompt Templates</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Diese Platzhalter werden bei der Dokumentgenerierung automatisch mit den echten Daten ersetzt:
-        </p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left p-2 font-semibold text-gray-900 dark:text-gray-100">Platzhalter</th>
-                <th className="text-left p-2 font-semibold text-gray-900 dark:text-gray-100">Beschreibung</th>
-                <th className="text-left p-2 font-semibold text-gray-900 dark:text-gray-100">Beispiel</th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-600 dark:text-gray-400">
-              <tr className="border-b border-gray-100 dark:border-gray-800">
-                <td className="p-2"><code className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1 rounded">{"{role}"}</code></td>
-                <td className="p-2">KI-Rolle/Persona</td>
-                <td className="p-2 text-xs">&quot;experienced career coach&quot;</td>
-              </tr>
-              <tr className="border-b border-gray-100 dark:border-gray-800">
-                <td className="p-2"><code className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1 rounded">{"{task}"}</code></td>
-                <td className="p-2">Hauptaufgabe</td>
-                <td className="p-2 text-xs">&quot;Write a professional cover letter&quot;</td>
-              </tr>
-              <tr className="border-b border-gray-100 dark:border-gray-800">
-                <td className="p-2"><code className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1 rounded">{"{job_description}"}</code></td>
-                <td className="p-2">Stellenbeschreibung + Kontext</td>
-                <td className="p-2 text-xs">Jobanforderungen, Firma, Bewerbungstyp</td>
-              </tr>
-              <tr className="border-b border-gray-100 dark:border-gray-800">
-                <td className="p-2"><code className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1 rounded">{"{cv_text}"}</code></td>
-                <td className="p-2">Vollständiger CV-Text</td>
-                <td className="p-2 text-xs">Gesamter Inhalt des hochgeladenen CVs</td>
-              </tr>
-              <tr className="border-b border-gray-100 dark:border-gray-800">
-                <td className="p-2"><code className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1 rounded">{"{cv_summary}"}</code></td>
-                <td className="p-2">CV-Kurzfassung (2000 Zeichen)</td>
-                <td className="p-2 text-xs">Kurzübersicht der Qualifikationen</td>
-              </tr>
-              <tr className="border-b border-gray-100 dark:border-gray-800">
-                <td className="p-2"><code className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-1 rounded">{"{language}"}</code></td>
-                <td className="p-2">Zielsprache für Dokument</td>
-                <td className="p-2 text-xs">&quot;German&quot;, &quot;English&quot;, &quot;French&quot;</td>
-              </tr>
-              <tr className="border-b border-gray-100 dark:border-gray-800">
-                <td className="p-2"><code className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-1 rounded">{"{documentation_language}"}</code></td>
-                <td className="p-2">Dokumentationssprache des Users</td>
-                <td className="p-2 text-xs">Wie {"{language}"}</td>
-              </tr>
-              <tr className="border-b border-gray-100 dark:border-gray-800">
-                <td className="p-2"><code className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-1 rounded">{"{company_profile_language}"}</code></td>
-                <td className="p-2">Sprache für Firmenprofil</td>
-                <td className="p-2 text-xs">Für Company Intelligence Dokumente</td>
-              </tr>
-              <tr className="border-b border-gray-100 dark:border-gray-800">
-                <td className="p-2"><code className="bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-1 rounded">{"{instructions}"}</code></td>
-                <td className="p-2">Formatierte Anweisungsliste</td>
-                <td className="p-2 text-xs">Nummerierte Liste aller Regeln</td>
-              </tr>
-              <tr className="border-b border-gray-100 dark:border-gray-800">
-                <td className="p-2"><code className="bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-1 rounded">{"{reference_letters}"}</code></td>
-                <td className="p-2">Referenzschreiben-Inhalt</td>
-                <td className="p-2 text-xs">Text der hochgeladenen Referenzen</td>
-              </tr>
-              <tr className="border-b border-gray-100 dark:border-gray-800">
-                <td className="p-2"><code className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-1 rounded">{"{doc_type}"}</code></td>
-                <td className="p-2">Technischer Dokumenttyp</td>
-                <td className="p-2 text-xs">&quot;cover_letter&quot;, &quot;tailored_cv_pdf&quot;, &quot;motivation_letter&quot;</td>
-              </tr>
-              <tr className="border-b border-gray-100 dark:border-gray-800">
-                <td className="p-2"><code className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-1 rounded">{"{doc_type_display}"}</code></td>
-                <td className="p-2">Anzeigename des Dokuments</td>
-                <td className="p-2 text-xs">&quot;Anschreiben&quot;, &quot;Tailored CV PDF&quot;, &quot;Motivationsschreiben&quot;</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-            <strong className="text-gray-900 dark:text-gray-100">Automatisch hinzugefügt (keine Platzhalter nötig):</strong>
-          </p>
-          <ul className="text-xs text-gray-600 dark:text-gray-400 list-disc ml-4 space-y-1">
-            <li>Bewerbungstyp (Vollzeit / Praktikum / Lehrstelle)</li>
-            <li>Beschäftigungsstatus des Users</li>
-            <li>Ausbildungstyp des Users</li>
-            <li>Zusätzlicher Profilkontext</li>
-          </ul>
-        </div>
-        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-          <p className="text-xs text-gray-700 dark:text-gray-300">
-            <strong>Beispiel-Prompt:</strong>
-          </p>
-          <pre className="mt-2 text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap font-mono">
-{`You are a {role}. {task}.
-
-Job Details:
-{job_description}
-
-Candidate CV:
-{cv_text}
-
-Language: {language}
-
-IMPORTANT INSTRUCTIONS:
-{instructions}
-
-Begin the cover letter now:`}
-          </pre>
-        </div>
-      </section>
+      {/* Placeholder Explorer Section */}
+      <PlaceholderExplorer />
 
       {/* Prompt Builder Modal */}
       <PromptBuilderModal
