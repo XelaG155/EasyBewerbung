@@ -33,16 +33,17 @@ Job application management platform for multilingual workers. Upload documents, 
 - Web scraping for job analysis
 
 **Frontend:**
-- Next.js 16 (React 19) on port 3001
-- TypeScript
+- Next.js 16.1.1 (React 19.2.3) on port 3001
+- TypeScript 5
 - Tailwind CSS 4
 - Client-side auth management
+- Playwright E2E testing framework
 
 **Infrastructure:**
 - Docker & Docker Compose
-- PostgreSQL database (port 5433)
-- Redis (port 6380)
-- Celery workers (5 replicas)
+- PostgreSQL 16 (Alpine) - port 5433
+- Redis 7 (Alpine) - port 6380
+- Celery workers (5 replicas, 4 concurrent tasks each)
 
 ## Setup Instructions
 
@@ -64,9 +65,10 @@ cp .env.docker.example .env
 Edit `.env` and set your actual values (never commit this file!):
 - `SECRET_KEY` - Generate with `openssl rand -hex 32`
 - `POSTGRES_PASSWORD` - Set a strong database password
-- `OPENAI_API_KEY` - Your OpenAI API key (if using AI features)
-- `ANTHROPIC_API_KEY` - Your Anthropic API key (if using Claude)
-- `GOOGLE_API_KEY` - Your Google API key (if using Gemini)
+- `OPENAI_API_KEY` - Your OpenAI API key for document generation
+- `ANTHROPIC_API_KEY` - Your Anthropic API key for Claude-based generation (optional)
+- `GOOGLE_API_KEY` - Your Google API key for Gemini-based generation (optional)
+- `GOOGLE_CLIENT_ID` - Google OAuth client ID (optional, for Google Sign-In)
 
 3. Start all services:
 ```bash
@@ -159,6 +161,52 @@ npm run dev
 ```
 
 The app will be available at `http://localhost:3000`
+
+## Testing
+
+### Backend Tests (pytest)
+
+The backend includes pytest-based test suite for API endpoints and core functionality:
+
+```bash
+cd backend
+pytest
+```
+
+Test coverage includes:
+- Authentication and login lockout
+- Language catalog functionality
+- Job analysis endpoints
+- Application management
+
+### Frontend Tests (Playwright)
+
+End-to-end testing with Playwright for UI workflows:
+
+```bash
+cd frontend
+
+# Run E2E tests (Chromium only)
+npm run test:e2e
+
+# Run all browsers
+npm run test:e2e:all
+
+# Run with UI mode
+npm run test:e2e:ui
+
+# Debug mode
+npm run test:e2e:debug
+
+# Visual regression tests
+npm run test:visual
+
+# Mobile testing
+npm run test:mobile
+
+# View test report
+npm run test:report
+```
 
 ## Google OAuth Setup (Optional)
 
@@ -434,9 +482,11 @@ EasyBewerbung/
 ### Docker Services
 - `easybewerbung-backend` - FastAPI backend (port 8002)
 - `easybewerbung-frontend` - Next.js frontend (port 3001)
-- `easybewerbung_worker` - Celery workers (5 replicas)
-- `easybewerbung-db` - PostgreSQL database (port 5433)
-- `easybewerbung-redis` - Redis message broker (port 6380)
+- `easybewerbung_worker` - Celery workers (5 replicas, 4 concurrent tasks each)
+  - Handles queues: celery, matching, generation
+  - Memory limit: 512MB per worker
+- `easybewerbung-db` - PostgreSQL 16 (Alpine) database (port 5433)
+- `easybewerbung-redis` - Redis 7 (Alpine) message broker (port 6380)
 
 ## Production Deployment
 
@@ -459,8 +509,12 @@ Before deploying to production:
 
 1. **Security Configuration**:
    - Generate secure `SECRET_KEY`: `openssl rand -hex 32`
-   - Set strong `POSTGRES_PASSWORD`
-   - Configure all API keys (OpenAI, Anthropic, Google)
+   - Set strong `POSTGRES_PASSWORD` (16+ characters)
+   - Configure AI provider API keys:
+     - `OPENAI_API_KEY` - Required for OpenAI-based document generation
+     - `ANTHROPIC_API_KEY` - Optional, for Claude-based generation
+     - `GOOGLE_API_KEY` - Optional, for Gemini-based generation
+   - Configure `GOOGLE_CLIENT_ID` if using Google OAuth
    - **NEVER commit `.env` files** - use environment variables
 
 2. **Database**:
@@ -485,9 +539,11 @@ Before deploying to production:
    - Set up alerts for failures
 
 6. **Performance**:
-   - Configure Redis for caching
-   - Adjust Celery worker count as needed
+   - Configure Redis for caching and message brokering
+   - Adjust Celery worker count as needed (default: 5 replicas, 4 concurrent tasks each = 20 parallel tasks)
+   - Monitor worker memory usage (default limit: 512MB per worker)
    - Enable CDN for static assets
+   - Consider increasing worker resources for heavy AI generation workloads
 
 ## License
 
