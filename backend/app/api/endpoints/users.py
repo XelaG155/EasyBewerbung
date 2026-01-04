@@ -1,6 +1,6 @@
 import logging
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, EmailStr, Field, validator, field_validator
 from sqlalchemy.orm import Session
@@ -22,6 +22,7 @@ from app.auth import (
     verify_password,
     create_access_token,
     get_current_user,
+    get_current_admin_user,
 )
 from app.limiter import limiter
 from app.privacy_policy import PRIVACY_POLICY_TEXT
@@ -62,6 +63,22 @@ class UserRegister(BaseModel):
     def validate_password(cls, v):
         if len(v) < 8:
             raise ValueError('Password must be at least 8 characters')
+
+        # Password complexity requirements
+        has_upper = any(c.isupper() for c in v)
+        has_lower = any(c.islower() for c in v)
+        has_digit = any(c.isdigit() for c in v)
+        has_special = any(c in '!@#$%^&*(),.?":{}|<>_-+=[]\\;\'/' for c in v)
+
+        if not has_upper:
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not has_lower:
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not has_digit:
+            raise ValueError('Password must contain at least one number')
+        if not has_special:
+            raise ValueError('Password must contain at least one special character (!@#$%^&*(),.?":{}|<>_-+=[]\\;\'/)')
+
         return v
     full_name: Optional[str] = None
     preferred_language: str = DEFAULT_LANGUAGE
@@ -310,6 +327,20 @@ async def login(request: Request, user_data: UserLogin, db: Session = Depends(ge
             detail="Incorrect email or password",
         )
 
+    # Check if account is locked
+    if getattr(user, "account_locked_until", None):
+        if user.account_locked_until > datetime.now(timezone.utc):
+            lock_minutes = int((user.account_locked_until - datetime.now(timezone.utc)).total_seconds() / 60)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Account is temporarily locked due to too many failed login attempts. Try again in {lock_minutes} minutes.",
+            )
+        else:
+            # Lock period has expired, reset counters
+            user.account_locked_until = None
+            user.failed_login_attempts = 0
+            db.commit()
+
     # Check if user registered with OAuth (no password)
     if user.oauth_provider == "google" and not user.hashed_password:
         raise HTTPException(
@@ -319,6 +350,22 @@ async def login(request: Request, user_data: UserLogin, db: Session = Depends(ge
 
     # Verify password
     if not user.hashed_password or not verify_password(user_data.password, user.hashed_password):
+        # Increment failed login attempts
+        user.failed_login_attempts = getattr(user, "failed_login_attempts", 0) + 1
+
+        # Lock account after 5 failed attempts for 15 minutes
+        if user.failed_login_attempts >= 5:
+            user.account_locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
+            db.commit()
+            logger.warning(
+                f"Account locked for user {user.email} after {user.failed_login_attempts} failed attempts"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account locked due to too many failed login attempts. Please try again in 15 minutes.",
+            )
+
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -330,6 +377,9 @@ async def login(request: Request, user_data: UserLogin, db: Session = Depends(ge
             detail="Account is locked",
         )
 
+    # Successful login - reset failed attempts
+    user.failed_login_attempts = 0
+    user.account_locked_until = None
     user.last_login_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(user)
@@ -465,23 +515,14 @@ async def get_privacy_policy():
 async def grant_credits(
     payload: AdminCreditUpdate,
     request: Request,
+    current_admin: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db),
 ):
     """
-    Admin-only endpoint to add credits. Protects with a static token header.
-    Uses constant-time comparison to prevent timing attacks.
+    Admin-only endpoint to add credits. Requires JWT authentication with admin privileges.
     """
-    admin_token_header = request.headers.get("X-Admin-Token") or ""
-    admin_token_env = os.getenv("ADMIN_TOKEN") or ""
     client_ip = request.client.host if request.client else "unknown"
     timestamp = datetime.now(timezone.utc).isoformat()
-
-    # Use constant-time comparison to prevent timing attacks
-    if not admin_token_env or not secrets.compare_digest(admin_token_header, admin_token_env):
-        logger.warning(
-            "Admin credit grant denied", extra={"ip": client_ip, "timestamp": timestamp, "user_id": payload.user_id}
-        )
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
     user = db.query(User).filter(User.id == payload.user_id).first()
     if not user:
@@ -494,6 +535,8 @@ async def grant_credits(
     logger.info(
         "Admin credit grant succeeded",
         extra={
+            "admin_id": current_admin.id,
+            "admin_email": current_admin.email,
             "ip": client_ip,
             "timestamp": timestamp,
             "user_id": payload.user_id,

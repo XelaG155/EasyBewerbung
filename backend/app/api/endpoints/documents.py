@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import timezone
@@ -17,6 +17,7 @@ from app.database import get_db
 from app.models import Document, User
 from app.document_catalog import DOCUMENT_CATALOG, DOCUMENT_PACKAGES
 from app.auth import get_current_user
+from app.limiter import limiter
 
 router = APIRouter()
 
@@ -79,7 +80,9 @@ def extract_text_from_pdf(file_path: str) -> str:
 
 
 @router.post("/upload")
+@limiter.limit("10/minute")
 async def upload_document(
+    request: Request,
     file: UploadFile = File(...),
     doc_type: str = Form("CV"),
     current_user: User = Depends(get_current_user),
