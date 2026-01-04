@@ -32,6 +32,10 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Security constants for authentication
+MAX_FAILED_LOGIN_ATTEMPTS = 5
+LOCKOUT_DURATION_MINUTES = 15
+
 
 def record_activity(db: Session, user: User, action: str, request: Optional[Request] = None, metadata: Optional[str] = None):
     ip_address = request.client.host if request and request.client else None
@@ -368,11 +372,11 @@ async def login(request: Request, user_data: UserLogin, db: Session = Depends(ge
         db.flush()
         db.refresh(user)
 
-        # Lock account after 5 failed attempts for 15 minutes
-        # Use atomic UPDATE to prevent race condition where multiple concurrent requests
-        # could each set the lockout timestamp
-        if user.failed_login_attempts >= 5:
-            lockout_time = datetime.now(timezone.utc) + timedelta(minutes=15)
+        # Lock account after MAX_FAILED_LOGIN_ATTEMPTS failed attempts for LOCKOUT_DURATION_MINUTES minutes
+        # The WHERE clause (account_locked_until.is_(None)) prevents race condition
+        # where multiple concurrent requests could each try to set the lockout timestamp
+        if user.failed_login_attempts >= MAX_FAILED_LOGIN_ATTEMPTS:
+            lockout_time = datetime.now(timezone.utc) + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
             # Only set lockout if not already locked (WHERE clause prevents race condition)
             rows_updated = db.query(User).filter(
                 User.id == user.id,
@@ -387,12 +391,15 @@ async def login(request: Request, user_data: UserLogin, db: Session = Depends(ge
                     f"Account locked for user {user.email} after {user.failed_login_attempts} failed attempts"
                 )
 
+            # Always raise the exception - account is locked whether we set it or another request did
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Account locked due to too many failed login attempts. Please try again in 15 minutes.",
+                detail=f"Account locked due to too many failed login attempts. Please try again in {LOCKOUT_DURATION_MINUTES} minutes.",
             )
+        else:
+            # Commit the incremented attempts for non-lockout case
+            db.commit()
 
-        db.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
