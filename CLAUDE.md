@@ -60,7 +60,7 @@ Commands:
 
 ## Deployment
 - Pushes to `main` trigger automatic deployment via GitHub webhook
-- Webhook service: `sudo systemctl status easybewerbung-webhook`
+- Webhook service: `systemctl status easybewerbung-webhook`
 - Webhook pulls code and runs `docker-compose build --no-cache`
 - Then runs `docker-compose up -d` to restart containers
 - Telegram notifications for deployment status
