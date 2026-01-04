@@ -18,29 +18,38 @@ export default function AdminDocumentsPage() {
   const [seeding, setSeeding] = useState(false);
   const [promptBuilderOpen, setPromptBuilderOpen] = useState(false);
 
-  // Available models for each provider (as of Dec 2025)
+  // Available models for each provider (as of Jan 2026)
   const availableModels: Record<string, string[]> = {
     openai: [
-      // GPT-5 Series (latest)
+      // GPT-5.2 Series (latest)
+      "gpt-5.2",
+      "gpt-5.2-pro",
+      "gpt-5.2-chat-latest",
+      // GPT-5.1 Series
       "gpt-5.1",
+      "gpt-5.1-chat-latest",
+      // GPT-5 Base
       "gpt-5",
       "gpt-5-mini",
-      "gpt-5-nano",
-      "gpt-5-pro",
       // GPT-4o Series (multimodal)
       "gpt-4o",
-      "gpt-4o-2024-05-13",
       "gpt-4o-mini"
     ],
     anthropic: [
+      // Claude 4.5 Series (latest)
+      "claude-opus-4-5-20251101",
+      "claude-sonnet-4-5-20250929",
+      "claude-haiku-4-5-20251001",
+      // Claude 4.1 Series
+      "claude-opus-4-1-20250805",
+      // Claude 3.5 Series
       "claude-3-5-sonnet-20241022",
       "claude-3-5-haiku-20241022",
-      "claude-3-opus-20240229",
-      "claude-3-sonnet-20240229",
-      "claude-3-haiku-20240307"
+      // Claude 3 Series (legacy)
+      "claude-3-opus-20240229"
     ],
     google: [
-      // Gemini 3 (latest)
+      // Gemini 3 (latest preview)
       "gemini-3-pro-preview",
       // Gemini 2.5 (stable)
       "gemini-2.5-pro",
@@ -48,7 +57,10 @@ export default function AdminDocumentsPage() {
       "gemini-2.5-flash-lite",
       // Gemini 2.0
       "gemini-2.0-flash-exp",
-      "gemini-2.0-flash"
+      "gemini-2.0-flash",
+      // Gemini 1.5 (legacy)
+      "gemini-1.5-pro",
+      "gemini-1.5-flash"
     ]
   };
 
@@ -393,8 +405,8 @@ export default function AdminDocumentsPage() {
           <div>
             <strong className="text-gray-900 dark:text-gray-100">LLM Provider & Modelle:</strong> Der KI-Anbieter für die Generierung.
             <ul className="list-disc ml-5 mt-1">
-              <li><code>openai</code> - OpenAI: gpt-5.1, gpt-5, gpt-5-mini, gpt-5-nano, gpt-5-pro, gpt-4o, gpt-4o-mini</li>
-              <li><code>anthropic</code> - Anthropic (Claude): claude-3-5-sonnet, claude-3-5-haiku, claude-3-opus</li>
+              <li><code>openai</code> - OpenAI: gpt-5.2, gpt-5.2-pro, gpt-5.1, gpt-5, gpt-5-mini, gpt-4o, gpt-4o-mini</li>
+              <li><code>anthropic</code> - Anthropic (Claude): claude-opus-4-5, claude-sonnet-4-5, claude-haiku-4-5, claude-3-5-sonnet</li>
               <li><code>google</code> - Google (Gemini): gemini-3-pro-preview, gemini-2.5-pro, gemini-2.5-flash, gemini-2.0-flash</li>
             </ul>
           </div>
