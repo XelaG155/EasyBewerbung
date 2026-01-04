@@ -22,22 +22,82 @@ Job application management platform for multilingual workers. Upload documents, 
 ## Tech Stack
 
 **Backend:**
-- FastAPI (Python)
+- FastAPI (Python) on port 8002
 - SQLAlchemy (ORM)
-- SQLite (Database)
+- PostgreSQL (Database)
+- Alembic (Database migrations)
 - JWT Authentication
+- Celery (Background task processing)
+- Redis (Message broker)
 - PDF text extraction
 - Web scraping for job analysis
 
 **Frontend:**
-- Next.js 16 (React 19)
+- Next.js 16 (React 19) on port 3001
 - TypeScript
 - Tailwind CSS 4
 - Client-side auth management
 
+**Infrastructure:**
+- Docker & Docker Compose
+- PostgreSQL database (port 5433)
+- Redis (port 6380)
+- Celery workers (5 replicas)
+
 ## Setup Instructions
 
-### Backend Setup
+### Docker Setup (Recommended for Production)
+
+The easiest way to run EasyBewerbung is using Docker Compose:
+
+1. Clone the repository:
+```bash
+git clone https://github.com/XelaG155/EasyBewerbung.git
+cd EasyBewerbung
+```
+
+2. Copy and configure environment file:
+```bash
+cp .env.docker.example .env
+```
+
+Edit `.env` and set your actual values (never commit this file!):
+- `SECRET_KEY` - Generate with `openssl rand -hex 32`
+- `POSTGRES_PASSWORD` - Set a strong database password
+- `OPENAI_API_KEY` - Your OpenAI API key (if using AI features)
+- `ANTHROPIC_API_KEY` - Your Anthropic API key (if using Claude)
+- `GOOGLE_API_KEY` - Your Google API key (if using Gemini)
+
+3. Start all services:
+```bash
+docker-compose up -d
+```
+
+This will start:
+- Backend API on `http://localhost:8002`
+- Frontend on `http://localhost:3001`
+- PostgreSQL database on port 5433
+- Redis on port 6380
+- 5 Celery worker instances for background tasks
+
+4. Check service status:
+```bash
+docker-compose ps
+docker-compose logs -f [service-name]
+```
+
+5. Stop services:
+```bash
+docker-compose down
+```
+
+6. Rebuild after code changes:
+```bash
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+### Backend Setup (Local Development)
 
 1. Navigate to the backend directory:
 ```bash
@@ -159,13 +219,23 @@ To enable Google Sign-In:
 
 ## Security Features
 
-- JWT token-based authentication
-- Password hashing with bcrypt
-- User-isolated data queries
-- File upload validation (type, size)
-- PDF text extraction
-- CORS protection
-- Admin credit grants require the `X-Admin-Token` header, are rate limited, and should only be called over HTTPS
+EasyBewerbung implements multiple layers of security:
+
+- **Authentication**: JWT token-based authentication with expiration
+- **Password Security**: Bcrypt hashing with proper salt generation
+- **Data Isolation**: User-specific data queries prevent unauthorized access
+- **File Upload Protection**:
+  - Multi-layer validation (extension, magic number, size limit: 25MB)
+  - User-specific directories with UUID filenames
+  - Path traversal prevention
+- **XSS Protection**: HTML sanitization for scraped job content
+- **SSRF Protection**: URL validation preventing localhost/private IP access
+- **SQL Injection Prevention**: SQLAlchemy ORM with parameterized queries
+- **CORS Protection**: Configurable allowed origins
+- **Rate Limiting**: Implemented on authentication and critical endpoints
+- **Admin Authorization**: Proper role-based access control
+
+**For detailed security information, see [SECURITY.md](SECURITY.md)**
 
 ## Application Structure & Navigation
 
@@ -355,21 +425,69 @@ EasyBewerbung/
 
 ## Development Notes
 
-- Backend runs on port 8000
-- Frontend runs on port 3000
-- Database file: `backend/easybewerbung.db`
+### Local Development
+- Backend runs on port 8000 (local) or 8002 (Docker)
+- Frontend runs on port 3000 (local) or 3001 (Docker)
+- Database: PostgreSQL (Docker) or SQLite (local dev)
 - Uploads stored in: `backend/uploads/{user_id}/`
+
+### Docker Services
+- `easybewerbung-backend` - FastAPI backend (port 8002)
+- `easybewerbung-frontend` - Next.js frontend (port 3001)
+- `easybewerbung_worker` - Celery workers (5 replicas)
+- `easybewerbung-db` - PostgreSQL database (port 5433)
+- `easybewerbung-redis` - Redis message broker (port 6380)
 
 ## Production Deployment
 
+The application is configured for production deployment with Docker Compose.
+
+### Deployment Workflow
+- **Production URL**: https://app.easybewerbung.ch
+- **Automatic Deployment**: Pushes to `main` branch trigger GitHub webhook
+- **Webhook Service**: Runs on production server (`systemctl status easybewerbung-webhook`)
+- **Deployment Process**:
+  1. Webhook receives GitHub push notification
+  2. Pulls latest code from `main` branch
+  3. Rebuilds containers: `docker-compose build --no-cache`
+  4. Restarts services: `docker-compose up -d`
+  5. Sends Telegram notification with deployment status
+
+### Production Checklist
+
 Before deploying to production:
 
-1. Change `SECRET_KEY` in `backend/.env` to a secure random string
-2. Use PostgreSQL instead of SQLite
-3. Set up proper file storage (S3, etc.)
-4. Configure CORS for production domain
-5. Enable HTTPS
-6. Set up database backups
+1. **Security Configuration**:
+   - Generate secure `SECRET_KEY`: `openssl rand -hex 32`
+   - Set strong `POSTGRES_PASSWORD`
+   - Configure all API keys (OpenAI, Anthropic, Google)
+   - **NEVER commit `.env` files** - use environment variables
+
+2. **Database**:
+   - Use PostgreSQL (configured in Docker)
+   - Set up automated database backups
+   - Configure connection pooling
+
+3. **Storage**:
+   - Consider S3 or similar for file uploads
+   - Configure volume persistence for uploads
+
+4. **Security**:
+   - Configure CORS for production domain in `.env`
+   - Enable HTTPS (reverse proxy with Let's Encrypt)
+   - Set secure headers (CSP, HSTS, etc.)
+   - Review rate limiting settings
+
+5. **Monitoring**:
+   - Set up application logging
+   - Configure error tracking (Sentry, etc.)
+   - Monitor Docker container health
+   - Set up alerts for failures
+
+6. **Performance**:
+   - Configure Redis for caching
+   - Adjust Celery worker count as needed
+   - Enable CDN for static assets
 
 ## License
 
@@ -378,7 +496,3 @@ MIT License
 ## Support
 
 For issues and questions, please open a GitHub issue.
-
-# Test
-
-
