@@ -1,10 +1,12 @@
 import logging
+import os
 from typing import List, Optional
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from openai import OpenAI
 
 from app.auth import get_current_user
 from app.database import get_db
@@ -109,6 +111,75 @@ class ToggleActiveRequest(BaseModel):
 
 class ToggleAdminRequest(BaseModel):
     is_admin: bool
+
+
+class PromptBuilderRequest(BaseModel):
+    tone: str = Field(..., description="Tone: formal, friendly, neutral")
+    length: str = Field(..., description="Length: short, medium, detailed")
+    focus: List[str] = Field(..., description="Focus areas: qualifications, motivation, soft_skills")
+    audience: str = Field(..., description="Audience: hr_manager, hiring_manager, ceo, general")
+    description: str = Field(default="", description="Free text description")
+    llm_provider: str = Field(default="openai", description="LLM provider: openai, anthropic, google")
+    llm_model: str = Field(default="gpt-4o", description="LLM model to use")
+
+
+class PromptBuilderResponse(BaseModel):
+    generated_prompt: str
+
+
+def get_llm_client(provider: str, model: str):
+    """Get the appropriate LLM client based on the provider."""
+    if provider == "openai":
+        return OpenAI(api_key=os.getenv("OPENAI_API_KEY")), model
+    elif provider == "anthropic":
+        try:
+            import anthropic
+            return anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY")), model
+        except ImportError:
+            logger.warning("Anthropic client not installed, falling back to OpenAI")
+            return OpenAI(api_key=os.getenv("OPENAI_API_KEY")), "gpt-4"
+    elif provider == "google":
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+            return genai, model
+        except ImportError:
+            logger.warning("Google GenAI client not installed, falling back to OpenAI")
+            return OpenAI(api_key=os.getenv("OPENAI_API_KEY")), "gpt-4"
+    else:
+        return OpenAI(api_key=os.getenv("OPENAI_API_KEY")), model
+
+
+def generate_with_prompt_builder_llm(client, model: str, provider: str, prompt: str) -> str:
+    """Generate content using the specified LLM for prompt building."""
+    if provider == "openai":
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+            max_tokens=2000,
+        )
+        return response.choices[0].message.content
+    elif provider == "anthropic":
+        response = client.messages.create(
+            model=model,
+            max_tokens=2000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.content[0].text
+    elif provider == "google":
+        model_obj = client.GenerativeModel(model)
+        response = model_obj.generate_content(prompt)
+        return response.text
+    else:
+        # Default to OpenAI-style API
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+            max_tokens=2000,
+        )
+        return response.choices[0].message.content
 
 
 DEFAULT_PROMPTS = [
@@ -386,3 +457,94 @@ async def update_prompt(
         content=prompt.content,
         updated_at=prompt.updated_at.isoformat(),
     )
+
+
+@router.post("/admin/generate-prompt", response_model=PromptBuilderResponse)
+@limiter.limit("10/minute")
+async def generate_prompt(
+    payload: PromptBuilderRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_admin_user),
+):
+    """
+    Generate a prompt template using AI based on structured parameters and description.
+    """
+    # Build the meta-prompt for the LLM
+    tone_descriptions = {
+        "formal": "professional and formal tone",
+        "friendly": "warm and approachable tone",
+        "neutral": "balanced and objective tone",
+    }
+
+    length_descriptions = {
+        "short": "concise and brief (1-2 paragraphs)",
+        "medium": "moderate length (3-4 paragraphs)",
+        "detailed": "comprehensive and thorough (5+ paragraphs)",
+    }
+
+    audience_descriptions = {
+        "hr_manager": "HR managers who screen applications",
+        "hiring_manager": "technical hiring managers who evaluate skills",
+        "ceo": "C-level executives and company leadership",
+        "general": "a general business audience",
+    }
+
+    focus_descriptions = {
+        "qualifications": "technical qualifications and experience",
+        "motivation": "motivation and enthusiasm for the role",
+        "soft_skills": "soft skills and interpersonal abilities",
+    }
+
+    # Build focus areas string
+    focus_areas = [focus_descriptions.get(f, f) for f in payload.focus]
+    focus_str = ", ".join(focus_areas) if focus_areas else "general qualifications"
+
+    meta_prompt = f"""You are an expert prompt engineer specializing in job application document generation.
+
+Create a detailed prompt template that will be used to generate job application documents (cover letters, CVs, etc.).
+
+The prompt you create should instruct an AI to generate documents with these characteristics:
+- Tone: {tone_descriptions.get(payload.tone, payload.tone)}
+- Length: {length_descriptions.get(payload.length, payload.length)}
+- Target audience: {audience_descriptions.get(payload.audience, payload.audience)}
+- Focus areas: {focus_str}
+
+Additional context from the user:
+{payload.description if payload.description else "(No additional description provided)"}
+
+IMPORTANT: Your prompt template MUST use these exact placeholders that will be replaced with actual data:
+- {{role}} - The AI's role/persona (e.g., "experienced career coach")
+- {{task}} - The main task description (e.g., "Write a professional cover letter")
+- {{job_description}} - Full job posting text and application context
+- {{cv_text}} - Complete CV/resume text
+- {{cv_summary}} - Short CV summary (first 500 chars)
+- {{language}} - Target language for the document (e.g., "German", "English")
+- {{documentation_language}} - Same as {{language}}, user's preferred doc language
+- {{company_profile_language}} - Language for company research (for company intelligence docs)
+- {{instructions}} - Formatted list of all instructions (numbered list)
+- {{reference_letters}} - Content of uploaded reference letters
+
+Create a prompt template that is ready to be used directly. Start with a clear role definition, then describe the task, include placeholders for the data, and end with clear formatting instructions.
+
+Output ONLY the prompt template, nothing else. Do not include any explanations or metadata."""
+
+    try:
+        # Get LLM client based on configured provider
+        client, model = get_llm_client(payload.llm_provider, payload.llm_model)
+
+        # Generate the prompt
+        generated = generate_with_prompt_builder_llm(
+            client, model, payload.llm_provider, meta_prompt
+        )
+
+        record_activity(db, admin, "generate_prompt", request=request, metadata=f"provider:{payload.llm_provider}")
+
+        return PromptBuilderResponse(generated_prompt=generated.strip())
+
+    except Exception as e:
+        logger.error(f"Prompt generation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate prompt: {str(e)}"
+        )

@@ -146,6 +146,20 @@ export interface DocumentTemplateUpdate {
   is_active?: boolean;
 }
 
+export interface PromptBuilderRequest {
+  tone: string;
+  length: string;
+  focus: string[];
+  audience: string;
+  description: string;
+  llm_provider: string;
+  llm_model: string;
+}
+
+export interface PromptBuilderResponse {
+  generated_prompt: string;
+}
+
 class ApiClient {
   private baseUrl: string;
   private token: string | null = null;
@@ -564,6 +578,13 @@ class ApiClient {
       `/admin/document-templates/seed${params}`,
       { method: "POST" }
     );
+  }
+
+  async generatePrompt(request: PromptBuilderRequest): Promise<PromptBuilderResponse> {
+    return this.request<PromptBuilderResponse>("/admin/generate-prompt", {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
   }
 
   async downloadJobDescriptionPDF(applicationId: number) {

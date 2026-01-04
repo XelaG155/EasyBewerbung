@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import api, { DocumentTemplate, DocumentTemplateUpdate } from "@/lib/api";
+import PromptBuilderModal from "@/components/PromptBuilderModal";
 
 export default function AdminDocumentsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -15,6 +16,7 @@ export default function AdminDocumentsPage() {
   const [expandedPrompt, setExpandedPrompt] = useState<number | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
+  const [promptBuilderOpen, setPromptBuilderOpen] = useState(false);
 
   // Available models for each provider (as of Dec 2025)
   const availableModels: Record<string, string[]> = {
@@ -289,13 +291,22 @@ export default function AdminDocumentsPage() {
                       {/* Prompt */}
                       <td className="p-3 max-w-xs">
                         {isEditing ? (
-                          <textarea
-                            value={editForm.prompt_template || ""}
-                            onChange={(e) => setEditForm({ ...editForm, prompt_template: e.target.value })}
-                            className="w-full rounded border border-gray-200 dark:border-gray-800 px-2 py-1 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-xs"
-                            rows={6}
-                            placeholder="Prompt template mit {language} placeholder"
-                          />
+                          <div className="space-y-2">
+                            <textarea
+                              value={editForm.prompt_template || ""}
+                              onChange={(e) => setEditForm({ ...editForm, prompt_template: e.target.value })}
+                              className="w-full rounded border border-gray-200 dark:border-gray-800 px-2 py-1 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-xs"
+                              rows={6}
+                              placeholder="Prompt template mit {language} placeholder"
+                            />
+                            <button
+                              onClick={() => setPromptBuilderOpen(true)}
+                              type="button"
+                              className="px-2 py-1 rounded bg-purple-600 text-white text-xs hover:bg-purple-700 flex items-center gap-1"
+                            >
+                              <span>🪄</span> Prompt Builder
+                            </button>
+                          </div>
                         ) : (
                           <div>
                             <button
@@ -492,6 +503,18 @@ Begin the cover letter now:`}
           </pre>
         </div>
       </section>
+
+      {/* Prompt Builder Modal */}
+      <PromptBuilderModal
+        isOpen={promptBuilderOpen}
+        onClose={() => setPromptBuilderOpen(false)}
+        onApply={(generatedPrompt) => {
+          setEditForm({ ...editForm, prompt_template: generatedPrompt });
+        }}
+        currentProvider={editForm.llm_provider || "openai"}
+        currentModel={editForm.llm_model || "gpt-4o"}
+        availableModels={availableModels}
+      />
     </div>
   );
 }
