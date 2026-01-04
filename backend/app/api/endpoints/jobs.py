@@ -122,14 +122,30 @@ def sanitize_html_text(text: str) -> str:
     Sanitize text extracted from HTML to prevent XSS.
     Removes any remaining HTML tags and dangerous characters.
     """
-    # Remove any HTML tags that might have slipped through
+    # First, remove dangerous tags with their content (order matters!)
+    # Handle whitespace in closing tags: </script>, </script >, </script  >, etc.
+    text = re.sub(r'<script[^>]*>.*?</script\s*>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<style[^>]*>.*?</style\s*>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<iframe[^>]*>.*?</iframe\s*>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<object[^>]*>.*?</object\s*>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<embed[^>]*>.*?</embed\s*>', '', text, flags=re.DOTALL | re.IGNORECASE)
+
+    # Remove self-closing dangerous tags (e.g., <embed />, <iframe/>)
+    text = re.sub(r'<(script|style|iframe|object|embed)[^>]*/\s*>', '', text, flags=re.IGNORECASE)
+
+    # Remove event handlers (onclick, onload, onerror, etc.)
+    text = re.sub(r'\bon\w+\s*=\s*["\'][^"\']*["\']', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bon\w+\s*=\s*[^\s>]+', '', text, flags=re.IGNORECASE)
+
+    # Remove javascript: and data: URLs in href/src attributes
+    text = re.sub(r'(href|src)\s*=\s*["\']?\s*(javascript|data):[^"\'>\s]*["\']?', '', text, flags=re.IGNORECASE)
+
+    # Remove any remaining HTML tags
     text = re.sub(r'<[^>]+>', '', text)
-    # Remove script-like content
-    text = re.sub(r'<script.*?</script>', '', text, flags=re.DOTALL | re.IGNORECASE)
-    # Remove event handlers
-    text = re.sub(r'on\w+\s*=\s*["\'][^"\']*["\']', '', text, flags=re.IGNORECASE)
+
     # Normalize whitespace
     text = re.sub(r'\s+', ' ', text)
+
     return text.strip()
 
 
