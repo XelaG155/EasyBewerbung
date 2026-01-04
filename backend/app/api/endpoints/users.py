@@ -4,6 +4,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, EmailStr, Field, validator, field_validator
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import Optional, List
 import os
 
@@ -327,19 +328,23 @@ async def login(request: Request, user_data: UserLogin, db: Session = Depends(ge
             detail="Incorrect email or password",
         )
 
-    # Check if account is locked
+    # Check if account is locked (don't reset here - only check)
     if getattr(user, "account_locked_until", None):
-        if user.account_locked_until > datetime.now(timezone.utc):
-            lock_minutes = int((user.account_locked_until - datetime.now(timezone.utc)).total_seconds() / 60)
+        # Convert to timezone-aware datetime for comparison
+        now_utc = datetime.now(timezone.utc)
+        locked_until = user.account_locked_until
+
+        # Handle both naive and aware datetimes
+        if locked_until.tzinfo is None:
+            # If stored as naive, assume it's UTC and make it aware
+            locked_until = locked_until.replace(tzinfo=timezone.utc)
+
+        if locked_until > now_utc:
+            lock_minutes = int((locked_until - now_utc).total_seconds() / 60)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Account is temporarily locked due to too many failed login attempts. Try again in {lock_minutes} minutes.",
             )
-        else:
-            # Lock period has expired, reset counters
-            user.account_locked_until = None
-            user.failed_login_attempts = 0
-            db.commit()
 
     # Check if user registered with OAuth (no password)
     if user.oauth_provider == "google" and not user.hashed_password:
@@ -350,8 +355,12 @@ async def login(request: Request, user_data: UserLogin, db: Session = Depends(ge
 
     # Verify password
     if not user.hashed_password or not verify_password(user_data.password, user.hashed_password):
-        # Increment failed login attempts
-        user.failed_login_attempts = getattr(user, "failed_login_attempts", 0) + 1
+        # Use atomic increment to prevent race conditions
+        db.query(User).filter(User.id == user.id).update({
+            "failed_login_attempts": User.failed_login_attempts + 1
+        })
+        db.flush()
+        db.refresh(user)
 
         # Lock account after 5 failed attempts for 15 minutes
         if user.failed_login_attempts >= 5:
@@ -377,7 +386,7 @@ async def login(request: Request, user_data: UserLogin, db: Session = Depends(ge
             detail="Account is locked",
         )
 
-    # Successful login - reset failed attempts
+    # Successful login - reset failed attempts and clear lockout
     user.failed_login_attempts = 0
     user.account_locked_until = None
     user.last_login_at = datetime.now(timezone.utc)

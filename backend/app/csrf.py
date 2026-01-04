@@ -5,6 +5,7 @@ Implements double-submit cookie pattern for CSRF protection.
 """
 import secrets
 import logging
+import os
 from typing import Callable
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -49,11 +50,13 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             # Set CSRF cookie if not present
             if self.cookie_name not in request.cookies:
                 csrf_token = secrets.token_urlsafe(32)
+                # Use secure=True in production, False in development
+                is_production = os.getenv("ENVIRONMENT", "production") == "production"
                 response.set_cookie(
                     key=self.cookie_name,
                     value=csrf_token,
                     httponly=False,  # JavaScript needs to read this to send it in headers
-                    secure=True,  # Only send over HTTPS in production
+                    secure=is_production,  # Only send over HTTPS in production
                     samesite="strict",
                     max_age=3600 * 24,  # 24 hours
                 )

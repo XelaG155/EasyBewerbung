@@ -24,7 +24,7 @@ class User(Base):
 
     # Account security fields
     failed_login_attempts = Column(Integer, default=0)
-    account_locked_until = Column(DateTime, nullable=True)
+    account_locked_until = Column(DateTime, nullable=True, index=True)
 
     # OAuth fields
     oauth_provider = Column(String, nullable=True)  # "google", "email", etc.
