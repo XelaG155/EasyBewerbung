@@ -123,12 +123,12 @@ def sanitize_html_text(text: str) -> str:
     Removes any remaining HTML tags and dangerous characters.
     """
     # First, remove dangerous tags with their content (order matters!)
-    # Handle whitespace in closing tags: </script>, </script >, </script  >, etc.
-    text = re.sub(r'<script[^>]*>.*?</script\s*>', '', text, flags=re.DOTALL | re.IGNORECASE)
-    text = re.sub(r'<style[^>]*>.*?</style\s*>', '', text, flags=re.DOTALL | re.IGNORECASE)
-    text = re.sub(r'<iframe[^>]*>.*?</iframe\s*>', '', text, flags=re.DOTALL | re.IGNORECASE)
-    text = re.sub(r'<object[^>]*>.*?</object\s*>', '', text, flags=re.DOTALL | re.IGNORECASE)
-    text = re.sub(r'<embed[^>]*>.*?</embed\s*>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    # Handle flexible/invalid closing tags: </script>, </script >, </script\t foo="bar">, etc.
+    text = re.sub(r'<script[^>]*>.*?</script[^>]*>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<style[^>]*>.*?</style[^>]*>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<iframe[^>]*>.*?</iframe[^>]*>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<object[^>]*>.*?</object[^>]*>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<embed[^>]*>.*?</embed[^>]*>', '', text, flags=re.DOTALL | re.IGNORECASE)
 
     # Remove self-closing dangerous tags (e.g., <embed />, <iframe/>)
     text = re.sub(r'<(script|style|iframe|object|embed)[^>]*/\s*>', '', text, flags=re.IGNORECASE)
