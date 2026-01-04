@@ -24,10 +24,11 @@ export default function AdminDocumentsPage() {
       // GPT-5.2 Series (latest)
       "gpt-5.2",
       "gpt-5.2-pro",
-      "gpt-5.2-chat-latest",
+      "gpt-5.2-mini",
+      "gpt-5.2-nano",
       // GPT-5.1 Series
       "gpt-5.1",
-      "gpt-5.1-chat-latest",
+      "gpt-5.1-mini",
       // GPT-5 Base
       "gpt-5",
       "gpt-5-mini",
@@ -405,7 +406,7 @@ export default function AdminDocumentsPage() {
           <div>
             <strong className="text-gray-900 dark:text-gray-100">LLM Provider & Modelle:</strong> Der KI-Anbieter für die Generierung.
             <ul className="list-disc ml-5 mt-1">
-              <li><code>openai</code> - OpenAI: gpt-5.2, gpt-5.2-pro, gpt-5.1, gpt-5, gpt-5-mini, gpt-4o, gpt-4o-mini</li>
+              <li><code>openai</code> - OpenAI: gpt-5.2, gpt-5.2-pro, gpt-5.2-mini, gpt-5.2-nano, gpt-5.1, gpt-5, gpt-4o</li>
               <li><code>anthropic</code> - Anthropic (Claude): claude-opus-4-5, claude-sonnet-4-5, claude-haiku-4-5, claude-3-5-sonnet</li>
               <li><code>google</code> - Google (Gemini): gemini-3-pro-preview, gemini-2.5-pro, gemini-2.5-flash, gemini-2.0-flash</li>
             </ul>
