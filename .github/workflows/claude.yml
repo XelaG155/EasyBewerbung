@@ -72,4 +72,4 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           additional_permissions: |
             actions: read
-          claude_args: '--allowed-tools "Bash(gh issue:*),Bash(gh pr:*),Bash(gh search:*)"'
+          claude_args: '--allowed-tools "WebFetch,WebSearch,Bash(gh issue:*),Bash(gh pr:*),Bash(gh search:*)"'
