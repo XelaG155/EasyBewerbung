@@ -128,15 +128,20 @@ def generate_document_prompt(doc_type: str, job_description: str, cv_text: str, 
     else:
         language_to_use = lang_instruction
 
+    # Get display name from prompt config
+    doc_type_display = prompt_config.get("document_type", doc_type).replace("_", " ").title()
+
     # Prepare input variables
     inputs = {
         "job_description": job_description,
         "cv_text": cv_text,
-        "cv_summary": cv_text[:500] if len(cv_text) > 500 else cv_text,
+        "cv_summary": cv_text[:2000] if len(cv_text) > 2000 else cv_text,
         "language": language_to_use,
         "company_profile_language": get_language_instruction(application.company_profile_language or lang),
         "role": prompt_config.get("role", ""),
         "task": prompt_config.get("task", ""),
+        "doc_type": doc_type,
+        "doc_type_display": doc_type_display,
     }
 
     # Format instructions
@@ -181,12 +186,14 @@ def generate_document_prompt_from_template(
     inputs = {
         "job_description": job_description,
         "cv_text": cv_text,
-        "cv_summary": cv_text[:500] if len(cv_text) > 500 else cv_text,
+        "cv_summary": cv_text[:2000] if len(cv_text) > 2000 else cv_text,
         "language": language_to_use,
         "company_profile_language": get_language_instruction(application.company_profile_language or lang),
         "role": prompt_config.get("role", ""),
         "task": prompt_config.get("task", ""),
         "reference_letters": cv_text,  # For reference_summary document type
+        "doc_type": template.doc_type,
+        "doc_type_display": template.display_name or template.doc_type.replace("_", " ").title(),
     }
 
     # Format instructions from JSON config

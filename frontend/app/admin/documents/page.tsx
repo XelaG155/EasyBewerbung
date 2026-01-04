@@ -452,7 +452,7 @@ export default function AdminDocumentsPage() {
               </tr>
               <tr className="border-b border-gray-100 dark:border-gray-800">
                 <td className="p-2"><code className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1 rounded">{"{cv_summary}"}</code></td>
-                <td className="p-2">CV-Kurzfassung (500 Zeichen)</td>
+                <td className="p-2">CV-Kurzfassung (2000 Zeichen)</td>
                 <td className="p-2 text-xs">Kurzübersicht der Qualifikationen</td>
               </tr>
               <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -479,6 +479,16 @@ export default function AdminDocumentsPage() {
                 <td className="p-2"><code className="bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-1 rounded">{"{reference_letters}"}</code></td>
                 <td className="p-2">Referenzschreiben-Inhalt</td>
                 <td className="p-2 text-xs">Text der hochgeladenen Referenzen</td>
+              </tr>
+              <tr className="border-b border-gray-100 dark:border-gray-800">
+                <td className="p-2"><code className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-1 rounded">{"{doc_type}"}</code></td>
+                <td className="p-2">Technischer Dokumenttyp</td>
+                <td className="p-2 text-xs">&quot;cover_letter&quot;, &quot;tailored_cv_pdf&quot;, &quot;motivation_letter&quot;</td>
+              </tr>
+              <tr className="border-b border-gray-100 dark:border-gray-800">
+                <td className="p-2"><code className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-1 rounded">{"{doc_type_display}"}</code></td>
+                <td className="p-2">Anzeigename des Dokuments</td>
+                <td className="p-2 text-xs">&quot;Anschreiben&quot;, &quot;Tailored CV PDF&quot;, &quot;Motivationsschreiben&quot;</td>
               </tr>
             </tbody>
           </table>

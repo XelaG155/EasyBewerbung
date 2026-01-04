@@ -84,12 +84,14 @@ export default function PromptBuilderModal({
         task: "Help this candidate create compelling, honest, and effective job application documents",
         job_description: "Senior Software Engineer at TechCorp\n\nWe are looking for an experienced software engineer with 5+ years of experience in Python and web development. The ideal candidate should have strong problem-solving skills and experience with modern frameworks.",
         cv_text: "John Doe\nSoftware Engineer\n\nExperience:\n- 6 years of Python development\n- Expert in Django and FastAPI\n- Led team of 4 developers\n\nEducation:\n- M.Sc. Computer Science, ETH Zurich\n\nSkills: Python, JavaScript, React, PostgreSQL, Docker",
-        cv_summary: "John Doe - Software Engineer with 6 years of Python development experience, expert in Django and FastAPI, led team of 4 developers...",
+        cv_summary: "John Doe - Software Engineer with 6 years of Python development experience, expert in Django and FastAPI, led team of 4 developers. Education: M.Sc. Computer Science from ETH Zurich. Technical skills include Python, JavaScript, React, PostgreSQL, and Docker...",
         language: "German - Write all content in German language",
         documentation_language: "German - Write all content in German language",
         company_profile_language: "German - Write all content in German language",
         instructions: "1. Focus on relevant experience\n2. Use professional tone\n3. Keep it concise\n4. Highlight key achievements\n5. Tailor to job requirements",
-        reference_letters: "--- Reference Letter 1 ---\nJohn was an exceptional employee who consistently delivered high-quality work...\n\n--- Reference Letter 2 ---\nI highly recommend John for any senior engineering position..."
+        reference_letters: "--- Reference Letter 1 ---\nJohn was an exceptional employee who consistently delivered high-quality work...\n\n--- Reference Letter 2 ---\nI highly recommend John for any senior engineering position...",
+        doc_type: "cover_letter",
+        doc_type_display: "Anschreiben / Cover Letter"
       };
 
       let preview = generatedPrompt;
@@ -307,7 +309,7 @@ export default function PromptBuilderModal({
                   </div>
                   <div>
                     <code className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1 rounded font-mono">{"{cv_summary}"}</code>
-                    <p className="text-gray-600 dark:text-gray-400 ml-2 mt-1">→ Erste 500 Zeichen des CVs</p>
+                    <p className="text-gray-600 dark:text-gray-400 ml-2 mt-1">→ Kurzfassung des CVs (erste 2000 Zeichen)</p>
                   </div>
                   <div>
                     <code className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-1 rounded font-mono">{"{language}"}</code>
@@ -320,6 +322,14 @@ export default function PromptBuilderModal({
                   <div>
                     <code className="bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-1 rounded font-mono">{"{reference_letters}"}</code>
                     <p className="text-gray-600 dark:text-gray-400 ml-2 mt-1">→ Inhalt der hochgeladenen Referenzschreiben</p>
+                  </div>
+                  <div>
+                    <code className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-1 rounded font-mono">{"{doc_type}"}</code>
+                    <p className="text-gray-600 dark:text-gray-400 ml-2 mt-1">→ Technischer Dokumenttyp (z.B. &quot;cover_letter&quot;, &quot;tailored_cv_pdf&quot;)</p>
+                  </div>
+                  <div>
+                    <code className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-1 rounded font-mono">{"{doc_type_display}"}</code>
+                    <p className="text-gray-600 dark:text-gray-400 ml-2 mt-1">→ Anzeigename des Dokuments (z.B. &quot;Anschreiben&quot;, &quot;Tailored CV PDF&quot;)</p>
                   </div>
                 </div>
               </div>

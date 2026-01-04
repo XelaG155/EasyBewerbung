@@ -102,8 +102,12 @@ def generate_document_prompt_from_template(
                     for i, doc in enumerate(ref_docs)
                 ])
 
-        # CV summary is the first ~500 chars of CV (for templates that need a brief version)
-        cv_summary = cv_text[:500] + "..." if len(cv_text) > 500 else cv_text
+        # CV summary is the first ~2000 chars of CV (for templates that need a brief version)
+        cv_summary = cv_text[:2000] + "..." if len(cv_text) > 2000 else cv_text
+
+        # Get document type info
+        doc_type = getattr(template, "doc_type", "document")
+        doc_type_display = getattr(template, "display_name", doc_type.replace("_", " ").title())
 
         # Replace all placeholders (single braces - matching template format)
         prompt = prompt.replace("{job_description}", job_description)
@@ -116,6 +120,8 @@ def generate_document_prompt_from_template(
         prompt = prompt.replace("{instructions}", instructions)
         prompt = prompt.replace("{documentation_language}", language_instruction)
         prompt = prompt.replace("{reference_letters}", reference_letters)
+        prompt = prompt.replace("{doc_type}", doc_type)
+        prompt = prompt.replace("{doc_type_display}", doc_type_display)
 
         return prompt
     except Exception as e:
