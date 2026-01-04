@@ -167,6 +167,165 @@ To enable Google Sign-In:
 - CORS protection
 - Admin credit grants require the `X-Admin-Token` header, are rate limited, and should only be called over HTTPS
 
+## Application Structure & Navigation
+
+### Screen Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        LANDING PAGE (/)                         │
+│  - Hero section with features                                   │
+│  - Login/Register buttons                                       │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │
+         ┌────────────┴────────────┐
+         ▼                         ▼
+┌─────────────────┐       ┌─────────────────┐
+│  LOGIN (/login) │       │ REGISTER        │
+│  - Email/PW     │       │ (/register)     │
+│  - Google OAuth │       │ - Name/Email/PW │
+└────────┬────────┘       │ - Languages     │
+         │                └────────┬────────┘
+         └────────────┬────────────┘
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     DASHBOARD (/dashboard)                       │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
+│  │ Upload      │  │ Spontaneous │  │ Analyze Job URL         │  │
+│  │ Documents   │  │ Application │  │                         │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────────┘  │
+│                                                                  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ APPLICATION LIST                                           │  │
+│  │ - Filter (Status, Month)                                   │  │
+│  │ - View details -> /applications/[id]                       │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└──────────┬──────────────────────────────────┬───────────────────┘
+           │                                  │
+           ▼                                  ▼
+┌─────────────────────┐              ┌─────────────────────┐
+│ SETTINGS (/settings)│              │ APPLICATION DETAIL  │
+│ - Profile           │              │ (/applications/[id])│
+│ - Languages         │              │ - Matching Score    │
+│ - Extended Profile  │              │ - Generate Docs     │
+└─────────────────────┘              │ - Download/Delete   │
+                                     └─────────────────────┘
+
+═══════════════════════════════════════════════════════════════════
+                         ADMIN AREA
+═══════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────┐
+│                      ADMIN (/admin)                              │
+│  - Language Management                                           │
+│  - User Search & Management (Credits, Lock, Admin Rights)       │
+│  - Prompt Templates                                              │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│               ADMIN DOCUMENTS (/admin/documents)                 │
+│  - Document Templates Configuration                              │
+│  - Credit Costs, LLM Provider, Model                            │
+│  - Prompt Templates, Active/Inactive                            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### All Pages
+
+| Route | Purpose | Access |
+|-------|---------|--------|
+| `/` | Landing page with features | Public |
+| `/login` | User login (Email/Google) | Public |
+| `/register` | New user registration | Public |
+| `/dashboard` | Main hub: documents, applications, job analysis | Authenticated |
+| `/applications/[id]` | Application details, matching score, document generation | Authenticated |
+| `/settings` | Profile, languages, preferences | Authenticated |
+| `/admin` | User management, languages, prompts | Admin only |
+| `/admin/documents` | Document template configuration | Admin only |
+
+### Admin Document Management Features
+
+The `/admin/documents` page provides complete control over document generation:
+
+| Feature | Description |
+|---------|-------------|
+| **Hide/Show Document** | `is_active` toggle to hide templates from users |
+| **Set Credits (0-X)** | `credit_cost` field (0 = free, up to 10 credits) |
+| **LLM Provider** | Choose OpenAI, Anthropic/Claude, or Google/Gemini |
+| **LLM Model** | Select specific model per template |
+| **Prompt Template** | Full control over the generation prompt |
+
+## Planned Feature: Prompt Builder
+
+A planned enhancement for `/admin/documents` to generate prompts from natural language descriptions:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Prompt Builder Modal                                            │
+├─────────────────────────────────────────────────────────────────┤
+│  STRUCTURED OPTIONS:                                             │
+│  - Tone:        [Formal] [Friendly] [Neutral]                   │
+│  - Length:      [Short] [Medium] [Detailed]                     │
+│  - Focus:       [x] Qualifications [x] Motivation [ ] Soft Skills│
+│  - Audience:    [HR Manager]                                     │
+├─────────────────────────────────────────────────────────────────┤
+│  FREE TEXT DESCRIPTION:                                          │
+│  "A cover letter that immediately convinces, highlights key      │
+│   experience and shows why the applicant is perfect..."          │
+├─────────────────────────────────────────────────────────────────┤
+│  LLM FOR GENERATION: [OpenAI] [gpt-4o-mini] (configurable)      │
+├─────────────────────────────────────────────────────────────────┤
+│  [Generate Prompt]                                               │
+│                                                                  │
+│  GENERATED PROMPT:                                               │
+│  "You are an experienced HR consultant with expertise in..."     │
+│                                                                  │
+│  [Apply] [Regenerate] [Cancel]                                   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Available Placeholders for Prompt Templates
+
+Use these placeholders in your prompt templates. They will be automatically replaced with actual data during document generation:
+
+| Placeholder | Description | Example |
+|-------------|-------------|---------|
+| `{role}` | The AI's role/persona | "experienced career coach" |
+| `{task}` | The main task description | "Write a professional cover letter" |
+| `{job_description}` | Full job posting text + application context | Job requirements, company info |
+| `{cv_text}` | Complete CV/resume text | Full uploaded CV content |
+| `{cv_summary}` | Short CV summary (first 500 chars) | Brief qualification overview |
+| `{language}` | Target language for document | "German", "English", "French" |
+| `{documentation_language}` | User's preferred doc language | Same as `{language}` |
+| `{company_profile_language}` | Language for company research | For company intelligence docs |
+| `{instructions}` | Formatted list of all instructions | Numbered list of rules |
+| `{reference_letters}` | Content of uploaded references | Reference letter text |
+
+**Example prompt template:**
+```
+You are a {role}. {task}.
+
+Job Details:
+{job_description}
+
+Candidate CV:
+{cv_text}
+
+Language: {language}
+
+IMPORTANT INSTRUCTIONS:
+{instructions}
+
+Begin the cover letter now:
+```
+
+**Auto-injected context (not placeholders):**
+- Application type (fulltime/internship/apprenticeship)
+- User employment status
+- User education type
+- Additional profile context
+
 ## File Structure
 
 ```
