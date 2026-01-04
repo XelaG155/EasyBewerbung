@@ -1,186 +1,132 @@
 # Security Policy
 
-## Overview
+## Reporting a Vulnerability
 
-EasyBewerbung takes security seriously. This document outlines our security features, best practices, and how to report security vulnerabilities.
+If you discover a security vulnerability in EasyBewerbung, please report it by opening a GitHub issue or contacting the maintainers directly. We take security seriously and will respond promptly to address any issues.
 
-## Implemented Security Features
+## Security Best Practices
 
-### Authentication & Authorization
+### For Developers
 
-- **JWT-based Authentication**: Secure token-based authentication with configurable expiration (7 days default)
-- **Bcrypt Password Hashing**: Industry-standard password hashing with automatic salt generation
-- **Password Complexity Requirements**:
-  - Minimum 8 characters
-  - At least one uppercase letter
-  - At least one lowercase letter
-  - At least one number
-  - At least one special character
-- **Account Lockout Mechanism**:
-  - Accounts are locked for 15 minutes after 5 failed login attempts
-  - Automatic unlock after the lockout period expires
-  - Failed login attempts are tracked and reset upon successful login
-- **Admin Role-Based Access Control**: Admin-only endpoints require JWT authentication with admin privileges
-- **OAuth Integration**: Secure Google OAuth 2.0 integration for passwordless authentication
+1. **Never Commit Secrets**
+   - Never commit `.env` files with actual credentials
+   - Use `.env.example` or `.env.docker.example` as templates only
+   - Keep API keys, passwords, and tokens in environment variables
+   - Review commits before pushing to ensure no secrets are included
 
-### Rate Limiting
+2. **Authentication & Authorization**
+   - All authenticated endpoints use JWT tokens
+   - User-isolated data queries prevent unauthorized access
+   - Admin endpoints require admin role verification
+   - Rate limiting is enabled on authentication endpoints
 
-Rate limiting is implemented on sensitive endpoints to prevent abuse:
-- Authentication endpoints: 5-10 requests/minute
-- Document upload: 10 requests/minute
-- Application creation: 20 requests/minute
-- Document generation: 10 requests/minute
-- Admin endpoints: 5 requests/minute
+3. **Input Validation**
+   - All API inputs are validated using Pydantic schemas
+   - File uploads are validated by extension, magic number, and size
+   - HTML content is sanitized to prevent XSS attacks
+   - URLs are validated to prevent SSRF attacks
+
+4. **File Upload Security**
+   - File type validation using magic numbers (not just extensions)
+   - Maximum file size: 25MB
+   - Files stored in user-specific directories
+   - Filenames are sanitized and use UUIDs
+   - No path traversal vulnerabilities
+
+5. **Database Security**
+   - All queries use SQLAlchemy ORM (prevents SQL injection)
+   - User data is isolated by user_id
+   - Passwords are hashed using bcrypt
+   - PostgreSQL in production (not SQLite)
+
+### For Administrators
+
+1. **Environment Configuration**
+   - Generate secure SECRET_KEY: `openssl rand -hex 32`
+   - Use strong database passwords (16+ characters)
+   - Rotate API keys regularly
+   - Never use default credentials in production
+
+2. **Production Deployment**
+   - Enable HTTPS with valid SSL certificates
+   - Configure CORS to allow only trusted domains
+   - Set up rate limiting for all endpoints
+   - Enable security headers (CSP, HSTS, X-Frame-Options)
+   - Use environment variables, not committed .env files
+
+3. **Monitoring & Logging**
+   - Monitor failed login attempts
+   - Set up alerts for suspicious activity
+   - Regularly review application logs
+   - Keep track of API usage and costs
+
+4. **Updates & Maintenance**
+   - Keep dependencies updated (`pip-audit`, `npm audit`)
+   - Apply security patches promptly
+   - Review security advisories for used packages
+   - Perform regular security audits
+
+## Known Security Considerations
+
+### Password Requirements
+- Minimum length: 8 characters
+- **Recommendation**: Implement password complexity requirements in future updates
+
+### JWT Token Storage
+- Currently stored in browser localStorage
+- **Recommendation**: Consider httpOnly cookies for better XSS protection
 
 ### CSRF Protection
+- **Status**: Not currently implemented
+- **Recommendation**: Implement CSRF tokens for state-changing operations
 
-- **CSRF Middleware Available**: Double-submit cookie pattern implementation
-- **Status**: Implemented but disabled by default (requires frontend integration)
-- **To Enable**: Uncomment `CSRFMiddleware` in `backend/app/main.py`
-- **Frontend Requirements**: Send `X-CSRF-Token` header matching the `csrf_token` cookie
+### Rate Limiting
+- Enabled on authentication endpoints (login, register)
+- **Recommendation**: Extend to all authenticated endpoints
 
-### File Upload Security
+## Security Features
 
-- **Extension Validation**: Only allows `.pdf`, `.doc`, `.docx`, `.txt` files
-- **Magic Number Verification**: Validates file type using magic numbers (not just extension)
-- **Path Traversal Prevention**:
-  - Filename sanitization removes path separators and dangerous characters
-  - Uses UUID prefixes for unique filenames
-- **File Size Limits**: Maximum 25MB per upload
-- **Chunked Reading**: Prevents memory exhaustion attacks
-- **User Isolation**: Files stored in user-specific directories
+✅ **Implemented**:
+- JWT authentication with token expiration
+- Bcrypt password hashing
+- User-isolated data queries
+- File upload validation (type, size, magic number)
+- XSS protection in HTML sanitization
+- SSRF protection in job URL scraping
+- SQL injection prevention via ORM
+- Rate limiting on authentication endpoints
+- Admin authorization checks
+- CORS protection
 
-### SSRF Protection (Job Scraping)
+⚠️ **Recommended Improvements**:
+- Add CSRF protection
+- Move JWT tokens to httpOnly cookies
+- Implement password complexity requirements
+- Add account lockout after failed login attempts
+- Extend rate limiting to all endpoints
+- Implement security headers (CSP, HSTS)
+- Add dependency vulnerability scanning to CI/CD
 
-- **URL Scheme Validation**: Only allows `http://` and `https://` schemes
-- **Private IP Blocking**: Blocks requests to private IP ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8)
-- **Localhost Blocking**: Prevents access to localhost and 127.0.0.1
-- **Timeout Protection**: 10-second timeout on external requests
+## Dependency Security
 
-### XSS Protection
+### Backend (Python)
+- Run `pip-audit` regularly to check for vulnerabilities
+- Keep FastAPI, SQLAlchemy, and other packages updated
+- Review security advisories for cryptographic libraries
 
-- **HTML Sanitization**: BeautifulSoup used to sanitize scraped HTML content
-- **Parameterized Queries**: SQLAlchemy ORM prevents SQL injection
-- **Content-Type Headers**: Proper content-type headers on all responses
+### Frontend (Node.js)
+- Run `npm audit` regularly
+- Keep Next.js, React, and dependencies updated
+- Monitor for XSS vulnerabilities in third-party components
 
-### SQL Injection Prevention
+## Compliance
 
-- **ORM Usage**: SQLAlchemy ORM with parameterized queries throughout
-- **No Raw SQL**: Avoids raw SQL queries with user input
-- **Migration Safety**: Alembic migrations use SQLAlchemy operations (not string interpolation)
+This application handles personal data (CVs, job applications) and should comply with:
+- **GDPR** (if serving EU users)
+- **Data retention policies**
+- **Right to deletion** (user data removal)
+- **Data export** (user data portability)
 
-### API Security
+## Contact
 
-- **CORS Configuration**: Configurable allowed origins via environment variables
-- **Credential Validation**: User-isolated queries prevent unauthorized data access
-- **Secure Headers**: HTTPOnly cookies for sensitive data (when cookie auth is enabled)
-
-## Security Considerations & Recommendations
-
-### High Priority Recommendations
-
-#### 1. Enable CSRF Protection
-**Current Status**: Implemented but disabled
-**Action Required**:
-1. Update frontend to read `csrf_token` cookie
-2. Send token in `X-CSRF-Token` header for all state-changing requests
-3. Uncomment `CSRFMiddleware` in `backend/app/main.py`
-
-#### 2. Implement HttpOnly Cookie Authentication (Optional Enhancement)
-**Current Status**: JWT tokens returned in response body (client stores in localStorage)
-**Security Improvement**: Use httpOnly cookies to prevent XSS attacks from stealing tokens
-**Trade-off**: Requires CORS configuration changes and may complicate mobile app integration
-
-### Medium Priority Recommendations
-
-#### 3. Environment Variables
-**Critical**:
-- Never commit `.env`, `.env.docker`, or similar files with real credentials
-- Rotate `SECRET_KEY` regularly in production
-- Use strong, unique values for `ADMIN_TOKEN`, `OPENAI_API_KEY`, etc.
-- Verify production `SECRET_KEY` is cryptographically random (use `openssl rand -hex 32`)
-
-#### 4. HTTPS Enforcement
-**Production**: Always use HTTPS in production environments
-- Set `secure=True` on cookies
-- Configure reverse proxy (nginx/traefik) to enforce HTTPS
-- Use HSTS headers
-
-#### 5. Dependency Security
-**Ongoing**:
-- Regularly update dependencies: `pip list --outdated`
-- Review security advisories: `safety check`
-- Pin dependency versions in `requirements.txt`
-
-#### 6. Database Security
-- Use strong PostgreSQL passwords
-- Limit database user privileges (application shouldn't have DROP/CREATE DATABASE)
-- Enable PostgreSQL SSL connections in production
-- Regular backups with encryption
-
-#### 7. Logging & Monitoring
-- **Current**: Basic logging for authentication events and admin actions
-- **Recommendation**:
-  - Implement centralized logging (e.g., ELK stack, CloudWatch)
-  - Set up alerts for suspicious activity (multiple failed logins, unusual API patterns)
-  - Log retention policy for compliance
-
-### API Token Management
-
-**Current Admin Token Approach** (DEPRECATED):
-- Static `ADMIN_TOKEN` in environment variables (removed in latest security update)
-- **New Approach**: JWT-based admin authentication with `is_admin` role check
-
-**Recommendation**:
-- Ensure at least one admin user exists in the database with `is_admin=True`
-- Use standard JWT authentication for admin operations
-- Consider implementing MFA for admin accounts
-
-## GDPR Compliance Considerations
-
-As a job application platform handling personal data:
-
-1. **Data Minimization**: Only collect necessary user information
-2. **User Rights**: Implement account deletion functionality (allows users to delete their data)
-3. **Privacy Policy**: Display and require acceptance during registration
-4. **Data Retention**: Consider implementing automatic deletion of old applications
-5. **Audit Logs**: User activity logs track data access and modifications
-
-## Reporting Security Vulnerabilities
-
-If you discover a security vulnerability, please:
-
-1. **Do NOT** open a public GitHub issue
-2. Email the maintainers directly (check repository for contact)
-3. Provide detailed information about the vulnerability
-4. Allow reasonable time for a fix before public disclosure
-
-## Security Checklist for Deployment
-
-- [ ] `SECRET_KEY` is set to a strong, random value (not the default)
-- [ ] All sensitive environment variables are set and not committed to git
-- [ ] HTTPS is enforced (CORS allows only HTTPS origins)
-- [ ] Database uses strong passwords and restricted privileges
-- [ ] Rate limiting is enabled and configured
-- [ ] File upload directory has proper permissions
-- [ ] Logs are monitored for security events
-- [ ] Dependencies are up-to-date
-- [ ] Backups are configured and tested
-- [ ] At least one admin user exists with `is_admin=True`
-- [ ] CSRF protection is enabled (after frontend integration)
-
-## Security Updates
-
-**2026-01-04**: Major security improvements
-- Added password complexity requirements
-- Implemented account lockout mechanism (5 failed attempts = 15min lock)
-- Added rate limiting to document upload and application endpoints
-- Replaced static admin token with JWT admin role check
-- Implemented CSRF protection middleware (ready for frontend integration)
-- Added migration for security-related database fields
-
-## Additional Resources
-
-- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-- [FastAPI Security Best Practices](https://fastapi.tiangolo.com/tutorial/security/)
-- [SQLAlchemy Security Considerations](https://docs.sqlalchemy.org/en/14/faq/security.html)
+For security concerns, please open a GitHub issue or contact the maintainers.
