@@ -50,7 +50,11 @@ export default function LlmSyncCheckModal({
   const [result, setResult] = useState<LlmSyncCheckResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectedDeprecated, setSelectedDeprecated] = useState<Set<number>>(
+    new Set()
+  );
   const [importing, setImporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Trigger the check automatically when the modal opens for the first time.
   useEffect(() => {
@@ -61,6 +65,7 @@ export default function LlmSyncCheckModal({
       // Reset on close so the next open re-runs fresh.
       setResult(null);
       setSelected(new Set());
+      setSelectedDeprecated(new Set());
       setError(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -151,6 +156,118 @@ export default function LlmSyncCheckModal({
     }
   };
 
+  // Locally prune a deleted deprecated entry from the current result so the
+  // admin does not need to wait for a fresh sync-check round-trip (which is
+  // an expensive call to every provider's list-models endpoint).
+  const removeDeprecatedFromResult = (ids: Set<number>) => {
+    setResult((prev) => {
+      if (!prev) return prev;
+      const nextProviders: typeof prev.providers = { ...prev.providers };
+      for (const providerName of Object.keys(nextProviders) as LlmProvider[]) {
+        const providerResult = nextProviders[providerName];
+        nextProviders[providerName] = {
+          ...providerResult,
+          deprecated: providerResult.deprecated.filter((d) => !ids.has(d.id)),
+        };
+      }
+      return { ...prev, providers: nextProviders };
+    });
+  };
+
+  const toggleDeprecated = (row: LlmSyncDeprecatedEntry) => {
+    setSelectedDeprecated((prev) => {
+      const next = new Set(prev);
+      if (next.has(row.id)) next.delete(row.id);
+      else next.add(row.id);
+      return next;
+    });
+  };
+
+  const selectAllDeprecated = () => {
+    if (!result) return;
+    const all = new Set<number>();
+    for (const providerName of Object.keys(result.providers) as LlmProvider[]) {
+      for (const row of result.providers[providerName].deprecated) {
+        // Only allow bulk-selecting rows that have no referencing templates —
+        // those with refs must be deleted individually AFTER the admin has
+        // migrated their templates, so they're never in scope for batch delete.
+        if (row.referencing_templates.length === 0) {
+          all.add(row.id);
+        }
+      }
+    }
+    setSelectedDeprecated(all);
+  };
+
+  const clearDeprecatedSelection = () => setSelectedDeprecated(new Set());
+
+  const deleteSelectedDeprecated = async () => {
+    if (!result || selectedDeprecated.size === 0) return;
+
+    // Collect the full rows so we can build a clear confirm dialog and
+    // detect any rows that still have references (those must be deleted
+    // individually after the admin updates templates).
+    const rows: LlmSyncDeprecatedEntry[] = [];
+    for (const providerName of Object.keys(result.providers) as LlmProvider[]) {
+      for (const row of result.providers[providerName].deprecated) {
+        if (selectedDeprecated.has(row.id)) rows.push(row);
+      }
+    }
+    const withRefs = rows.filter((r) => r.referencing_templates.length > 0);
+    if (withRefs.length > 0) {
+      setStatus({
+        kind: "error",
+        text:
+          `${withRefs.length} der ausgewählten Modelle werden noch von Templates verwendet. ` +
+          "Diese müssen einzeln gelöscht werden, nachdem die Templates auf ein anderes Modell " +
+          "umgestellt wurden. Bitte entfernen Sie sie aus der Auswahl.",
+      });
+      return;
+    }
+
+    const confirmMsg =
+      `${rows.length} veraltete Modelle löschen?\n\n` +
+      rows.map((r) => `  • ${r.provider}/${r.model_id}`).join("\n");
+    if (!window.confirm(confirmMsg)) return;
+
+    setDeleting(true);
+    const succeeded: number[] = [];
+    const failed: { row: LlmSyncDeprecatedEntry; error: string }[] = [];
+    for (const row of rows) {
+      try {
+        await api.deleteLlmModel(row.id);
+        succeeded.push(row.id);
+      } catch (e) {
+        failed.push({
+          row,
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+
+    // Remove successful deletes from the local result in one batch.
+    if (succeeded.length > 0) {
+      removeDeprecatedFromResult(new Set(succeeded));
+      setSelectedDeprecated(new Set());
+      await onChanged();
+    }
+
+    if (failed.length === 0) {
+      setStatus({
+        kind: "success",
+        text: `${succeeded.length} veraltete Modelle gelöscht.`,
+      });
+    } else {
+      setStatus({
+        kind: "error",
+        text:
+          `${succeeded.length} gelöscht, ${failed.length} fehlgeschlagen. ` +
+          `Erste Ursache: ${failed[0].error}`,
+      });
+    }
+    setDeleting(false);
+  };
+
   const deleteDeprecated = async (row: LlmSyncDeprecatedEntry) => {
     const refs = row.referencing_templates;
     const confirmMsg =
@@ -171,8 +288,10 @@ export default function LlmSyncCheckModal({
         kind: "success",
         text: `Modell ${row.provider}/${row.model_id} gelöscht.`,
       });
+      // Prune locally instead of re-running the full sync-check, which would
+      // re-hit every provider API for every single delete.
+      removeDeprecatedFromResult(new Set([row.id]));
       await onChanged();
-      await runCheck();
     } catch (e) {
       setStatus({
         kind: "error",
@@ -313,13 +432,39 @@ export default function LlmSyncCheckModal({
                         Veraltet ({pr.deprecated.length})
                       </h4>
                       <div className="space-y-2">
-                        {pr.deprecated.map((row) => (
+                        {pr.deprecated.map((row) => {
+                          const hasRefs = row.referencing_templates.length > 0;
+                          const isChecked = selectedDeprecated.has(row.id);
+                          return (
                           <div
                             key={row.id}
-                            className="rounded border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/20 p-3"
+                            className={
+                              "rounded border p-3 transition-colors " +
+                              (isChecked
+                                ? "border-red-500 bg-red-100 dark:bg-red-950/40"
+                                : "border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/20")
+                            }
                           >
                             <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0 flex-1">
+                              <div className="min-w-0 flex-1 flex items-start gap-2">
+                                {/* Checkbox for bulk delete — only rows without
+                                    referencing templates are eligible. Rows
+                                    with references must be cleaned up in the
+                                    templates first. */}
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  disabled={hasRefs}
+                                  onChange={() => toggleDeprecated(row)}
+                                  className="mt-0.5 h-4 w-4 flex-shrink-0 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                                  aria-label={`${row.provider}/${row.model_id} für Bulk-Löschen auswählen`}
+                                  title={
+                                    hasRefs
+                                      ? "Dieses Modell wird noch von Templates verwendet und kann nicht im Bulk-Delete gelöscht werden."
+                                      : "Für Bulk-Löschen auswählen"
+                                  }
+                                />
+                                <div className="min-w-0 flex-1">
                                 <div className="font-mono text-xs text-gray-900 dark:text-gray-100">
                                   {row.model_id}
                                 </div>
@@ -359,6 +504,7 @@ export default function LlmSyncCheckModal({
                                     sicher gelöscht werden.
                                   </div>
                                 )}
+                                </div>
                               </div>
                               <button
                                 onClick={() => deleteDeprecated(row)}
@@ -369,7 +515,8 @@ export default function LlmSyncCheckModal({
                               </button>
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -421,10 +568,54 @@ export default function LlmSyncCheckModal({
             })}
         </div>
 
-        {/* Footer */}
+        {/* Footer: Bulk-Delete for deprecated (appears whenever any deprecated
+            entries exist) + Bulk-Import for new (appears whenever new entries
+            exist). Both sections can render together. */}
+        {result && totalDeprecated > 0 && (
+          <footer className="px-6 py-3 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between bg-red-50/50 dark:bg-red-950/20">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold text-red-800 dark:text-red-300">
+                Veraltete Modelle:
+              </span>
+              <button
+                type="button"
+                onClick={selectAllDeprecated}
+                className="text-xs text-red-700 dark:text-red-400 hover:underline rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+              >
+                Alle ohne Referenzen auswählen
+              </button>
+              <span className="text-gray-400" aria-hidden="true">·</span>
+              <button
+                type="button"
+                onClick={clearDeprecatedSelection}
+                className="text-xs text-gray-600 dark:text-gray-400 hover:underline rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500"
+              >
+                Auswahl leeren
+              </button>
+              <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
+                {selectedDeprecated.size} ausgewählt
+              </span>
+            </div>
+            <button
+              onClick={deleteSelectedDeprecated}
+              disabled={deleting || selectedDeprecated.size === 0}
+              className={adminBtn.danger("lg")}
+            >
+              {deleting
+                ? "Wird gelöscht..."
+                : selectedDeprecated.size === 0
+                ? "Auswahl löschen"
+                : `${selectedDeprecated.size} löschen`}
+            </button>
+          </footer>
+        )}
+
         {result && totalNew > 0 && (
-          <footer className="px-6 py-3 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50">
-            <div className="flex items-center gap-2">
+          <footer className="px-6 py-3 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between bg-green-50/50 dark:bg-green-950/20">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold text-green-800 dark:text-green-300">
+                Neu verfügbar:
+              </span>
               <button
                 type="button"
                 onClick={selectAllNew}

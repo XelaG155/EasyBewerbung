@@ -1,7 +1,61 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 interface ApiError {
-  detail: string;
+  detail: string | unknown;
+}
+
+/**
+ * Format a backend error response into a readable German message.
+ *
+ * FastAPI returns errors in two shapes:
+ *   - string detail: `{"detail": "Dokumenttyp nicht gefunden."}`
+ *   - Pydantic validation array: `{"detail": [{"type": "...", "loc": [...], "msg": "...", "input": "..."}]}`
+ *
+ * Previously we did `new Error(error.detail)`, which stringified the array
+ * as `"[object Object]"` and lost all information. This helper unpacks the
+ * validation array into a human-readable list of `field: message` lines.
+ */
+function formatApiError(error: unknown, status: number): string {
+  if (typeof error === "string") return error;
+  if (!error || typeof error !== "object") return `HTTP ${status}`;
+
+  const detail = (error as { detail?: unknown }).detail;
+
+  if (typeof detail === "string" && detail.length > 0) return detail;
+
+  if (Array.isArray(detail)) {
+    // Pydantic v2 validation error list
+    const lines = detail.map((item) => {
+      if (typeof item === "string") return item;
+      if (!item || typeof item !== "object") return String(item);
+      const obj = item as {
+        loc?: unknown[];
+        msg?: string;
+        type?: string;
+        input?: unknown;
+      };
+      // Build "field: message" where field is the last meaningful loc segment
+      const loc = Array.isArray(obj.loc)
+        ? obj.loc
+            .filter((x) => x !== "body" && x !== "query" && x !== "path")
+            .join(".")
+        : "";
+      const msg = obj.msg ?? obj.type ?? "Ungültiger Wert";
+      return loc ? `${loc}: ${msg}` : msg;
+    });
+    return lines.join("\n");
+  }
+
+  if (detail && typeof detail === "object") {
+    // Fallback for nested objects — JSON.stringify is better than [object Object]
+    try {
+      return JSON.stringify(detail);
+    } catch {
+      return `HTTP ${status}`;
+    }
+  }
+
+  return `HTTP ${status}`;
 }
 
 export interface User {
@@ -112,14 +166,6 @@ export interface ActivityEntry {
 export interface AdminUserDetail {
   user: User;
   activity: ActivityEntry[];
-}
-
-export interface PromptTemplate {
-  id: number;
-  doc_type: string;
-  name: string;
-  content: string;
-  updated_at: string;
 }
 
 export interface DocumentTemplate {
@@ -355,10 +401,10 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const error: ApiError = await response.json().catch(() => ({
-        detail: "An error occurred",
-      }));
-      throw new Error(error.detail || `HTTP ${response.status}`);
+      const error = await response
+        .json()
+        .catch(() => ({ detail: "An error occurred" }));
+      throw new Error(formatApiError(error, response.status));
     }
 
     return response.json();
@@ -482,10 +528,10 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const error: ApiError = await response.json().catch(() => ({
-        detail: "Upload failed",
-      }));
-      throw new Error(error.detail);
+      const error = await response
+        .json()
+        .catch(() => ({ detail: "Upload failed" }));
+      throw new Error(formatApiError(error, response.status));
     }
 
     return response.json();
@@ -679,17 +725,6 @@ class ApiClient {
     return this.request<AdminUserDetail>(`/admin/users/${userId}/admin`, {
       method: "POST",
       body: JSON.stringify({ is_admin: isAdmin }),
-    });
-  }
-
-  async adminListPrompts() {
-    return this.request<PromptTemplate[]>("/admin/prompts");
-  }
-
-  async adminUpdatePrompt(promptId: number, name?: string, content?: string) {
-    return this.request<PromptTemplate>(`/admin/prompts/${promptId}`, {
-      method: "PUT",
-      body: JSON.stringify({ name, content }),
     });
   }
 

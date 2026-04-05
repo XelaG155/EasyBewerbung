@@ -1,22 +1,30 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import api, {
   ActivityEntry,
-  AdminLanguageSetting,
   AdminUserDetail,
   AdminUserSummary,
-  PromptTemplate,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { adminBtn } from "@/lib/admin-ui";
 
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+type StatusMessage = { kind: "success" | "error"; text: string };
+
+function SectionCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-800">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          {title}
+        </h2>
       </div>
       {children}
     </section>
@@ -26,69 +34,28 @@ function SectionCard({ title, children }: { title: string; children: React.React
 export default function AdminPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [languages, setLanguages] = useState<AdminLanguageSetting[]>([]);
   const [users, setUsers] = useState<AdminUserSummary[]>([]);
-  const [selectedUser, setSelectedUser] = useState<AdminUserDetail | null>(null);
+  const [selectedUser, setSelectedUser] = useState<AdminUserDetail | null>(
+    null
+  );
   const [query, setQuery] = useState("");
-  const [prompts, setPrompts] = useState<PromptTemplate[]>([]);
-  const [status, setStatus] = useState<string | null>(null);
+  const [creditInput, setCreditInput] = useState<string>("10");
+  const [status, setStatus] = useState<StatusMessage | null>(null);
 
   const isAdmin = user?.is_admin;
 
   useEffect(() => {
     if (!isAdmin) return;
-    loadLanguages();
-    loadPrompts();
     searchUsers("");
   }, [isAdmin]);
 
-  const sortedLanguages = useMemo(
-    () => [...languages].sort((a, b) => a.sort_order - b.sort_order),
-    [languages],
-  );
-
-  const loadLanguages = async () => {
-    try {
-      const data = await api.adminListLanguages();
-      setLanguages(data);
-    } catch (error) {
-      console.error("Failed to load languages:", error);
-      setStatus("Fehler beim Laden der Sprachen.");
-    }
-  };
-
-  const updateLanguages = async (next: AdminLanguageSetting[]) => {
-    try {
-      setLanguages(next);
-      await api.adminUpdateLanguages(
-        next.map((lang) => ({ code: lang.code, is_active: lang.is_active, sort_order: lang.sort_order })),
-      );
-      setStatus("Sprachoptionen gespeichert.");
-    } catch (error) {
-      console.error("Failed to update languages:", error);
-      setStatus("Fehler beim Speichern der Sprachoptionen.");
-      // Reload languages to revert changes
-      await loadLanguages();
-    }
-  };
-
-  const toggleLanguage = (code: string) => {
-    const next = languages.map((lang) =>
-      lang.code === code ? { ...lang, is_active: !lang.is_active } : lang,
-    );
-    updateLanguages(next);
-  };
-
-  const moveLanguage = (code: string, direction: -1 | 1) => {
-    const next = [...sortedLanguages];
-    const index = next.findIndex((l) => l.code === code);
-    if (index < 0) return;
-    const swapIndex = index + direction;
-    if (swapIndex < 0 || swapIndex >= next.length) return;
-    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
-    const withOrder = next.map((lang, idx) => ({ ...lang, sort_order: idx }));
-    updateLanguages(withOrder);
-  };
+  // Auto-dismiss toast after 5s (8s for errors)
+  useEffect(() => {
+    if (!status) return;
+    const ms = status.kind === "error" ? 8000 : 5000;
+    const handle = setTimeout(() => setStatus(null), ms);
+    return () => clearTimeout(handle);
+  }, [status]);
 
   const searchUsers = async (value: string) => {
     try {
@@ -96,7 +63,7 @@ export default function AdminPage() {
       setUsers(data);
     } catch (error) {
       console.error("Failed to search users:", error);
-      setStatus("Fehler bei der Benutzersuche.");
+      setStatus({ kind: "error", text: "Fehler bei der Benutzersuche." });
     }
   };
 
@@ -106,31 +73,71 @@ export default function AdminPage() {
       setSelectedUser(detail);
     } catch (error) {
       console.error("Failed to load user details:", error);
-      setStatus("Fehler beim Laden der Benutzerdetails.");
+      setStatus({
+        kind: "error",
+        text: "Fehler beim Laden der Benutzerdetails.",
+      });
     }
   };
 
-  const changeCredits = async (delta: number) => {
+  const applyCreditChange = async (delta: number) => {
     if (!selectedUser) return;
+    if (delta === 0) {
+      setStatus({ kind: "error", text: "Bitte eine Anzahl ungleich 0 angeben." });
+      return;
+    }
     try {
       const detail = await api.adminUpdateCredits(selectedUser.user.id, delta);
       setSelectedUser(detail);
-      setStatus("Credits aktualisiert.");
+      setStatus({
+        kind: "success",
+        text:
+          delta > 0
+            ? `${delta} Credits hinzugefügt (neu: ${detail.user.credits}).`
+            : `${Math.abs(delta)} Credits abgezogen (neu: ${detail.user.credits}).`,
+      });
     } catch (error) {
       console.error("Failed to update credits:", error);
-      setStatus("Fehler beim Aktualisieren der Credits.");
+      setStatus({
+        kind: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Fehler beim Aktualisieren der Credits.",
+      });
     }
+  };
+
+  const handleCreditSubmit = (mode: "add" | "subtract") => {
+    const parsed = parseInt(creditInput.trim(), 10);
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      setStatus({
+        kind: "error",
+        text: "Bitte eine positive ganze Zahl eingeben.",
+      });
+      return;
+    }
+    applyCreditChange(mode === "add" ? parsed : -parsed);
   };
 
   const toggleUserActive = async (desired: boolean) => {
     if (!selectedUser) return;
     try {
-      const detail = await api.adminToggleActive(selectedUser.user.id, desired);
+      const detail = await api.adminToggleActive(
+        selectedUser.user.id,
+        desired
+      );
       setSelectedUser(detail);
-      setStatus(desired ? "Benutzer entsperrt." : "Benutzer gesperrt.");
+      setStatus({
+        kind: "success",
+        text: desired ? "Benutzer entsperrt." : "Benutzer gesperrt.",
+      });
     } catch (error) {
       console.error("Failed to toggle user active status:", error);
-      setStatus("Fehler beim Ändern des Benutzerstatus.");
+      setStatus({
+        kind: "error",
+        text: "Fehler beim Ändern des Benutzerstatus.",
+      });
     }
   };
 
@@ -139,245 +146,311 @@ export default function AdminPage() {
     try {
       const detail = await api.adminToggleAdmin(selectedUser.user.id, desired);
       setSelectedUser(detail);
-      setStatus(desired ? "Admin-Rechte erteilt." : "Admin-Rechte entzogen.");
+      setStatus({
+        kind: "success",
+        text: desired ? "Admin-Rechte erteilt." : "Admin-Rechte entzogen.",
+      });
     } catch (error) {
       console.error("Failed to toggle user admin status:", error);
-      setStatus("Fehler beim Ändern der Admin-Rechte.");
-    }
-  };
-
-  const loadPrompts = async () => {
-    try {
-      const data = await api.adminListPrompts();
-      setPrompts(data);
-    } catch (error) {
-      console.error("Failed to load prompts:", error);
-      setStatus("Fehler beim Laden der Prompts.");
-    }
-  };
-
-  const updatePrompt = async (prompt: PromptTemplate, content: string) => {
-    try {
-      const updated = await api.adminUpdatePrompt(prompt.id, prompt.name, content);
-      setPrompts((prev) => prev.map((p) => (p.id === prompt.id ? updated : p)));
-      setStatus("Prompt gespeichert.");
-    } catch (error) {
-      console.error("Failed to update prompt:", error);
-      setStatus("Fehler beim Speichern des Prompts.");
+      setStatus({
+        kind: "error",
+        text: "Fehler beim Ändern der Admin-Rechte.",
+      });
     }
   };
 
   if (loading) {
-    return <div className="p-8 text-gray-700 dark:text-gray-200">Lade...</div>;
+    return (
+      <div className="p-8 text-gray-700 dark:text-gray-200">Lade...</div>
+    );
   }
 
   if (!user) {
-    return <div className="p-8 text-gray-700 dark:text-gray-200">Bitte zuerst anmelden.</div>;
+    return (
+      <div className="p-8 text-gray-700 dark:text-gray-200">
+        Bitte zuerst anmelden.
+      </div>
+    );
   }
 
   if (!isAdmin) {
-    return <div className="p-8 text-red-600">Kein Zugriff: Administratoren vorbehalten.</div>;
+    return (
+      <div className="p-8 text-red-600">
+        Kein Zugriff: Administratoren vorbehalten.
+      </div>
+    );
   }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 p-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          Admin Konsole
+          Admin-Konsole
         </h1>
         <button
           onClick={() => router.push("/dashboard")}
           className={adminBtn.secondary("lg")}
-          title="Zurück zum Dashboard / Hauptmenu"
+          title="Zurück zum Dashboard"
         >
           <span aria-hidden="true">←</span> Zurück zum Dashboard
         </button>
       </div>
-      {status && (
-        <div className="rounded bg-green-100 text-green-800 px-4 py-2 text-sm" role="status">
-          {status}
-        </div>
-      )}
 
-      {/* Document Templates Navigation Card */}
-      <SectionCard title="Document Templates">
-        <p className="text-gray-600 dark:text-gray-400 mb-4">
-          Konfiguriere Credit-Kosten, Sprachquellen, LLM Provider und Prompts für die Dokumentgenerierung.
-        </p>
-        <button
-          onClick={() => router.push("/admin/documents")}
-          className={adminBtn.primary("lg")}
-        >
-          Dokument-Vorlagen verwalten
-        </button>
-      </SectionCard>
+      {/* Navigation cards for sub-admin areas */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <SectionCard title="Dokument-Vorlagen">
+          <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+            Credit-Kosten, Sprachquellen, LLM-Provider, Prompts und Dokumenttypen
+            verwalten.
+          </p>
+          <button
+            onClick={() => router.push("/admin/documents")}
+            className={adminBtn.primary("lg")}
+          >
+            Dokument-Vorlagen verwalten →
+          </button>
+        </SectionCard>
 
-      <SectionCard title="Sprachen verwalten">
-        <div className="space-y-2">
-          {sortedLanguages.map((lang) => (
-            <div
-              key={lang.code}
-              className="flex items-center justify-between rounded border border-gray-200 dark:border-gray-800 px-3 py-2"
-            >
-              <div>
-                <div className="font-medium text-gray-900 dark:text-gray-100">{lang.label}</div>
-                <div className="text-xs text-gray-500">{lang.code}</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800"
-                  onClick={() => moveLanguage(lang.code, -1)}
-                >
-                  ↑
-                </button>
-                <button
-                  className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800"
-                  onClick={() => moveLanguage(lang.code, 1)}
-                >
-                  ↓
-                </button>
-                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-                  <input
-                    type="checkbox"
-                    checked={lang.is_active}
-                    onChange={() => toggleLanguage(lang.code)}
-                  />
-                  Aktiv
-                </label>
-              </div>
-            </div>
-          ))}
-        </div>
-      </SectionCard>
+        <SectionCard title="Sprachen">
+          <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+            Verfügbare Oberflächensprachen aktivieren, deaktivieren und sortieren.
+          </p>
+          <button
+            onClick={() => router.push("/admin/languages")}
+            className={adminBtn.primary("lg")}
+          >
+            Sprachen verwalten →
+          </button>
+        </SectionCard>
+      </div>
 
-      <SectionCard title="User Suche & Details">
+      <SectionCard title="Benutzer suchen und verwalten">
         <div className="flex gap-2 mb-4">
           <input
-            className="flex-1 rounded border border-gray-200 dark:border-gray-800 px-3 py-2"
-            placeholder="Email oder Name"
+            className="flex-1 rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            placeholder="E-Mail oder Name"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") searchUsers(query);
+            }}
           />
           <button
-            className="px-4 py-2 rounded bg-blue-600 text-white"
+            className={adminBtn.primary("lg")}
             onClick={() => searchUsers(query)}
           >
             Suchen
           </button>
         </div>
+
         <div className="grid md:grid-cols-3 gap-4">
-          <div className="space-y-2 md:col-span-1">
-            {users.map((u) => (
-              <button
-                key={u.id}
-                className={`w-full text-left rounded border px-3 py-2 ${
-                  selectedUser?.user.id === u.id
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30"
-                    : "border-gray-200 dark:border-gray-800"
-                }`}
-                onClick={() => selectUser(u.id)}
-              >
-                <div className="font-semibold text-gray-900 dark:text-gray-100">{u.email}</div>
-                <div className="text-xs text-gray-500">Credits: {u.credits}</div>
-                <div className="text-xs text-gray-500">Admin: {u.is_admin ? "Ja" : "Nein"}</div>
-              </button>
-            ))}
+          <div className="space-y-2 md:col-span-1 max-h-[600px] overflow-y-auto">
+            {users.length === 0 ? (
+              <div className="text-sm text-gray-500">Keine Benutzer gefunden.</div>
+            ) : (
+              users.map((u) => (
+                <button
+                  key={u.id}
+                  className={
+                    "w-full text-left rounded border px-3 py-2 transition-colors " +
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 " +
+                    (selectedUser?.user.id === u.id
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30"
+                      : "border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40")
+                  }
+                  onClick={() => selectUser(u.id)}
+                >
+                  <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                    {u.email}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Credits: {u.credits} · Admin: {u.is_admin ? "Ja" : "Nein"}
+                  </div>
+                </button>
+              ))
+            )}
           </div>
-          <div className="md:col-span-2 space-y-3">
+
+          <div className="md:col-span-2 space-y-4">
             {selectedUser ? (
               <>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      {selectedUser.user.email}
+                <div className="rounded border border-gray-200 dark:border-gray-800 p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
+                        {selectedUser.user.email}
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Aktuelle Credits:{" "}
+                        <strong className="text-gray-900 dark:text-gray-100">
+                          {selectedUser.user.credits}
+                        </strong>
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Credits: {selectedUser.user.credits}
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button
+                        className={
+                          selectedUser.user.is_active
+                            ? adminBtn.danger("md")
+                            : adminBtn.success("md")
+                        }
+                        onClick={() =>
+                          toggleUserActive(!selectedUser.user.is_active)
+                        }
+                      >
+                        {selectedUser.user.is_active ? "Sperren" : "Entsperren"}
+                      </button>
+                      <button
+                        className={adminBtn.warning("md")}
+                        onClick={() =>
+                          toggleUserAdmin(!selectedUser.user.is_admin)
+                        }
+                      >
+                        {selectedUser.user.is_admin
+                          ? "Admin entziehen"
+                          : "Admin geben"}
+                      </button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      className="px-3 py-1 rounded bg-gray-100 dark:bg-gray-800"
-                      onClick={() => changeCredits(1)}
-                    >
-                      +1 Credit
-                    </button>
-                    <button
-                      className="px-3 py-1 rounded bg-gray-100 dark:bg-gray-800"
-                      onClick={() => changeCredits(-1)}
-                    >
-                      -1 Credit
-                    </button>
-                    <button
-                      className={`px-3 py-1 rounded ${
-                        selectedUser.user.is_active ? "bg-red-600 text-white" : "bg-green-600 text-white"
-                      }`}
-                      onClick={() => toggleUserActive(!selectedUser.user.is_active)}
-                    >
-                      {selectedUser.user.is_active ? "Sperren" : "Entsperren"}
-                    </button>
-                    <button
-                      className="px-3 py-1 rounded bg-yellow-500 text-white"
-                      onClick={() => toggleUserAdmin(!selectedUser.user.is_admin)}
-                    >
-                      {selectedUser.user.is_admin ? "Admin entziehen" : "Admin geben"}
-                    </button>
+
+                  {/* Credit management — bulk input instead of +1/-1 buttons */}
+                  <div className="border-t border-gray-200 dark:border-gray-800 pt-3">
+                    <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Credits anpassen
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={creditInput}
+                        onChange={(e) => setCreditInput(e.target.value)}
+                        className="w-24 rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                        aria-label="Anzahl Credits"
+                      />
+                      <button
+                        className={adminBtn.success("md")}
+                        onClick={() => handleCreditSubmit("add")}
+                      >
+                        + hinzufügen
+                      </button>
+                      <button
+                        className={adminBtn.secondary("md")}
+                        onClick={() => handleCreditSubmit("subtract")}
+                      >
+                        − abziehen
+                      </button>
+                      <span className="text-xs text-gray-500 ml-1">
+                        z.B. 20 für 20 gekaufte Credits
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-200 dark:border-gray-800 pt-3 grid grid-cols-2 gap-2 text-sm text-gray-700 dark:text-gray-200">
+                    <div>
+                      Letzter Login:{" "}
+                      <span className="text-gray-500">
+                        {selectedUser.user.last_login_at || "—"}
+                      </span>
+                    </div>
+                    <div>
+                      Passwort geändert:{" "}
+                      <span className="text-gray-500">
+                        {selectedUser.user.password_changed_at || "—"}
+                      </span>
+                    </div>
+                    <div>
+                      Erstellt am:{" "}
+                      <span className="text-gray-500">
+                        {selectedUser.user.created_at}
+                      </span>
+                    </div>
+                    <div>
+                      Status:{" "}
+                      <span
+                        className={
+                          selectedUser.user.is_active
+                            ? "text-green-700 dark:text-green-400"
+                            : "text-red-700 dark:text-red-400"
+                        }
+                      >
+                        {selectedUser.user.is_active ? "Aktiv" : "Gesperrt"}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-sm text-gray-700 dark:text-gray-200">
-                  <div>Letzter Login: {selectedUser.user.last_login_at || "-"}</div>
-                  <div>Passwort geändert: {selectedUser.user.password_changed_at || "-"}</div>
-                  <div>Erstellt am: {selectedUser.user.created_at}</div>
-                  <div>Status: {selectedUser.user.is_active ? "Aktiv" : "Gesperrt"}</div>
-                </div>
+
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Aktivitäten</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    Aktivitäten
+                  </h3>
                   <div className="max-h-60 overflow-auto space-y-2 text-sm">
                     {selectedUser.activity.length === 0 && (
-                      <div className="text-gray-500">Noch keine Logs.</div>
-                    )}
-                    {selectedUser.activity.map((log: ActivityEntry, idx) => (
-                      <div
-                        key={idx}
-                        className="border border-gray-200 dark:border-gray-800 rounded px-3 py-2"
-                      >
-                        <div className="font-medium text-gray-900 dark:text-gray-100">{log.action}</div>
-                        <div className="text-xs text-gray-500">{log.created_at}</div>
-                        <div className="text-xs text-gray-500">IP: {log.ip_address || "-"}</div>
-                        {log.metadata && <div className="text-xs text-gray-500">{log.metadata}</div>}
+                      <div className="text-gray-500">
+                        Noch keine Aktivitätslogs.
                       </div>
-                    ))}
+                    )}
+                    {selectedUser.activity.map(
+                      (log: ActivityEntry, idx) => (
+                        <div
+                          key={idx}
+                          className="border border-gray-200 dark:border-gray-800 rounded px-3 py-2"
+                        >
+                          <div className="font-medium text-gray-900 dark:text-gray-100">
+                            {log.action}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {log.created_at}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            IP: {log.ip_address || "—"}
+                          </div>
+                          {log.metadata && (
+                            <div className="text-xs text-gray-500 break-all">
+                              {log.metadata}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
               </>
             ) : (
-              <div className="text-gray-500">Bitte einen User auswählen.</div>
+              <div className="text-gray-500 text-sm">
+                Bitte einen Benutzer aus der Liste wählen.
+              </div>
             )}
           </div>
         </div>
       </SectionCard>
 
-      <SectionCard title="Prompts verwalten">
-        <div className="space-y-4">
-          {prompts.map((prompt) => (
-            <div key={prompt.id} className="border border-gray-200 dark:border-gray-800 rounded p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-semibold text-gray-900 dark:text-gray-100">{prompt.name}</div>
-                  <div className="text-xs text-gray-500">{prompt.doc_type}</div>
-                </div>
-                <div className="text-xs text-gray-500">Aktualisiert: {prompt.updated_at}</div>
-              </div>
-              <textarea
-                className="mt-2 w-full rounded border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-2 text-sm text-gray-800 dark:text-gray-100"
-                rows={4}
-                defaultValue={prompt.content}
-                onBlur={(e) => updatePrompt(prompt, e.target.value)}
-              />
-            </div>
-          ))}
+      {/* Status toast */}
+      {status && (
+        <div
+          role={status.kind === "error" ? "alert" : "status"}
+          aria-live={status.kind === "error" ? "assertive" : "polite"}
+          className={
+            "fixed bottom-4 right-4 z-[60] max-w-md rounded-lg shadow-lg " +
+            "border px-4 py-3 text-sm flex items-start gap-3 " +
+            (status.kind === "success"
+              ? "bg-green-50 dark:bg-green-950/80 border-green-300 dark:border-green-800 text-green-900 dark:text-green-200"
+              : "bg-red-50 dark:bg-red-950/80 border-red-300 dark:border-red-800 text-red-900 dark:text-red-200")
+          }
+        >
+          <span aria-hidden="true" className="mt-0.5 flex-shrink-0">
+            {status.kind === "success" ? "✓" : "⚠"}
+          </span>
+          <div className="flex-1 min-w-0">{status.text}</div>
+          <button
+            onClick={() => setStatus(null)}
+            className="flex-shrink-0 text-current opacity-70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current rounded"
+            aria-label="Meldung schliessen"
+          >
+            &times;
+          </button>
         </div>
-      </SectionCard>
+      )}
     </div>
   );
 }

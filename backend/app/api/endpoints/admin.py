@@ -12,7 +12,6 @@ from app.language_catalog import get_language_options
 from app.models import (
     User,
     LanguageSetting,
-    PromptTemplate,
     UserActivityLog,
 )
 from app.api.endpoints.users import serialize_user, record_activity, UserResponse
@@ -87,22 +86,6 @@ class CreditUpdateRequest(BaseModel):
     reason: Optional[str] = None
 
 
-class PromptResponse(BaseModel):
-    id: int
-    doc_type: str
-    name: str
-    content: str
-    updated_at: str
-
-    class Config:
-        from_attributes = True
-
-
-class PromptUpdateRequest(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=200)
-    content: Optional[str] = Field(None, min_length=1, max_length=50000)
-
-
 class ToggleActiveRequest(BaseModel):
     is_active: bool
 
@@ -123,13 +106,6 @@ class ToggleAdminRequest(BaseModel):
 # `components/PromptBuilderModal.tsx`.
 
 
-DEFAULT_PROMPTS = [
-    ("cover_letter", "Cover Letter", "Default cover letter prompt"),
-    ("cv", "CV", "Default CV prompt"),
-    ("motivation", "Motivation", "Default motivation prompt"),
-]
-
-
 def ensure_language_settings(db: Session) -> None:
     existing_codes = {ls.code for ls in db.query(LanguageSetting).all()}
     if existing_codes:
@@ -145,14 +121,6 @@ def ensure_language_settings(db: Session) -> None:
                 is_active=True,
             )
         )
-    db.commit()
-
-
-def ensure_prompts(db: Session) -> None:
-    if db.query(PromptTemplate).count() > 0:
-        return
-    for doc_type, name, content in DEFAULT_PROMPTS:
-        db.add(PromptTemplate(doc_type=doc_type, name=name, content=content))
     db.commit()
 
 
@@ -330,73 +298,21 @@ async def toggle_admin(
     return await get_user_detail(user_id, request, db, admin)
 
 
-@router.get("/admin/prompts", response_model=List[PromptResponse])
-@limiter.limit("30/minute")
-async def list_prompts(request: Request, db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
-    ensure_prompts(db)
-    prompts = db.query(PromptTemplate).order_by(PromptTemplate.id).all()
-    return [
-        PromptResponse(
-            id=prompt.id,
-            doc_type=prompt.doc_type,
-            name=prompt.name,
-            content=prompt.content,
-            updated_at=prompt.updated_at.isoformat(),
-        )
-        for prompt in prompts
-    ]
-
-
-@router.put("/admin/prompts/{prompt_id}", response_model=PromptResponse)
-@limiter.limit("20/minute")
-async def update_prompt(
-    prompt_id: int,
-    payload: PromptUpdateRequest,
-    request: Request,
-    db: Session = Depends(get_db),
-    admin: User = Depends(get_admin_user),
-):
-    prompt = db.query(PromptTemplate).filter(PromptTemplate.id == prompt_id).first()
-    if not prompt:
-        raise HTTPException(status_code=404, detail="Prompt not found")
-
-    # Validate that at least one field is being updated
-    if payload.name is None and payload.content is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="At least one field (name or content) must be provided"
-        )
-
-    if payload.name is not None:
-        # Basic sanitization: strip whitespace
-        sanitized_name = payload.name.strip()
-        if not sanitized_name:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Name cannot be empty or whitespace only"
-            )
-        prompt.name = sanitized_name
-
-    if payload.content is not None:
-        # Basic sanitization: strip leading/trailing whitespace but preserve internal formatting
-        sanitized_content = payload.content.strip()
-        if not sanitized_content:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Content cannot be empty or whitespace only"
-            )
-        prompt.content = sanitized_content
-
-    prompt.updated_at = datetime.now(timezone.utc)
-    db.commit()
-    db.refresh(prompt)
-    record_activity(db, admin, "update_prompt", request=request, metadata=f"prompt:{prompt_id}")
-    return PromptResponse(
-        id=prompt.id,
-        doc_type=prompt.doc_type,
-        name=prompt.name,
-        content=prompt.content,
-        updated_at=prompt.updated_at.isoformat(),
-    )
+# NOTE: The legacy /admin/prompts endpoints (list_prompts, update_prompt)
+# and their supporting helpers (ensure_prompts, DEFAULT_PROMPTS,
+# PromptResponse, PromptUpdateRequest) used to live here. They backed a
+# separate "Prompts verwalten" admin UI that only contained three
+# placeholder rows (cover_letter, cv, motivation) with dummy content
+# ("Default cover letter prompt" etc.) and were never read by the actual
+# document-generation pipeline in app/tasks.py. The real prompts come
+# from `document_templates.prompt_template` (DB) joined with
+# `document_prompts.json` (per-doc-type role/task/instructions) via
+# `_resolve_prompt_components`. Removed on 2026-04-05 together with the
+# frontend "Prompts verwalten" section to stop confusing admins.
+#
+# The underlying `prompt_templates` DB table and SQLAlchemy model are
+# intentionally left in place so that a downgrade from this commit does
+# not require a destructive migration. If you also want the table gone,
+# add an Alembic migration to drop it.
 
 
