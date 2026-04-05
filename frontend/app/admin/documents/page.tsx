@@ -14,10 +14,10 @@ import api, {
   LlmModelCreate,
   LlmProvider,
 } from "@/lib/api";
-import PromptBuilderModal from "@/components/PromptBuilderModal";
 import PlaceholderExplorer from "@/components/PlaceholderExplorer";
 import TemplateEditorDrawer from "@/components/TemplateEditorDrawer";
 import LlmSyncCheckModal from "@/components/LlmSyncCheckModal";
+import { adminBtn, statusBadge } from "@/lib/admin-ui";
 
 type StatusMessage = { kind: "success" | "error"; text: string };
 
@@ -45,10 +45,6 @@ export default function AdminDocumentsPage() {
   const [status, setStatus] = useState<StatusMessage | null>(null);
 
   const [editorTemplateId, setEditorTemplateId] = useState<number | null>(null);
-  const [promptBuilderOpen, setPromptBuilderOpen] = useState(false);
-  const [promptBuilderDraft, setPromptBuilderDraft] = useState<
-    DocumentTemplateUpdate | null
-  >(null);
 
   const editorTemplate = useMemo(
     () => templates.find((t) => t.id === editorTemplateId) ?? null,
@@ -105,6 +101,15 @@ export default function AdminDocumentsPage() {
       loadAll();
     }
   }, [user, loadAll]);
+
+  // Auto-dismiss toast after 5 seconds. Errors stay a bit longer (8 s) so the
+  // admin has time to read them.
+  useEffect(() => {
+    if (!status) return;
+    const ms = status.kind === "error" ? 8000 : 5000;
+    const handle = setTimeout(() => setStatus(null), ms);
+    return () => clearTimeout(handle);
+  }, [status]);
 
   const [advancedSeedOpen, setAdvancedSeedOpen] = useState(false);
 
@@ -179,7 +184,17 @@ export default function AdminDocumentsPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="p-8 text-gray-700 dark:text-gray-200">Lade...</div>
+      <div className="max-w-7xl mx-auto p-6" aria-busy="true">
+        <div className="h-8 w-64 rounded bg-gray-200 dark:bg-gray-800 animate-pulse mb-4" />
+        <div className="space-y-3">
+          <div className="h-32 w-full rounded bg-gray-100 dark:bg-gray-900 animate-pulse" />
+          <div className="h-32 w-full rounded bg-gray-100 dark:bg-gray-900 animate-pulse" />
+          <div className="h-32 w-full rounded bg-gray-100 dark:bg-gray-900 animate-pulse" />
+        </div>
+        <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+          Vorlagen und LLM-Modelle werden geladen…
+        </p>
+      </div>
     );
   }
 
@@ -189,38 +204,25 @@ export default function AdminDocumentsPage() {
     <div className="max-w-7xl mx-auto space-y-6 p-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          Document Templates Admin
+          Dokument-Vorlagen verwalten
         </h1>
         <button
           onClick={() => router.push("/admin")}
-          className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+          className={adminBtn.secondary("lg")}
         >
-          Zurück zu Admin
+          <span aria-hidden="true">←</span> Zurück zur Admin-Konsole
         </button>
       </header>
-
-      {status && (
-        <div
-          role="status"
-          className={`rounded px-4 py-2 text-sm ${
-            status.kind === "success"
-              ? "bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-200"
-              : "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-200"
-          }`}
-        >
-          {status.text}
-        </div>
-      )}
 
       {/* === Template-Übersicht (kompakte Tabelle, Editor im Drawer) === */}
       <section className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-800">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-              Templates
+              Vorlagen
             </h2>
             <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-              Klicke auf <em>Bearbeiten</em>, um Credits, Sprachquelle, LLM-Modell
+              Klicken Sie auf <em>Bearbeiten</em>, um Credits, Sprachquelle, LLM-Modell
               und Prompt in einem fokussierten Editor anzupassen.
             </p>
           </div>
@@ -228,15 +230,16 @@ export default function AdminDocumentsPage() {
             <button
               onClick={handleInitialSeed}
               disabled={seeding}
-              className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 text-sm disabled:opacity-50"
-              title="Initialer Seed: Dokumenttypen + LLM-Modelle + Template-Prompts aus dem Code-Katalog. Sicher für erste Befüllung und wiederholbar."
+              className={adminBtn.primary("lg")}
+              title="Lädt alle Dokumenttypen, LLM-Modelle und Prompts aus dem Standardkatalog. Idempotent — sicher wiederholbar."
             >
-              {seeding ? "Seeding..." : "Initial-Seed (alles)"}
+              {seeding ? "Wird geladen..." : "Standardvorlagen laden"}
             </button>
             <button
               type="button"
               onClick={() => setAdvancedSeedOpen((o) => !o)}
-              className="text-xs text-gray-600 dark:text-gray-400 hover:underline"
+              className="text-xs text-gray-600 dark:text-gray-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
+              aria-expanded={advancedSeedOpen}
             >
               {advancedSeedOpen ? "Erweitert ausblenden" : "Erweitert…"}
             </button>
@@ -245,7 +248,7 @@ export default function AdminDocumentsPage() {
                 <button
                   onClick={() => handleSeedCatalog(true)}
                   disabled={seeding}
-                  className="px-3 py-1.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-900/60 text-xs disabled:opacity-50"
+                  className={adminBtn.warning("md")}
                   title="Überschreibt bestehende Dokumenttypen und LLM-Modelle mit den Code-Werten (destruktiv)."
                 >
                   Katalog force-update
@@ -253,7 +256,7 @@ export default function AdminDocumentsPage() {
                 <button
                   onClick={() => handleSeedLegacyTemplates(true)}
                   disabled={seeding}
-                  className="px-3 py-1.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-900/60 text-xs disabled:opacity-50"
+                  className={adminBtn.warning("md")}
                   title="Überschreibt bestehende Prompts mit document_prompts.json (destruktiv)."
                 >
                   Prompts force-update
@@ -265,10 +268,11 @@ export default function AdminDocumentsPage() {
 
         {templates.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            <p>Keine Templates gefunden.</p>
+            <p>Keine Vorlagen gefunden.</p>
             <p className="text-sm mt-2">
-              Nutze „Katalog seeden" und danach „Prompts seeden", um den
-              Ausgangszustand zu laden.
+              Klicken Sie oben rechts auf <strong>„Standardvorlagen laden"</strong>,
+              um die Dokumenttypen, LLM-Modelle und Prompts aus dem
+              Standardkatalog zu importieren.
             </p>
           </div>
         ) : (
@@ -330,18 +334,19 @@ export default function AdminDocumentsPage() {
                       <td className="p-3">
                         <span
                           className={
-                            template.is_active
-                              ? "text-green-600 dark:text-green-400"
-                              : "text-red-600 dark:text-red-400"
+                            template.is_active ? statusBadge.active : statusBadge.inactive
                           }
                         >
-                          {template.is_active ? "Ja" : "Nein"}
+                          <span aria-hidden="true">
+                            {template.is_active ? "●" : "○"}
+                          </span>
+                          {template.is_active ? "Aktiv" : "Inaktiv"}
                         </span>
                       </td>
                       <td className="p-3">
                         <button
                           onClick={() => setEditorTemplateId(template.id)}
-                          className="px-3 py-1.5 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                          className={adminBtn.primary("md")}
                         >
                           Bearbeiten
                         </button>
@@ -381,45 +386,39 @@ export default function AdminDocumentsPage() {
         llmModels={llmModels}
         onClose={() => setEditorTemplateId(null)}
         onSave={handleSaveTemplate}
-        onOpenPromptBuilder={() => {
-          setPromptBuilderDraft(null);
-          setPromptBuilderOpen(true);
-        }}
       />
 
-      {/* Prompt Builder Modal (behalten für Kompatibilität) */}
-      <PromptBuilderModal
-        isOpen={promptBuilderOpen}
-        onClose={() => setPromptBuilderOpen(false)}
-        onApply={(generatedPrompt) => {
-          setPromptBuilderDraft({ prompt_template: generatedPrompt });
-          setStatus({
-            kind: "success",
-            text: "Prompt generiert — öffne den Template-Editor und wechsle auf den Prompt-Tab, um ihn einzufügen.",
-          });
-        }}
-        currentProvider={editorTemplate?.llm_provider || "openai"}
-        currentModel={editorTemplate?.llm_model || "gpt-4o"}
-        availableModels={buildLegacyModelMap(llmModels)}
-      />
+      {/* Status-Toast — fixed bottom-right, auto-dismiss via useEffect.
+          Positioned outside the scrollable content so it is always visible
+          regardless of scroll position, which matters for confirmations on
+          actions at the bottom of the page (e.g. deleting a document type). */}
+      {status && (
+        <div
+          role={status.kind === "error" ? "alert" : "status"}
+          aria-live={status.kind === "error" ? "assertive" : "polite"}
+          className={
+            "fixed bottom-4 right-4 z-[60] max-w-md rounded-lg shadow-lg " +
+            "border px-4 py-3 text-sm flex items-start gap-3 " +
+            (status.kind === "success"
+              ? "bg-green-50 dark:bg-green-950/80 border-green-300 dark:border-green-800 text-green-900 dark:text-green-200"
+              : "bg-red-50 dark:bg-red-950/80 border-red-300 dark:border-red-800 text-red-900 dark:text-red-200")
+          }
+        >
+          <span aria-hidden="true" className="mt-0.5 flex-shrink-0">
+            {status.kind === "success" ? "✓" : "⚠"}
+          </span>
+          <div className="flex-1 min-w-0">{status.text}</div>
+          <button
+            onClick={() => setStatus(null)}
+            className="flex-shrink-0 text-current opacity-70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current rounded"
+            aria-label="Meldung schliessen"
+          >
+            &times;
+          </button>
+        </div>
+      )}
     </div>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Helper: build the legacy {provider: string[]} shape PromptBuilderModal
-// still expects, from the new LlmModel[] list.
-// ---------------------------------------------------------------------------
-function buildLegacyModelMap(
-  models: LlmModel[]
-): Record<string, string[]> {
-  const map: Record<string, string[]> = {};
-  for (const m of models) {
-    if (!m.is_active) continue;
-    if (!map[m.provider]) map[m.provider] = [];
-    map[m.provider].push(m.model_id);
-  }
-  return map;
 }
 
 // ===========================================================================
@@ -531,21 +530,26 @@ function LlmModelsManager({
           </h2>
           <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
             Liste der verfügbaren Modelle. Werden im Template-Editor als Auswahl
-            angeboten. Neue Modelle kannst du hier ohne Deploy hinzufügen — oder
-            per <em>LLM-Update prüfen</em> direkt von den Providern holen.
+            angeboten. Neue Modelle können Sie hier ohne Deployment hinzufügen — oder
+            über <em>LLM-Update prüfen</em> direkt von den Providern laden.
           </p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <button
             onClick={() => setSyncModalOpen(true)}
-            className="px-3 py-2 rounded bg-purple-600 text-white hover:bg-purple-700 text-sm"
+            className={
+              "inline-flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium " +
+              "bg-purple-600 text-white hover:bg-purple-700 transition-colors " +
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 " +
+              "focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900"
+            }
             title="Prüft live bei OpenAI, Anthropic und Google auf veraltete und neue Modelle."
           >
             LLM-Update prüfen
           </button>
           <button
             onClick={() => setFormOpen((o) => !o)}
-            className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 text-sm"
+            className={adminBtn.primary("md")}
           >
             {formOpen ? "Abbrechen" : "Neues Modell"}
           </button>
@@ -599,7 +603,7 @@ function LlmModelsManager({
           <div className="sm:col-span-2 flex justify-end">
             <button
               onClick={handleCreate}
-              className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 text-sm"
+              className={adminBtn.success("lg")}
             >
               Speichern
             </button>
@@ -609,8 +613,8 @@ function LlmModelsManager({
 
       {models.length === 0 ? (
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Noch keine Modelle. Klicke oben auf „Katalog seeden", um die
-          Standardliste zu laden.
+          Noch keine LLM-Modelle hinterlegt. Klicken Sie oben rechts auf
+          <strong> „Standardvorlagen laden"</strong>, um die Standardliste zu laden.
         </p>
       ) : (
         <div className="space-y-4">
@@ -623,15 +627,28 @@ function LlmModelsManager({
                 {modelsByProvider[provider].map((m) => (
                   <div
                     key={m.id}
-                    className={`flex items-center justify-between gap-2 rounded border px-3 py-2 text-sm ${
-                      m.is_active
-                        ? "border-gray-200 dark:border-gray-800"
-                        : "border-gray-200 dark:border-gray-800 opacity-60"
-                    }`}
+                    className={
+                      "flex items-center justify-between gap-2 rounded border px-3 py-2 text-sm " +
+                      (m.is_active
+                        ? "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+                        : "border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40")
+                    }
                   >
-                    <div className="min-w-0">
-                      <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                        {m.display_name}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {m.display_name}
+                        </span>
+                        <span
+                          className={
+                            m.is_active ? statusBadge.active : statusBadge.inactive
+                          }
+                        >
+                          <span aria-hidden="true">
+                            {m.is_active ? "●" : "○"}
+                          </span>
+                          {m.is_active ? "Aktiv" : "Inaktiv"}
+                        </span>
                       </div>
                       <div className="text-xs font-mono text-gray-600 dark:text-gray-400 truncate">
                         {m.model_id}
@@ -640,13 +657,19 @@ function LlmModelsManager({
                     <div className="flex gap-1 flex-shrink-0">
                       <button
                         onClick={() => handleToggleActive(m)}
-                        className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-xs hover:bg-gray-200 dark:hover:bg-gray-700"
+                        className={adminBtn.secondary("sm")}
+                        aria-label={
+                          m.is_active
+                            ? `Modell ${m.display_name} deaktivieren`
+                            : `Modell ${m.display_name} aktivieren`
+                        }
                       >
-                        {m.is_active ? "Deaktiv." : "Aktiv."}
+                        {m.is_active ? "Deaktivieren" : "Aktivieren"}
                       </button>
                       <button
                         onClick={() => handleDelete(m)}
-                        className="px-2 py-1 rounded bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs hover:bg-red-200 dark:hover:bg-red-950/60"
+                        className={adminBtn.dangerSubtle("sm")}
+                        aria-label={`Modell ${m.display_name} löschen`}
                       >
                         Löschen
                       </button>
@@ -784,8 +807,8 @@ function DocumentTypesManager({
       setStatus({
         kind: "success",
         text:
-          "Dokumenttyp angelegt. Draft-Template wurde vorbereitet — " +
-          "öffne den Editor und passe Prompt + LLM an, dann aktiviere das Template.",
+          "Dokumenttyp wurde angelegt. Ein Vorlagen-Entwurf wurde vorbereitet — " +
+          "passen Sie im Editor Prompt und LLM an, und aktivieren Sie die Vorlage anschliessend.",
       });
       setDraft({
         key: "",
@@ -820,14 +843,14 @@ function DocumentTypesManager({
           </h2>
           <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
             Das Modell: welche Dokumente die Plattform überhaupt generieren kann.
-            Neue Typen kannst du hier direkt anlegen — beim Speichern wird
-            automatisch ein inaktives Draft-Template mit Standard-Prompt
-            angelegt, das du danach im Editor anpasst.
+            Neue Typen können Sie hier direkt anlegen — beim Speichern wird
+            automatisch ein inaktiver Vorlagen-Entwurf mit Standard-Prompt
+            angelegt, den Sie danach im Editor anpassen.
           </p>
         </div>
         <button
           onClick={() => setFormOpen((o) => !o)}
-          className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 text-sm flex-shrink-0"
+          className={`${adminBtn.primary("md")} flex-shrink-0`}
         >
           {formOpen ? "Abbrechen" : "Neuer Typ"}
         </button>
@@ -837,9 +860,9 @@ function DocumentTypesManager({
         <div className="rounded border border-gray-200 dark:border-gray-800 p-4 mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="sm:col-span-2 rounded bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-3 py-2 text-xs text-blue-900 dark:text-blue-200">
             <strong>Ablauf:</strong> Nach dem Speichern wird automatisch ein
-            inaktives Draft-Template mit Standard-Prompt erstellt. Der
-            Editor öffnet sich direkt — passe dort Prompt, LLM und Credits an
-            und setze das Template dann auf <em>aktiv</em>.
+            inaktiver Vorlagen-Entwurf mit Standard-Prompt erstellt. Der
+            Editor öffnet sich direkt — passen Sie dort Prompt, LLM und Credits an
+            und setzen Sie die Vorlage dann auf <em>aktiv</em>.
           </div>
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
@@ -921,7 +944,7 @@ function DocumentTypesManager({
           <div className="sm:col-span-2 flex justify-end">
             <button
               onClick={handleCreate}
-              className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 text-sm"
+              className={adminBtn.success("lg")}
             >
               Speichern
             </button>
@@ -931,7 +954,8 @@ function DocumentTypesManager({
 
       {types.length === 0 ? (
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Keine Dokumenttypen. Klicke oben auf „Katalog seeden".
+          Keine Dokumenttypen vorhanden. Klicken Sie oben rechts auf
+          <strong> „Standardvorlagen laden"</strong>, um den Standardkatalog zu laden.
         </p>
       ) : (
         <div className="space-y-4">
@@ -946,15 +970,28 @@ function DocumentTypesManager({
                   {grouped[cat].map((t) => (
                     <div
                       key={t.id}
-                      className={`flex items-center justify-between gap-2 rounded border px-3 py-2 text-sm ${
-                        t.is_active
-                          ? "border-gray-200 dark:border-gray-800"
-                          : "border-gray-200 dark:border-gray-800 opacity-60"
-                      }`}
+                      className={
+                        "flex items-center justify-between gap-2 rounded border px-3 py-2 text-sm " +
+                        (t.is_active
+                          ? "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+                          : "border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40")
+                      }
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                          {t.title}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                            {t.title}
+                          </span>
+                          <span
+                            className={
+                              t.is_active ? statusBadge.active : statusBadge.inactive
+                            }
+                          >
+                            <span aria-hidden="true">
+                              {t.is_active ? "●" : "○"}
+                            </span>
+                            {t.is_active ? "Aktiv" : "Inaktiv"}
+                          </span>
                         </div>
                         <div className="text-xs font-mono text-gray-600 dark:text-gray-400 truncate">
                           {t.key} · outputs: {t.outputs.join(", ") || "—"}
@@ -963,13 +1000,19 @@ function DocumentTypesManager({
                       <div className="flex gap-1 flex-shrink-0">
                         <button
                           onClick={() => handleToggleActive(t)}
-                          className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-xs hover:bg-gray-200 dark:hover:bg-gray-700"
+                          className={adminBtn.secondary("sm")}
+                          aria-label={
+                            t.is_active
+                              ? `Dokumenttyp ${t.title} deaktivieren`
+                              : `Dokumenttyp ${t.title} aktivieren`
+                          }
                         >
-                          {t.is_active ? "Deaktiv." : "Aktiv."}
+                          {t.is_active ? "Deaktivieren" : "Aktivieren"}
                         </button>
                         <button
                           onClick={() => handleDelete(t)}
-                          className="px-2 py-1 rounded bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs hover:bg-red-200 dark:hover:bg-red-950/60"
+                          className={adminBtn.dangerSubtle("sm")}
+                          aria-label={`Dokumenttyp ${t.title} löschen`}
                         >
                           Löschen
                         </button>

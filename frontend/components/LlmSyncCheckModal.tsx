@@ -25,6 +25,7 @@ import api, {
   LlmSyncDeprecatedEntry,
   LlmSyncNewEntry,
 } from "@/lib/api";
+import { adminBtn, adminIconBtn } from "@/lib/admin-ui";
 
 const PROVIDER_LABELS: Record<LlmProvider, string> = {
   openai: "OpenAI",
@@ -157,7 +158,7 @@ export default function LlmSyncCheckModal({
         ? `Modell ${row.provider}/${row.model_id} löschen?\n\n` +
           `Es wird aktuell von ${refs.length} Template(s) verwendet:\n` +
           refs.map((r) => `  • ${r.display_name} (${r.doc_type})`).join("\n") +
-          `\n\nDu musst diese Templates zuerst auf ein anderes Modell umstellen, ` +
+          `\n\nBitte stellen Sie diese Vorlagen zuerst auf ein anderes Modell um, ` +
           `sonst verweigert der Server den Löschvorgang (409).` +
           (row.suggested_replacement
             ? `\n\nVorschlag: ${row.suggested_replacement.provider}/${row.suggested_replacement.model_id}`
@@ -196,12 +197,17 @@ export default function LlmSyncCheckModal({
     : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+      role="presentation"
+    >
       <div
         className="w-full max-w-4xl max-h-[90vh] bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby="sync-check-title"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <header className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-start justify-between gap-4">
@@ -235,13 +241,13 @@ export default function LlmSyncCheckModal({
             <button
               onClick={runCheck}
               disabled={loading}
-              className="px-3 py-1.5 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50"
+              className={adminBtn.primary("md")}
             >
               {loading ? "Prüft..." : "Neu prüfen"}
             </button>
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 text-2xl leading-none px-1"
+              className={`${adminIconBtn} text-2xl leading-none`}
               aria-label="Schliessen"
             >
               &times;
@@ -356,7 +362,8 @@ export default function LlmSyncCheckModal({
                               </div>
                               <button
                                 onClick={() => deleteDeprecated(row)}
-                                className="px-2 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700 flex-shrink-0"
+                                className={`${adminBtn.danger("sm")} flex-shrink-0`}
+                                aria-label={`Modell ${row.model_id} löschen`}
                               >
                                 Löschen
                               </button>
@@ -421,15 +428,15 @@ export default function LlmSyncCheckModal({
               <button
                 type="button"
                 onClick={selectAllNew}
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               >
                 Alle auswählen
               </button>
-              <span className="text-gray-400">·</span>
+              <span className="text-gray-400" aria-hidden="true">·</span>
               <button
                 type="button"
                 onClick={clearSelection}
-                className="text-xs text-gray-600 dark:text-gray-400 hover:underline"
+                className="text-xs text-gray-600 dark:text-gray-400 hover:underline rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               >
                 Auswahl leeren
               </button>
@@ -440,9 +447,13 @@ export default function LlmSyncCheckModal({
             <button
               onClick={importSelected}
               disabled={importing || selected.size === 0}
-              className="px-4 py-2 rounded bg-green-600 text-white text-sm hover:bg-green-700 disabled:opacity-50"
+              className={adminBtn.success("lg")}
             >
-              {importing ? "Importiert..." : `${selected.size} importieren`}
+              {importing
+                ? "Wird importiert..."
+                : selected.size === 0
+                ? "Auswahl importieren"
+                : `${selected.size} importieren`}
             </button>
           </footer>
         )}

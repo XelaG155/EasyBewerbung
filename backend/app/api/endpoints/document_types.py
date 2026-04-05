@@ -46,17 +46,16 @@ VALID_PROVIDERS = {"openai", "anthropic", "google"}
 # Kept here as constants so the test suite can import and assert on them.
 # ---------------------------------------------------------------------------
 
+# Per-candidate-input placeholders (job description, CV, etc.) are filled
+# with realistic sample values because the real values only exist at
+# generation time. The per-doc-type placeholders {role}/{task}/{instructions}
+# are NOT listed here — they are resolved from document_prompts.json at
+# preview time via _resolve_prompt_components, so the admin sees the actual
+# runtime content, not a stub.
 PREVIEW_SAMPLE_VALUES: dict[str, str] = {
     "{language}": "Deutsch (Schweiz)",
     "{documentation_language}": "Deutsch (Schweiz)",
     "{company_profile_language}": "Deutsch (Schweiz)",
-    "{role}": "[Beispiel] ATS-optimized professional CV writer",
-    "{task}": "[Beispiel] Create a tailored CV that aligns with the job posting",
-    "{instructions}": (
-        "[Beispiel] 1. Be completely honest\n"
-        "2. Only use information that exists in the CV\n"
-        "3. Optimize for the specific job requirements"
-    ),
     "{doc_type}": "tailored_cv_pdf",
     "{doc_type_display}": "Lebenslauf",
     "{job_description}": (
@@ -78,14 +77,36 @@ PREVIEW_SAMPLE_VALUES: dict[str, str] = {
 _PLACEHOLDER_RE = re.compile(r"\{[a-z_][a-z0-9_]*\}")
 
 
-def render_preview(prompt_template: str) -> tuple[str, list[str]]:
-    """Substitute known placeholders with sample values.
+def render_preview(
+    prompt_template: str,
+    doc_type: str | None = None,
+) -> tuple[str, list[str]]:
+    """Substitute known placeholders with realistic preview values.
+
+    For ``{role}``, ``{task}`` and ``{instructions}``, the real runtime values
+    are resolved from ``document_prompts.json`` via
+    ``tasks._resolve_prompt_components`` — so the preview shows what will
+    actually be sent to the LLM, not a stub. For candidate-specific
+    placeholders (job description, CV text, etc.) we substitute realistic
+    sample strings because the real values only exist at generation time.
 
     Returns the rendered prompt and a list of placeholders that could not be
     resolved, so the admin sees immediately if their prompt uses a name that
     does not exist at runtime.
     """
     rendered = prompt_template or ""
+
+    # Resolve per-doc-type placeholders from the canonical JSON. If no doc_type
+    # is provided (e.g. unsaved new template), fall back to the generic values
+    # from tasks.py — which is what generation would do anyway.
+    if doc_type is not None:
+        from app.tasks import _resolve_prompt_components
+
+        role, task, instructions = _resolve_prompt_components(doc_type)
+        rendered = rendered.replace("{role}", role)
+        rendered = rendered.replace("{task}", task)
+        rendered = rendered.replace("{instructions}", instructions)
+
     for key, value in PREVIEW_SAMPLE_VALUES.items():
         rendered = rendered.replace(key, value)
 
@@ -665,11 +686,16 @@ async def preview_document_template_prompt(
     db: Session = Depends(get_db),
     admin: User = Depends(get_admin_user),
 ) -> dict:
-    """Render the template prompt with sample placeholder values.
+    """Render the template prompt with realistic placeholder values.
 
-    This does **not** call an LLM — it's a dry-run that only substitutes
-    known placeholders with example strings so the admin can validate the
-    prompt structure before saving.
+    This does **not** call an LLM — it's a dry-run that substitutes:
+    - ``{role}``, ``{task}``, ``{instructions}`` with the REAL runtime values
+      from ``document_prompts.json`` (resolved via ``_resolve_prompt_components``)
+      so the admin sees exactly what the LLM will receive, including the full
+      multi-hundred-line instruction block;
+    - candidate-specific placeholders (``{job_description}``, ``{cv_text}``,
+      etc.) with realistic sample strings because the real values only exist
+      at generation time.
     """
     template = (
         db.query(DocumentTemplate)
@@ -683,7 +709,15 @@ async def preview_document_template_prompt(
         )
 
     source_prompt = payload.prompt_template or template.prompt_template or ""
-    rendered, unresolved = render_preview(source_prompt)
+    rendered, unresolved = render_preview(source_prompt, doc_type=template.doc_type)
+
+    # Also expose the resolved per-doc-type components so the drawer can show
+    # them as a separate read-only panel ("These come from document_prompts.json").
+    from app.tasks import _resolve_prompt_components
+
+    resolved_role, resolved_task, resolved_instructions = _resolve_prompt_components(
+        template.doc_type
+    )
 
     return {
         "template_id": template.id,
@@ -693,12 +727,13 @@ async def preview_document_template_prompt(
         "rendered_prompt": rendered,
         "unresolved_placeholders": unresolved,
         "sample_values": PREVIEW_SAMPLE_VALUES,
+        "resolved_components": {
+            "role": resolved_role,
+            "task": resolved_task,
+            "instructions": resolved_instructions,
+            "source": "backend/app/document_prompts.json",
+        },
     }
-
-
-# ---------------------------------------------------------------------------
-# Seed endpoint (admin only, used by the UI "Seed Catalog" button)
-# ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
@@ -982,8 +1017,8 @@ async def seed_catalog_endpoint(
         metadata=json.dumps({"force_update": force_update, "document_types": dt, "llm_models": lm}),
     )
     logger.info(
-        "Admin %s seeded catalog (force=%s): document_types=%s llm_models=%s",
-        admin.email,
+        "Admin %d seeded catalog (force=%s): document_types=%s llm_models=%s",
+        admin.id,
         force_update,
         dt,
         lm,

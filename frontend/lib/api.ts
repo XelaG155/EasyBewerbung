@@ -260,6 +260,14 @@ export interface TemplatePromptPreview {
   rendered_prompt: string;
   unresolved_placeholders: string[];
   sample_values: Record<string, string>;
+  /** Real runtime values for {role}, {task}, {instructions} resolved from
+   *  backend/app/document_prompts.json — what the LLM actually sees. */
+  resolved_components: {
+    role: string;
+    task: string;
+    instructions: string;
+    source: string;
+  };
 }
 
 // --- LLM provider sync (check for deprecated / new models) --------------

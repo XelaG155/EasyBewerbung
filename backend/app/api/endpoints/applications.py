@@ -20,7 +20,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
 from app.database import get_db
-from app.document_catalog import ALLOWED_GENERATED_DOC_TYPES, get_allowed_generated_doc_types
+from app.document_catalog import get_allowed_generated_doc_types
 from app.models import Application, GeneratedDocument, User, Document, JobOffer, MatchingScore, GenerationTask, DocumentTemplate, MatchingScoreTask
 from app.auth import get_current_user
 from app.language_catalog import DEFAULT_LANGUAGE, normalize_language

@@ -620,13 +620,33 @@ def test_document_type_key_must_match_snake_case(db_session, admin_user):
 
 
 def test_render_preview_substitutes_known_placeholders():
+    # Without a doc_type, candidate-specific placeholders are replaced but
+    # per-doc-type ones ({role}, {task}, {instructions}) are left for the caller
+    # to handle — we don't want the preview to invent stubs for those.
     rendered, unresolved = render_preview(
-        "Sprache: {language}. Typ: {doc_type_display}. Aufgabe: {task}."
+        "Sprache: {language}. Typ: {doc_type_display}."
     )
     assert "{language}" not in rendered
     assert "{doc_type_display}" not in rendered
-    assert "{task}" not in rendered
     assert "Deutsch" in rendered
+    assert unresolved == []
+
+
+def test_render_preview_with_doc_type_resolves_role_task_instructions():
+    """When a doc_type is provided, role/task/instructions must be resolved
+    from document_prompts.json so the admin sees the real runtime content,
+    not a stub. This is the core of the B2 fix."""
+    rendered, unresolved = render_preview(
+        "Rolle: {role}\n\nAufgabe: {task}\n\nAnweisungen:\n{instructions}",
+        doc_type="reference_summary",
+    )
+    assert "{role}" not in rendered
+    assert "{task}" not in rendered
+    assert "{instructions}" not in rendered
+    # reference_summary has the Swiss Arbeitszeugnis-code role
+    assert "Arbeitszeugnis" in rendered or "Swiss" in rendered
+    # Instructions list for reference_summary has > 2000 chars
+    assert len(rendered) > 2000
     assert unresolved == []
 
 
@@ -1064,27 +1084,36 @@ def test_tasks_preserves_section_dividers_in_instructions():
     assert "1. " in instructions
 
 
-def test_sample_values_cover_tasks_py_placeholders():
-    """Ensures every placeholder that app/tasks.py resolves at runtime has a
-    corresponding entry in PREVIEW_SAMPLE_VALUES, so the admin preview stays
-    in sync with the real generation pipeline.
+def test_sample_values_cover_candidate_placeholders():
+    """Ensures every candidate-specific placeholder that app/tasks.py resolves
+    at runtime has a corresponding entry in PREVIEW_SAMPLE_VALUES. The per-doc-type
+    placeholders ({role}, {task}, {instructions}) are intentionally NOT in
+    PREVIEW_SAMPLE_VALUES because they are resolved from document_prompts.json
+    at preview time to show real runtime content.
     """
-    runtime_placeholders = {
+    candidate_placeholders = {
         "{job_description}",
         "{cv_text}",
         "{cv_summary}",
         "{language}",
         "{company_profile_language}",
-        "{role}",
-        "{task}",
-        "{instructions}",
         "{documentation_language}",
         "{reference_letters}",
         "{doc_type}",
         "{doc_type_display}",
     }
-    missing = runtime_placeholders - set(PREVIEW_SAMPLE_VALUES.keys())
+    missing = candidate_placeholders - set(PREVIEW_SAMPLE_VALUES.keys())
     assert not missing, (
         f"PREVIEW_SAMPLE_VALUES is missing {missing}. "
-        "Every placeholder resolved in app/tasks.py must have a preview sample."
+        "Every candidate-specific placeholder resolved in app/tasks.py must "
+        "have a preview sample."
+    )
+
+    # Explicitly assert that per-doc-type placeholders are NOT in sample values
+    # — they must be resolved from document_prompts.json instead.
+    per_doc_type_placeholders = {"{role}", "{task}", "{instructions}"}
+    leaked = per_doc_type_placeholders & set(PREVIEW_SAMPLE_VALUES.keys())
+    assert not leaked, (
+        f"{leaked} must NOT be in PREVIEW_SAMPLE_VALUES — they are resolved "
+        "from document_prompts.json by render_preview() via _resolve_prompt_components"
     )

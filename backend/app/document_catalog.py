@@ -20,9 +20,12 @@ is empty.
 Follow-up ticket (post-pilot): move the bundle definitions in ``PACKAGES``
 to the database as well, then delete this file.
 """
+import logging
 from typing import Dict, List, Optional, Set
 
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 # Individual document definitions
 ESSENTIAL_PACK = [
@@ -222,8 +225,14 @@ def get_allowed_generated_doc_types(db: Optional[Session] = None) -> Set[str]:
         rows = db.query(DocumentType.key).all()
         if rows:
             return {r[0] for r in rows}
-    except Exception:  # noqa: BLE001 — fallback path, never crash callers
-        pass
+    except Exception as exc:  # noqa: BLE001 — fallback path, never crash callers
+        # Log so operators notice the fallback kicking in — the table may be
+        # corrupted or the model may be out of sync with the schema.
+        logger.warning(
+            "Falling back to static ALLOWED_GENERATED_DOC_TYPES because the "
+            "document_types table could not be read: %s",
+            exc,
+        )
 
     return ALLOWED_GENERATED_DOC_TYPES
 
@@ -267,5 +276,10 @@ def get_document_catalog_for_api(db: Optional[Session] = None) -> Dict[str, List
                 }
             )
         return grouped
-    except Exception:  # noqa: BLE001 — fallback path, never crash callers
+    except Exception as exc:  # noqa: BLE001 — fallback path, never crash callers
+        logger.warning(
+            "Falling back to static DOCUMENT_CATALOG because the document_types "
+            "table could not be read: %s",
+            exc,
+        )
         return DOCUMENT_CATALOG

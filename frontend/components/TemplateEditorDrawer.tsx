@@ -21,6 +21,7 @@ import api, {
   LlmModel,
   TemplatePromptPreview,
 } from "@/lib/api";
+import { adminBtn, adminIconBtn } from "@/lib/admin-ui";
 
 type Tab = "basics" | "language" | "llm" | "prompt" | "preview";
 
@@ -30,7 +31,6 @@ interface TemplateEditorDrawerProps {
   llmModels: LlmModel[];
   onClose: () => void;
   onSave: (updates: DocumentTemplateUpdate) => Promise<void>;
-  onOpenPromptBuilder?: () => void;
 }
 
 const LANGUAGE_SOURCE_LABELS: Record<DocumentTemplate["language_source"], string> = {
@@ -62,7 +62,6 @@ export default function TemplateEditorDrawer({
   llmModels,
   onClose,
   onSave,
-  onOpenPromptBuilder,
 }: TemplateEditorDrawerProps) {
   const [tab, setTab] = useState<Tab>("basics");
   const [form, setForm] = useState<DocumentTemplateUpdate>({});
@@ -220,7 +219,7 @@ export default function TemplateEditorDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 text-2xl leading-none"
+            className={`${adminIconBtn} text-2xl leading-none`}
             aria-label="Schliessen"
           >
             &times;
@@ -234,11 +233,17 @@ export default function TemplateEditorDrawer({
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
-              className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
-                tab === t.id
+              aria-current={tab === t.id ? "page" : undefined}
+              className={
+                "px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 -mb-px " +
+                "transition-colors " +
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 " +
+                "focus-visible:ring-offset-2 focus-visible:ring-offset-white " +
+                "dark:focus-visible:ring-offset-gray-900 " +
+                (tab === t.id
                   ? "border-blue-600 text-blue-700 dark:text-blue-400"
-                  : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-              }`}
+                  : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100")
+              }
             >
               {t.label}
             </button>
@@ -269,8 +274,8 @@ export default function TemplateEditorDrawer({
                   className={inputClasses}
                 />
                 <HelpText>
-                  0 = kostenlos. Orientiere dich an der Generierungsdauer und der
-                  Modellkosten.
+                  0 = kostenlos. Orientieren Sie sich an der Generierungsdauer
+                  und den Modellkosten.
                 </HelpText>
               </Field>
               <Field label="Aktiv">
@@ -338,8 +343,9 @@ export default function TemplateEditorDrawer({
               <Field label="Modell">
                 {modelsForProvider.length === 0 ? (
                   <div className="rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-700 text-amber-900 dark:text-amber-200 px-3 py-2 text-sm">
-                    Keine aktiven Modelle für diesen Provider. Füge welche unter
-                    dem Bereich „LLM-Modelle" hinzu oder aktiviere sie dort.
+                    Keine aktiven Modelle für diesen Provider. Fügen Sie im
+                    Bereich „LLM-Modelle" welche hinzu oder aktivieren Sie
+                    bestehende dort.
                   </div>
                 ) : (
                   <select
@@ -357,47 +363,52 @@ export default function TemplateEditorDrawer({
                 )}
                 <HelpText>
                   Modelle werden in der DB-Tabelle <code>llm_models</code>{" "}
-                  gepflegt. Neue Modelle kannst du unterhalb der Template-Liste
-                  hinzufügen, ohne Code zu ändern.
+                  gepflegt. Neue Modelle können Sie unterhalb der Vorlagen-Liste
+                  hinzufügen, ohne Code-Änderung.
                 </HelpText>
               </Field>
             </>
           )}
 
           {tab === "prompt" && (
-            <Field label="Prompt-Template">
-              <textarea
-                value={form.prompt_template ?? ""}
-                onChange={(e) => setField("prompt_template", e.target.value)}
-                rows={16}
-                className={`${inputClasses} font-mono text-xs`}
-                placeholder="Prompt-Template mit Placeholdern wie {language}, {cv_summary}, ..."
-              />
-              <div className="flex items-center justify-between mt-2">
-                <HelpText>
-                  Nutze Placeholder in geschweiften Klammern. Die verfügbaren
-                  Placeholder findest du unten auf der Seite im „Placeholder
-                  Explorer".
-                </HelpText>
-                {onOpenPromptBuilder && (
-                  <button
-                    type="button"
-                    onClick={onOpenPromptBuilder}
-                    className="px-3 py-1.5 rounded bg-purple-600 text-white text-xs hover:bg-purple-700 flex items-center gap-1 flex-shrink-0"
-                  >
-                    <span>🪄</span> Prompt Builder
-                  </button>
-                )}
+            <>
+              <div className="rounded border border-blue-200 dark:border-blue-900/60 bg-blue-50 dark:bg-blue-950/30 px-3 py-2 text-xs text-blue-900 dark:text-blue-200">
+                <strong>Wichtig:</strong> Dieser Editor bearbeitet nur den{" "}
+                <em>äusseren Prompt-Rahmen</em> (das Template mit den
+                Platzhaltern). Die Inhalte für{" "}
+                <code className="font-mono">{"{role}"}</code>,{" "}
+                <code className="font-mono">{"{task}"}</code> und{" "}
+                <code className="font-mono">{"{instructions}"}</code> kommen
+                aus der Datei{" "}
+                <code className="font-mono">backend/app/document_prompts.json</code>{" "}
+                und werden erst beim Generieren eingesetzt. Wechseln Sie auf
+                den <strong>Vorschau-Tab</strong> und klicken Sie{" "}
+                <em>Dry-Run starten</em>, um den vollständig aufgelösten Prompt
+                zu sehen.
               </div>
-            </Field>
+              <Field label="Prompt-Template (äusserer Rahmen)">
+                <textarea
+                  value={form.prompt_template ?? ""}
+                  onChange={(e) => setField("prompt_template", e.target.value)}
+                  rows={16}
+                  className={`${inputClasses} font-mono text-xs`}
+                  placeholder="Prompt-Template mit Platzhaltern wie {language}, {cv_summary}, ..."
+                />
+                <HelpText>
+                  Verwenden Sie Platzhalter in geschweiften Klammern. Die
+                  verfügbaren Platzhalter finden Sie unten auf der Seite im
+                  „Platzhalter-Explorer".
+                </HelpText>
+              </Field>
+            </>
           )}
 
           {tab === "preview" && (
             <div className="space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <HelpText>
-                  Vorschau des Prompts. Klick auf <em>Dry-Run starten</em>, um
-                  Placeholder (wie <code>{"{language}"}</code>,{" "}
+                  Vorschau des Prompts. Klicken Sie auf <em>Dry-Run starten</em>, um
+                  Platzhalter (wie <code>{"{language}"}</code>,{" "}
                   <code>{"{cv_summary}"}</code>) mit Beispielwerten zu ersetzen.
                   Es wird <strong>kein LLM-Call</strong> ausgeführt — rein
                   lokale Substitution, kostenlos und sicher.
@@ -406,7 +417,7 @@ export default function TemplateEditorDrawer({
                   type="button"
                   onClick={handlePreview}
                   disabled={previewLoading}
-                  className="px-3 py-1.5 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 flex-shrink-0 disabled:opacity-50"
+                  className={`${adminBtn.primary("md")} flex-shrink-0`}
                 >
                   {previewLoading ? "Lädt..." : "Dry-Run starten"}
                 </button>
@@ -423,9 +434,54 @@ export default function TemplateEditorDrawer({
                       </div>
                     </div>
                   )}
-                  <pre className="rounded border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 p-3 text-xs font-mono whitespace-pre-wrap text-gray-900 dark:text-gray-100 overflow-auto max-h-[50vh]">
-                    {preview.rendered_prompt}
-                  </pre>
+
+                  {/* Resolved components panel — shows what document_prompts.json
+                      actually delivers for this doc_type at runtime. Collapsible
+                      because the instructions block can be 5000+ chars. */}
+                  <details className="rounded border border-gray-200 dark:border-gray-800">
+                    <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800/60">
+                      Aufgelöste Komponenten aus{" "}
+                      <code className="font-mono">
+                        {preview.resolved_components.source}
+                      </code>
+                      {" "}(role / task / instructions)
+                    </summary>
+                    <div className="px-3 py-2 space-y-2 text-xs">
+                      <div>
+                        <div className="font-semibold text-gray-700 dark:text-gray-300 mb-0.5">
+                          {"{role}"}
+                        </div>
+                        <div className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+                          {preview.resolved_components.role}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-700 dark:text-gray-300 mb-0.5">
+                          {"{task}"}
+                        </div>
+                        <div className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+                          {preview.resolved_components.task}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-700 dark:text-gray-300 mb-0.5">
+                          {"{instructions}"} ({preview.resolved_components.instructions.length} Zeichen)
+                        </div>
+                        <pre className="rounded border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 p-2 text-xs font-mono whitespace-pre-wrap text-gray-900 dark:text-gray-100 max-h-[30vh] overflow-auto">
+                          {preview.resolved_components.instructions}
+                        </pre>
+                      </div>
+                    </div>
+                  </details>
+
+                  <div>
+                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      Vollständig aufgelöster Prompt (so sieht ihn das LLM):
+                    </div>
+                    <pre className="rounded border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 p-3 text-xs font-mono whitespace-pre-wrap text-gray-900 dark:text-gray-100 overflow-auto max-h-[50vh]">
+                      {preview.rendered_prompt}
+                    </pre>
+                  </div>
                   <div className="text-xs text-gray-600 dark:text-gray-400">
                     Quelle: {preview.source_length} Zeichen · Gerendert:{" "}
                     {preview.rendered_length} Zeichen · Modell:{" "}
@@ -457,7 +513,7 @@ export default function TemplateEditorDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700"
+            className={adminBtn.secondary("lg")}
             disabled={saving}
           >
             Abbrechen
@@ -466,7 +522,7 @@ export default function TemplateEditorDrawer({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+            className={adminBtn.success("lg")}
           >
             {saving ? "Speichern..." : "Speichern"}
           </button>

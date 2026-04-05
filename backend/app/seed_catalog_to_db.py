@@ -197,14 +197,71 @@ LLM_MODEL_SEED: list[dict] = [
 ]
 
 
+def _is_provider_runtime_available(provider: str) -> bool:
+    """Check whether the generation runtime can actually talk to this provider.
+
+    Returns True only if both the SDK and the API key are present. Anthropic
+    and Google models are seeded as ``is_active=False`` on providers that
+    don't pass this check so they never appear in the drawer dropdown until
+    the operator explicitly installs the SDK, adds the key, and re-activates
+    them in the admin UI. This prevents the "admin picks Claude, generation
+    produces empty output" foot gun.
+    """
+    import os
+
+    if provider == "openai":
+        if not os.getenv("OPENAI_API_KEY"):
+            return False
+        try:
+            import openai  # noqa: F401
+        except ImportError:
+            return False
+        return True
+
+    if provider == "anthropic":
+        if not os.getenv("ANTHROPIC_API_KEY"):
+            return False
+        try:
+            import anthropic  # noqa: F401
+        except ImportError:
+            return False
+        return True
+
+    if provider == "google":
+        if not os.getenv("GOOGLE_API_KEY"):
+            return False
+        try:
+            import google.generativeai  # noqa: F401
+        except ImportError:
+            return False
+        return True
+
+    return False
+
+
 def seed_llm_models(db: Session, force_update: bool = False) -> dict:
-    """Populate the ``llm_models`` table with the canonical seed list."""
+    """Populate the ``llm_models`` table with the canonical seed list.
+
+    Models whose provider SDK or API key is missing at seed time are inserted
+    with ``is_active=False`` so the admin UI does not offer them for new
+    templates. Once the operator installs the SDK and sets the key, they can
+    reactivate entire providers through the LLM Models Manager or force-update
+    the seed.
+    """
     created = 0
     updated = 0
     skipped = 0
     now = datetime.now(timezone.utc)
 
+    # Cache per-provider availability so we don't re-check inside the loop
+    provider_available: dict[str, bool] = {}
+
     for sort_order, entry in enumerate(LLM_MODEL_SEED):
+        provider = entry["provider"]
+        if provider not in provider_available:
+            provider_available[provider] = _is_provider_runtime_available(provider)
+        is_active_default = provider_available[provider]
+
         existing = (
             db.query(LlmModel)
             .filter(
@@ -221,9 +278,16 @@ def seed_llm_models(db: Session, force_update: bool = False) -> dict:
                     model_id=entry["model_id"],
                     display_name=entry["display_name"],
                     context_window=entry.get("context_window"),
-                    notes=entry.get("notes"),
+                    notes=(
+                        entry.get("notes")
+                        or (
+                            None
+                            if is_active_default
+                            else "Inaktiv: Provider-SDK oder API-Key im Backend nicht verfügbar."
+                        )
+                    ),
                     sort_order=sort_order,
-                    is_active=True,
+                    is_active=is_active_default,
                     created_at=now,
                     updated_at=now,
                 )

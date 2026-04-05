@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+/*
+ * Wire Tailwind v4's `dark:` variant to the in-app theme toggle.
+ *
+ * Default behavior in Tailwind v4 is `prefers-color-scheme: dark` — meaning
+ * every `dark:bg-gray-900` etc. in the admin UI reacts to the OS setting,
+ * not to the user's explicit choice in the ThemeToggle button. This
+ * declaration redirects the variant to our `.dark-theme` class (applied by
+ * `lib/theme-context.tsx` on <html>), so every existing `dark:*` utility
+ * instantly follows the in-app toggle.
+ */
+@custom-variant dark (&:where(.dark-theme, .dark-theme *));
+
 
 :root {
   --background: #070a14;

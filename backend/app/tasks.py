@@ -85,23 +85,108 @@ def _resolve_prompt_components(doc_type: str) -> tuple[str, str, str]:
     return role, task, instructions
 
 
+class LlmProviderUnavailable(RuntimeError):
+    """Raised when an admin picked a provider for a template whose SDK is not
+    installed or whose API key is not configured. The error message is written
+    to ``GenerationTask.error_message`` so the admin sees WHY generation failed
+    instead of receiving an empty document."""
+
+
 def get_llm_client(provider: str, model: str):
-    """Get LLM client based on provider configuration."""
+    """Return an initialized client for the requested provider.
+
+    Raises ``LlmProviderUnavailable`` with a clear, actionable German message
+    when the SDK is missing or the API key is not set. The caller (Celery task)
+    is expected to surface the error to the admin via ``GenerationTask``.
+    """
     if provider == "openai":
-        return OpenAI(api_key=os.getenv("OPENAI_API_KEY")), model
-    # Add other providers as needed (anthropic, google, etc.)
-    return OpenAI(api_key=os.getenv("OPENAI_API_KEY")), model
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise LlmProviderUnavailable(
+                "OPENAI_API_KEY ist nicht gesetzt. Bitte den Key in der .env "
+                "ergänzen und den Backend-Container neu starten."
+            )
+        return OpenAI(api_key=api_key), model
+
+    if provider == "anthropic":
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise LlmProviderUnavailable(
+                "ANTHROPIC_API_KEY ist nicht gesetzt. Das Template verweist auf "
+                f"das Anthropic-Modell '{model}', aber der Key fehlt in der .env."
+            )
+        try:
+            import anthropic  # type: ignore
+        except ImportError as exc:
+            raise LlmProviderUnavailable(
+                "Das anthropic SDK ist im Backend-Container nicht installiert. "
+                "Bitte 'anthropic>=0.39' in backend/requirements.txt ergänzen "
+                "und den Container neu bauen."
+            ) from exc
+        return anthropic.Anthropic(api_key=api_key), model
+
+    if provider == "google":
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise LlmProviderUnavailable(
+                "GOOGLE_API_KEY ist nicht gesetzt. Das Template verweist auf "
+                f"das Gemini-Modell '{model}', aber der Key fehlt in der .env."
+            )
+        try:
+            import google.generativeai as genai  # type: ignore
+        except ImportError as exc:
+            raise LlmProviderUnavailable(
+                "Das google-generativeai SDK ist im Backend-Container nicht "
+                "installiert. Bitte 'google-generativeai' in backend/requirements.txt "
+                "ergänzen und den Container neu bauen."
+            ) from exc
+        genai.configure(api_key=api_key)
+        return genai, model
+
+    raise LlmProviderUnavailable(
+        f"Unbekannter LLM-Provider '{provider}'. Unterstützt werden: "
+        "openai, anthropic, google."
+    )
 
 
 def generate_with_llm(client, model: str, provider: str, prompt: str) -> str:
-    """Generate content using the specified LLM."""
+    """Generate content using the specified LLM provider.
+
+    Dispatches per provider. Raises ``LlmProviderUnavailable`` (or lets the
+    underlying provider exception propagate) rather than silently returning
+    an empty string, so failures are visible in ``GenerationTask.error_message``.
+    """
     if provider == "openai":
         response = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],
         )
-        return response.choices[0].message.content
-    return ""
+        return response.choices[0].message.content or ""
+
+    if provider == "anthropic":
+        # anthropic SDK >= 0.39 messages API
+        response = client.messages.create(
+            model=model,
+            max_tokens=4096,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        # response.content is a list of content blocks; concatenate text blocks.
+        parts: list[str] = []
+        for block in getattr(response, "content", []) or []:
+            text = getattr(block, "text", None)
+            if text:
+                parts.append(text)
+        return "".join(parts)
+
+    if provider == "google":
+        # google-generativeai: client is the module, instantiate a model per-call
+        model_instance = client.GenerativeModel(model)
+        response = model_instance.generate_content(prompt)
+        return getattr(response, "text", "") or ""
+
+    raise LlmProviderUnavailable(
+        f"Unbekannter LLM-Provider '{provider}' in generate_with_llm."
+    )
 
 
 def get_language_instruction(lang_code: str) -> str:
@@ -248,7 +333,22 @@ def generate_document_prompt_from_template(
                 ])
 
         # CV summary is the first ~2000 chars of CV (for templates that need a brief version)
-        cv_summary = cv_text[:2000] + "..." if len(cv_text) > 2000 else cv_text
+        # cv_summary is used by templates that want a shorter version for the
+        # hook (e.g. email_linkedin, tailored_cv_one_page). For deep-analysis
+        # templates like reference_summary / skill_gap_report / executive_summary
+        # we use the full CV via {cv_text} instead — the deep prompts explicitly
+        # instruct the LLM to read the full text.
+        #
+        # 10 000 characters is roughly 2500 tokens — generous enough for the
+        # short-form templates without losing candidate context. For truly
+        # long CVs we still truncate rather than silently send 50 pages to
+        # the LLM, but the limit is now high enough that no realistic CV hits it.
+        CV_SUMMARY_CHAR_LIMIT = 10_000
+        cv_summary = (
+            cv_text[:CV_SUMMARY_CHAR_LIMIT] + "..."
+            if len(cv_text) > CV_SUMMARY_CHAR_LIMIT
+            else cv_text
+        )
 
         # Get document type info with localized display name
         doc_type = getattr(template, "doc_type", "document")
@@ -586,6 +686,16 @@ def generate_documents_task(self, task_id: int, application_id: int, doc_types: 
                 task.progress = int((task.completed_docs / task.total_docs) * 100)
                 db.commit()
 
+            except LlmProviderUnavailable as e:
+                # Provider SDK or API key missing — surface the exact German
+                # message so the admin can fix the .env / requirements and retry.
+                logging.error(
+                    "LLM provider unavailable for %s: %s", doc_type, e
+                )
+                task.error_message = (
+                    f"LLM-Provider nicht verfügbar bei Dokument '{doc_type}': {e}"
+                )
+                db.commit()
             except Exception as e:
                 logging.error(f"Error generating {doc_type}: {e}")
                 task.error_message = f"Partial failure: Error generating {doc_type}: {str(e)}"
