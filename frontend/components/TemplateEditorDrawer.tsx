@@ -98,6 +98,18 @@ export default function TemplateEditorDrawer({
     return () => window.removeEventListener("keydown", handler);
   }, [isOpen, onClose]);
 
+  // Providers that actually have at least one active model — any other
+  // provider would be a dead end for the admin (the "Keine aktiven Modelle"
+  // amber warning would fire and save would be blocked). We hide them from
+  // the dropdown entirely so the admin cannot walk into the trap.
+  const availableProviders = useMemo(() => {
+    const set = new Set<string>();
+    for (const m of llmModels) {
+      if (m.is_active) set.add(m.provider);
+    }
+    return set;
+  }, [llmModels]);
+
   const modelsForProvider = useMemo(() => {
     const provider = form.llm_provider ?? template?.llm_provider ?? "openai";
     return llmModels
@@ -335,10 +347,37 @@ export default function TemplateEditorDrawer({
                   onChange={(e) => handleProviderChange(e.target.value)}
                   className={inputClasses}
                 >
-                  <option value="openai">OpenAI</option>
-                  <option value="anthropic">Anthropic (Claude)</option>
-                  <option value="google">Google (Gemini)</option>
+                  {availableProviders.has("openai") && (
+                    <option value="openai">OpenAI</option>
+                  )}
+                  {availableProviders.has("anthropic") && (
+                    <option value="anthropic">Anthropic (Claude)</option>
+                  )}
+                  {availableProviders.has("google") && (
+                    <option value="google">Google (Gemini)</option>
+                  )}
+                  {/* If the template's saved provider has no active models
+                      anymore, still show it so the admin can see what the
+                      template is currently pointing at — otherwise they'd
+                      see a different provider selected than what's stored. */}
+                  {form.llm_provider &&
+                    !availableProviders.has(form.llm_provider) && (
+                      <option value={form.llm_provider}>
+                        {form.llm_provider} (inaktiv — keine verfügbaren Modelle)
+                      </option>
+                    )}
                 </select>
+                {availableProviders.size < 3 && (
+                  <HelpText>
+                    Provider ohne aktive Modelle werden ausgeblendet. Aktuell
+                    verfügbar:{" "}
+                    <strong>
+                      {Array.from(availableProviders).join(", ") || "keiner"}
+                    </strong>
+                    . Anthropic und Google erscheinen hier, sobald die SDKs
+                    installiert und API-Keys im Backend gesetzt sind.
+                  </HelpText>
+                )}
               </Field>
               <Field label="Modell">
                 {modelsForProvider.length === 0 ? (

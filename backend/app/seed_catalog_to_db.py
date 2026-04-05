@@ -17,6 +17,7 @@ Usage::
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from typing import Iterable
 
@@ -207,8 +208,6 @@ def _is_provider_runtime_available(provider: str) -> bool:
     them in the admin UI. This prevents the "admin picks Claude, generation
     produces empty output" foot gun.
     """
-    import os
-
     if provider == "openai":
         if not os.getenv("OPENAI_API_KEY"):
             return False
@@ -299,10 +298,20 @@ def seed_llm_models(db: Session, force_update: bool = False) -> dict:
             skipped += 1
             continue
 
+        # Force-update: re-apply every field including is_active and notes so
+        # that operators who fix the runtime (install the SDK / set the key)
+        # and re-click "Initial-Seed (force-update)" see the inactive rows
+        # flip to active automatically. Previous behavior silently left
+        # is_active stale and clobbered the "Inaktiv: ..." hint with None.
         existing.display_name = entry["display_name"]
         existing.context_window = entry.get("context_window")
-        existing.notes = entry.get("notes")
+        existing.notes = entry.get("notes") or (
+            None
+            if is_active_default
+            else "Inaktiv: Provider-SDK oder API-Key im Backend nicht verfügbar."
+        )
         existing.sort_order = sort_order
+        existing.is_active = is_active_default
         existing.updated_at = now
         updated += 1
 

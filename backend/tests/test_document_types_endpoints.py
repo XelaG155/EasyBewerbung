@@ -39,13 +39,35 @@ from app.api.endpoints.document_types import (
     update_llm_model,
 )
 from app.document_catalog import ALLOWED_GENERATED_DOC_TYPES
-from app.models import Base, DocumentTemplate, DocumentType, LlmModel, User
+from app.models import (
+    Base,
+    DocumentTemplate,
+    DocumentType,
+    LlmModel,
+    User,
+    UserActivityLog,
+)
 from app.seed_catalog_to_db import seed_document_types, seed_llm_models
 
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    """Reset the module-scoped slowapi rate limiter between tests.
+
+    Without this, a long unit-test run eventually hits the "20 per minute"
+    limit on create / update endpoints because every test uses the same
+    synthetic 127.0.0.1 client IP in ``_req()`` and the limiter accumulates
+    call counts across tests. Resetting is cheap and idempotent.
+    """
+    from app.limiter import limiter
+
+    limiter.reset()
+    yield
 
 
 @pytest.fixture()
@@ -1117,3 +1139,156 @@ def test_sample_values_cover_candidate_placeholders():
         f"{leaked} must NOT be in PREVIEW_SAMPLE_VALUES — they are resolved "
         "from document_prompts.json by render_preview() via _resolve_prompt_components"
     )
+
+
+# ---------------------------------------------------------------------------
+# Multi-provider LLM dispatch (B1 regression guards)
+# ---------------------------------------------------------------------------
+
+
+def test_llm_provider_unavailable_openai_missing_key(monkeypatch):
+    """OpenAI without API key must raise LlmProviderUnavailable with a
+    clear German message, not return an empty response."""
+    from app.tasks import LlmProviderUnavailable, get_llm_client
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    with pytest.raises(LlmProviderUnavailable) as exc:
+        get_llm_client("openai", "gpt-4o")
+    assert "OPENAI_API_KEY" in str(exc.value)
+
+
+def test_llm_provider_unavailable_anthropic_missing_key(monkeypatch):
+    from app.tasks import LlmProviderUnavailable, get_llm_client
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    with pytest.raises(LlmProviderUnavailable) as exc:
+        get_llm_client("anthropic", "claude-opus-4-5-20251101")
+    assert "ANTHROPIC_API_KEY" in str(exc.value)
+    # The message also references the exact model so the admin can find the
+    # template that caused it.
+    assert "claude-opus-4-5-20251101" in str(exc.value)
+
+
+def test_llm_provider_unavailable_anthropic_missing_sdk(monkeypatch):
+    """When the anthropic SDK is not installed, provider dispatch must fail
+    with an actionable 'pip install anthropic' message rather than AttributeError."""
+    import sys
+
+    from app.tasks import LlmProviderUnavailable, get_llm_client
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-key-for-test")
+    # Simulate ImportError by inserting a sentinel that raises on attribute
+    # access. The SDK is imported inside get_llm_client, so we use
+    # monkeypatch.setitem to force the import to fail.
+    monkeypatch.setitem(sys.modules, "anthropic", None)
+
+    with pytest.raises(LlmProviderUnavailable) as exc:
+        get_llm_client("anthropic", "claude-opus-4-5-20251101")
+    message = str(exc.value)
+    assert "anthropic SDK" in message
+    # Actionable fix instruction is present (current wording: "anthropic>=0.39
+    # in backend/requirements.txt ergänzen").
+    assert "requirements.txt" in message
+    assert "anthropic" in message
+
+
+def test_llm_provider_unavailable_google_missing_key(monkeypatch):
+    from app.tasks import LlmProviderUnavailable, get_llm_client
+
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    with pytest.raises(LlmProviderUnavailable) as exc:
+        get_llm_client("google", "gemini-2.0-flash")
+    assert "GOOGLE_API_KEY" in str(exc.value)
+
+
+def test_llm_provider_unavailable_unknown_provider():
+    from app.tasks import LlmProviderUnavailable, get_llm_client
+
+    with pytest.raises(LlmProviderUnavailable) as exc:
+        get_llm_client("llama-local", "llama-3-70b")
+    assert "Unbekannter LLM-Provider" in str(exc.value)
+    assert "llama-local" in str(exc.value)
+
+
+def test_generate_with_llm_raises_for_unknown_provider():
+    """Even if a client slipped through, generate_with_llm must refuse
+    unknown providers rather than returning an empty string (which would
+    silently persist an empty document to disk)."""
+    from app.tasks import LlmProviderUnavailable, generate_with_llm
+
+    with pytest.raises(LlmProviderUnavailable):
+        generate_with_llm(client=None, model="x", provider="llama-local", prompt="y")
+
+
+def test_is_provider_runtime_available_openai(monkeypatch):
+    """The seeder's availability check must return True only when both the
+    SDK is importable AND the key is set."""
+    from app.seed_catalog_to_db import _is_provider_runtime_available
+
+    # Key present, SDK importable → True
+    monkeypatch.setenv("OPENAI_API_KEY", "fake")
+    assert _is_provider_runtime_available("openai") is True
+
+    # Key absent → False
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    assert _is_provider_runtime_available("openai") is False
+
+
+def test_is_provider_runtime_available_anthropic_without_sdk(monkeypatch):
+    import sys
+
+    from app.seed_catalog_to_db import _is_provider_runtime_available
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fake")
+    # Force the anthropic import to fail
+    monkeypatch.setitem(sys.modules, "anthropic", None)
+    assert _is_provider_runtime_available("anthropic") is False
+
+
+def test_is_provider_runtime_available_unknown_provider():
+    from app.seed_catalog_to_db import _is_provider_runtime_available
+
+    assert _is_provider_runtime_available("nonexistent") is False
+
+
+# ---------------------------------------------------------------------------
+# Audit log persistence (closes the round-1 gap)
+# ---------------------------------------------------------------------------
+
+
+def test_admin_mutation_writes_user_activity_log(db_session, admin_user):
+    """Every admin mutation in document_types.py calls ``record_activity``.
+    This test exercises one full round-trip and asserts a row is persisted
+    in ``user_activity_logs`` with the correct action and metadata, guarding
+    against silent drift of the ``record_activity`` signature or a
+    reviewer's refactor that accidentally drops the call."""
+    import json as _json
+
+    payload = DocumentTypeCreate(
+        key="audit_log_probe",
+        title="Audit Log Probe",
+        description="Probe for the audit trail test",
+        create_draft_template=False,
+    )
+    asyncio.run(
+        create_document_type(
+            payload=payload,
+            request=_req(),
+            db=db_session,
+            admin=admin_user,
+        )
+    )
+
+    log_row = (
+        db_session.query(UserActivityLog)
+        .filter(
+            UserActivityLog.user_id == admin_user.id,
+            UserActivityLog.action == "admin_document_type_create",
+        )
+        .one()
+    )
+    meta = _json.loads(log_row.metadata_)
+    assert meta["key"] == "audit_log_probe"
+    assert meta["title"] == "Audit Log Probe"
+    # The mutation did not create a draft template, so draft_template_id is None
+    assert meta["draft_template_id"] is None
