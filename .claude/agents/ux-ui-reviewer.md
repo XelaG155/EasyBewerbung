@@ -28,7 +28,6 @@ Admin UI:
 - `frontend/components/TemplateEditorDrawer.tsx` (5-tab drawer editor)
 - `frontend/components/LlmSyncCheckModal.tsx` (provider sync modal)
 - `frontend/components/PlaceholderExplorer.tsx` (used on admin page)
-- `frontend/components/PromptBuilderModal.tsx` (legacy, still rendered)
 
 User-facing touchpoints (only if the admin refactor affects them):
 - `frontend/app/dashboard/page.tsx` (uses `/documents/catalog` which now reads from DB)

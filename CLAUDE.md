@@ -48,7 +48,7 @@ EasyBewerbung is a job application platform with AI-powered features for resume 
 EasyBewerbung runs as a Docker Compose stack:
 - `easybewerbung-backend` - FastAPI backend (port 8002)
 - `easybewerbung-frontend` - Next.js frontend (port 3001)
-- `easybewerbung_worker` - Celery workers (5 replicas)
+- `easybewerbung_worker` - Celery workers (2 replicas, concurrency 2)
 - `easybewerbung-db` - PostgreSQL database (port 5433)
 - `easybewerbung-redis` - Redis message broker (port 6380)
 

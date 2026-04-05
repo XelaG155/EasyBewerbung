@@ -381,6 +381,12 @@ def scrape_job_offer(url: str) -> dict:
             status_code=400,
             detail="Could not fetch job offer. Please check the URL and try again.",
         )
+    except HTTPException:
+        # HTTPException is a subclass of Exception, so the bare
+        # ``except Exception`` below would re-wrap our deliberate 400s
+        # (e.g. the "Response too large" path) as 500s and lose the
+        # actionable client-facing status. Re-raise them unchanged.
+        raise
     except Exception as e:
         print(f"❌ ERROR in scrape_job_offer: {str(e)}")
         print(f"❌ Traceback: {traceback.format_exc()}")

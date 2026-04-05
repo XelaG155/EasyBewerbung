@@ -287,11 +287,14 @@ async def test_timezone_aware_lockout_check(session_factory, locked_user):
     - Login attempt should fail with 403
     - Error message should indicate remaining time
     """
-    result = await _attempt_login(session_factory, "locked@example.com", "CorrectPassword123!")
+    # ``_attempt_login`` raises HTTPException rather than returning it, so
+    # we wrap the call — the gather-based concurrency tests in this file
+    # used ``return_exceptions=True`` to get the same effect.
+    with pytest.raises(HTTPException) as exc_info:
+        await _attempt_login(session_factory, "locked@example.com", "CorrectPassword123!")
 
-    assert isinstance(result, HTTPException)
-    assert result.status_code == 403
-    assert "locked" in result.detail.lower()
+    assert exc_info.value.status_code == 403
+    assert "locked" in exc_info.value.detail.lower()
 
 
 @pytest.mark.anyio("asyncio")
@@ -327,9 +330,9 @@ async def test_incremental_failed_attempts(session_factory, seeded_user):
     """
     # Make 3 failed login attempts
     for i in range(3):
-        result = await _attempt_login(session_factory, "test@example.com", "WrongPassword123!")
-        assert isinstance(result, HTTPException)
-        assert result.status_code == 401  # Still unauthorized, not locked yet
+        with pytest.raises(HTTPException) as exc_info:
+            await _attempt_login(session_factory, "test@example.com", "WrongPassword123!")
+        assert exc_info.value.status_code == 401  # Still unauthorized, not locked yet
 
     # Verify failed attempts incremented but not locked
     Session = session_factory
@@ -348,10 +351,11 @@ async def test_exactly_max_attempts_locks_account(session_factory, seeded_user):
     - User has 0 failed attempts
     - MAX_FAILED_LOGIN_ATTEMPTS failed logins should lock the account
     """
-    # Make MAX_FAILED_LOGIN_ATTEMPTS failed login attempts
+    # Make MAX_FAILED_LOGIN_ATTEMPTS failed login attempts. Each one raises
+    # HTTPException (either 401 "Incorrect password" or the final 403 lockout).
     for i in range(MAX_FAILED_LOGIN_ATTEMPTS):
-        result = await _attempt_login(session_factory, "test@example.com", f"WrongPassword{i}!")
-        assert isinstance(result, HTTPException)
+        with pytest.raises(HTTPException):
+            await _attempt_login(session_factory, "test@example.com", f"WrongPassword{i}!")
 
     # The last attempt should have locked the account
     Session = session_factory
