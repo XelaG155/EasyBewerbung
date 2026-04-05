@@ -13,6 +13,7 @@ services:
   db:
     image: postgres:16-alpine
     container_name: easybewerbung-db
+    mem_limit: 512m
     environment:
       POSTGRES_USER: easybewerbung
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-localdev123}
@@ -26,11 +27,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   # Redis (Message Broker for Celery)
   redis:
     image: redis:7-alpine
     container_name: easybewerbung-redis
+    mem_limit: 256m
     ports:
       - "6380:6379"  # Use 6380 externally to avoid conflicts
     volumes:
@@ -40,6 +43,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   # FastAPI Backend (API Server)
   backend:
@@ -47,6 +51,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: easybewerbung-backend
+    mem_limit: 512m
     environment:
       DATABASE_URL: postgresql://easybewerbung:${POSTGRES_PASSWORD:-localdev123}@db:5432/easybewerbung
       REDIS_URL: redis://redis:6379/0
@@ -67,13 +72,13 @@ services:
     restart: unless-stopped
 
   # Celery Worker (Background Job Processor)
-  # Scales to 4 workers by default, each with 4 concurrent tasks (16 parallel tasks total)
+  # Scales to 2 workers, each with 2 concurrent tasks (4 parallel tasks total)
   worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
     # No container_name to allow scaling with replicas
-    command: celery -A app.celery_app worker --loglevel=info --concurrency=4 -Q celery,matching,generation
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=2 -Q celery,matching,generation
     environment:
       DATABASE_URL: postgresql://easybewerbung:${POSTGRES_PASSWORD:-localdev123}@db:5432/easybewerbung
       REDIS_URL: redis://redis:6379/0
@@ -89,7 +94,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     deploy:
-      replicas: 5
+      replicas: 2
       resources:
         limits:
           memory: 512M
@@ -102,6 +107,7 @@ services:
       args:
         NEXT_PUBLIC_API_URL: https://app.easybewerbung.ch/api
     container_name: easybewerbung-frontend
+    mem_limit: 256m
     environment:
       NEXT_PUBLIC_API_URL: https://app.easybewerbung.ch/api
     ports:
