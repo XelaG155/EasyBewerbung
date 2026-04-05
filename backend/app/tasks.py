@@ -29,6 +29,62 @@ from app.models import (
 )
 
 
+# Load per-document-type role / task / instructions from the canonical JSON
+# on module import. This is the single source of truth for document-specific
+# prompt components that fill {role}, {task}, {instructions} placeholders
+# inside DocumentTemplate.prompt_template at generation time.
+_PROMPTS_FILE = os.path.join(os.path.dirname(__file__), "document_prompts.json")
+try:
+    with open(_PROMPTS_FILE, "r", encoding="utf-8") as _f:
+        DOCUMENT_PROMPTS: dict = json.load(_f)
+except (FileNotFoundError, json.JSONDecodeError) as _e:
+    logging.error("Could not load document_prompts.json: %s", _e)
+    DOCUMENT_PROMPTS = {}
+
+
+# Fallback values used when a document type is not present in document_prompts.json
+# or the file cannot be read. Generic by design — the specific values live in JSON.
+_FALLBACK_ROLE = "professional career consultant and CV/resume expert"
+_FALLBACK_TASK = (
+    "Help this candidate create compelling, honest, and effective job application documents"
+)
+_FALLBACK_INSTRUCTIONS = """
+1. Be completely honest - NEVER invent skills, experiences, or qualifications
+2. Only use information that exists in the candidate's CV
+3. Optimize for the specific job requirements while staying truthful
+4. Use professional, clear language appropriate for the target role
+5. Highlight genuine strengths and relevant experience
+6. Structure content for maximum impact and readability"""
+
+
+def _resolve_prompt_components(doc_type: str) -> tuple[str, str, str]:
+    """Return (role, task, instructions) for a doc_type from document_prompts.json
+    with sensible fallbacks. Instructions are rendered as a numbered list.
+    """
+    config = DOCUMENT_PROMPTS.get(doc_type) or {}
+    role = config.get("role") or _FALLBACK_ROLE
+    task = config.get("task") or _FALLBACK_TASK
+
+    raw_instructions = config.get("instructions")
+    if isinstance(raw_instructions, list) and raw_instructions:
+        # Render as a numbered list, but preserve section dividers that already
+        # start with "===" so the LLM keeps the visual structure.
+        lines = []
+        step = 0
+        for item in raw_instructions:
+            if isinstance(item, str) and item.startswith("==="):
+                lines.append("")
+                lines.append(item)
+            elif isinstance(item, str):
+                step += 1
+                lines.append(f"{step}. {item}")
+        instructions = "\n".join(lines).strip()
+    else:
+        instructions = _FALLBACK_INSTRUCTIONS
+
+    return role, task, instructions
+
+
 def get_llm_client(provider: str, model: str):
     """Get LLM client based on provider configuration."""
     if provider == "openai":
@@ -173,18 +229,10 @@ def generate_document_prompt_from_template(
         # Get explicit language instruction for LLM
         language_instruction = get_language_instruction(doc_lang)
 
-        # Standard role and task for document generation
-        role = "professional career consultant and CV/resume expert"
-        task = "Help this candidate create compelling, honest, and effective job application documents"
-
-        # Standard instructions (can be customized per user in future)
-        instructions = """
-1. Be completely honest - NEVER invent skills, experiences, or qualifications
-2. Only use information that exists in the candidate's CV
-3. Optimize for the specific job requirements while staying truthful
-4. Use professional, clear language appropriate for the target role
-5. Highlight genuine strengths and relevant experience
-6. Structure content for maximum impact and readability"""
+        # Resolve per-document-type role/task/instructions from document_prompts.json.
+        # Falls back to generic values when the doc_type is not present in the JSON.
+        doc_type_key = getattr(template, "doc_type", "")
+        role, task, instructions = _resolve_prompt_components(doc_type_key)
 
         # Get reference letters if user has any
         reference_letters = "No reference letters provided."

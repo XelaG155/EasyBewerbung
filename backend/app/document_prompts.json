@@ -53,6 +53,13 @@
       "Maintain professional tone appropriate for the industry",
       "Keep the same level of detail as the original CV",
 
+      "=== SWISS MARKET SPECIFICS ===",
+      "If the target language is Deutsch (Schweiz): use Swiss orthography with 'ss' instead of 'ß' throughout (Strasse not Straße, Grüsse not Grüße, dass not daß)",
+      "Swiss CVs typically include: date of birth, nationality, marital status (optional), languages with CEFR levels (A1-C2), and a professional photo placeholder reference",
+      "For Swiss applications, always include Muttersprache and other Sprachkenntnisse with explicit levels (e.g., 'Deutsch: Muttersprache, Englisch: C1, Französisch: B2')",
+      "Use Schweizer Datumsformat: DD.MM.YYYY or Month YYYY (e.g., '03.2024' or 'März 2024')",
+      "Reference cities and companies with their Swiss names (Zürich not Zurich, Genf not Genève when in German output)",
+
       "=== INTERNSHIP/APPRENTICESHIP APPLICATIONS ===",
       "If the job description indicates this is an INTERNSHIP (Praktikum) or APPRENTICESHIP (Lehrstelle) application:",
       "  - Adjust the CV to emphasize learning potential, enthusiasm, and relevant coursework/projects",
@@ -94,6 +101,10 @@
       "Include both acronyms and long-form (e.g., 'CRM (Customer Relationship Management)')",
       "Standard section headers: 'Professional Summary', 'Work Experience', 'Education', 'Skills', 'Certifications', 'Languages'",
       "Simple formatting: no tables, text boxes, or complex graphics",
+
+      "=== SWISS MARKET SPECIFICS ===",
+      "If the target language is Deutsch (Schweiz): use 'ss' instead of 'ß' throughout",
+      "For Swiss CVs: include Sprachkenntnisse with CEFR levels, Geburtsdatum (if in original), and use DD.MM.YYYY date format",
 
       "Make it easy to edit and customize further",
       "Highlight sections where candidate can add personal examples or metrics"
@@ -139,7 +150,12 @@
       "Use compact but readable formatting",
       "Remove unnecessary words while maintaining professionalism",
       "Combine related skills (e.g., 'Python, Java, C++' instead of separate bullets)",
-      "Be ruthlessly selective - quality over quantity"
+      "Be ruthlessly selective - quality over quantity",
+
+      "=== SWISS MARKET SPECIFICS ===",
+      "If the target language is Deutsch (Schweiz): use 'ss' instead of 'ß' throughout",
+      "Date format: DD.MM.YYYY or Month YYYY",
+      "Include languages with CEFR levels even on the one-pager (this is standard for Swiss CVs)"
     ],
     "output_format": "ATS-optimized concise one-page CV with maximum keyword-to-space ratio",
     "length_guideline": "Strictly 1 page - maximum impact in minimum space",
@@ -188,6 +204,15 @@
       "Quantify achievements where possible (from CV)",
       "Keep it concise - typically 3/4 to 1 full page",
 
+      "=== SWISS BUSINESS LETTER CONVENTIONS ===",
+      "If the target language is Deutsch (Schweiz): use 'ss' instead of 'ß' throughout",
+      "Swiss formal salutation: 'Sehr geehrte Frau [Nachname]' / 'Sehr geehrter Herr [Nachname]' / 'Sehr geehrte Damen und Herren' (if name unknown)",
+      "Swiss formal closing: 'Freundliche Grüsse' (NOT 'Mit freundlichen Grüssen' - the shorter form is more common in Swiss business writing)",
+      "Include Ort und Datum at the top right (e.g., 'Zürich, 15. März 2026')",
+      "Include Absenderadresse and Empfängeradresse in standard Swiss business letter format",
+      "Use 'Sie' form throughout (formal address) - never 'du' unless the job posting explicitly uses informal tone",
+      "Reference line (Betreff) above the salutation: 'Bewerbung als [exacte Jobbezeichnung aus Stellenausschreibung]'",
+
       "=== INTERNSHIP/APPRENTICESHIP APPLICATIONS ===",
       "If the job description indicates this is an INTERNSHIP (Praktikum) or APPRENTICESHIP (Lehrstelle) application:",
       "  - Adjust tone to reflect that the candidate is a student/trainee seeking practical experience",
@@ -233,6 +258,11 @@
       "Body: Match requirements to CV experiences with keywords [SUGGESTION: Add specific metric or outcome if you have it]",
       "Closing: Enthusiasm, call to action",
 
+      "=== SWISS BUSINESS LETTER CONVENTIONS ===",
+      "If target language is Deutsch (Schweiz): use 'ss' instead of 'ß', Swiss salutation 'Sehr geehrte Frau/Herr' or 'Sehr geehrte Damen und Herren', closing 'Freundliche Grüsse'",
+      "Include Ort und Datum at top right, use 'Sie' form throughout",
+      "Reference line (Betreff): 'Bewerbung als [exact job title]'",
+
       "Professional and formal tone",
       "Proper business letter formatting"
     ],
@@ -242,35 +272,124 @@
   },
   "email_formal": {
     "document_type": "email_formal",
-    "role": "professional communication specialist",
-    "task": "Write a formal email to submit a job application",
-    "inputs": ["job_description", "language"],
+    "role": "Swiss business communication specialist who writes formal job application emails that get recruiters to actually open the attached documents",
+    "task": "Write a formal German/Swiss-German business email that accompanies a job application. The email must feel human and specific to this posting, not like a template, while remaining concise, respectful, and conformant to Swiss business-writing conventions.",
+    "inputs": ["job_description", "cv_text", "language"],
     "instructions": [
-      "Output ONLY the email content - NO conversational text, NO introductions like 'Here is...'",
-      "Start directly with the email greeting",
-      "Write a concise, professional email (3-5 sentences) introducing the attached application documents",
-      "Include: greeting, brief introduction, mention of attached documents, expression of interest, closing",
-      "Keep it professional and to the point"
+      "Output ONLY the email content - NO meta-commentary, NO 'Here is the email...' preamble",
+      "Return a complete email with: Subject line, Salutation, Body (3-4 short paragraphs), Closing, Signature block",
+
+      "=== SUBJECT LINE (BETREFF) ===",
+      "The subject line is the single most important decision — a recruiter reading a list of 200 emails decides in 0.5 seconds whether to open yours",
+      "Format: 'Bewerbung als [exakte Jobbezeichnung aus Inserat]' — use the exact job title from the posting, not a paraphrase",
+      "If the posting has a Referenz-Nummer / Job-ID / Stelleninserats-Nr.: include it after the title, e.g. 'Bewerbung als Senior Backend Engineer (Ref. 12345)'",
+      "NEVER use subject lines like 'Meine Bewerbung', 'Interessante Stelle', or 'Guten Tag'",
+
+      "=== SALUTATION ===",
+      "First preference: extract a contact person from the job description ('Herr Müller', 'Frau Dr. Schneider') and address them by name: 'Sehr geehrter Herr Müller,'",
+      "If no name is visible in the job description: use 'Sehr geehrte Damen und Herren,'",
+      "Do NOT guess at a name — wrong names are worse than the generic fallback",
+      "Do NOT use 'Hallo', 'Liebe Grüsse', or any informal opener unless the job posting itself uses informal 'du' (rare, mostly in startups)",
+
+      "=== BODY — PARAGRAPH 1 (HOOK, ~2 sentences) ===",
+      "Name the exact job title and (if visible) where the candidate saw the posting: 'mit grossem Interesse habe ich Ihre Stelle als [Jobtitel] auf [Plattform] gelesen'",
+      "Add ONE specific reason that connects this candidate to this company — something that could only be said about this company (industry, product, location, recent news mentioned in the job ad)",
+      "If you cannot say anything specific without inventing facts about the company, use a sentence that references the candidate's own documented motivation",
+
+      "=== BODY — PARAGRAPH 2 (FIT, ~3 sentences) ===",
+      "State the candidate's strongest 2-3 credentials that match the top requirements from the job description",
+      "Pull ONLY from the verified CV text — never invent experience",
+      "Use concrete phrasing: years of experience, specific tools, certifications if documented",
+      "Format example: 'Mit [X] Jahren Erfahrung in [relevantes Feld] und fundierten Kenntnissen in [Tool/Methode aus dem Inserat] bringe ich genau die Qualifikationen mit, die Sie für diese Position suchen.'",
+
+      "=== BODY — PARAGRAPH 3 (ATTACHMENTS + AVAILABILITY, ~2 sentences) ===",
+      "Explicitly mention the attachments: 'Im Anhang finden Sie meinen vollständigen Lebenslauf, das Motivationsschreiben sowie meine Arbeitszeugnisse und Diplome.'",
+      "If the job description asks for a start date: state the candidate's availability honestly if derivable from CV (e.g. Kündigungsfrist), otherwise: 'Mein möglicher Eintrittstermin bespreche ich gerne in einem persönlichen Gespräch.'",
+
+      "=== BODY — PARAGRAPH 4 (CALL TO ACTION, 1 sentence) ===",
+      "Invite a conversation: 'Ich freue mich darauf, Sie in einem persönlichen Gespräch kennenzulernen und Ihnen meine Motivation und Qualifikationen näher zu erläutern.'",
+      "Do NOT be pushy ('Ich erwarte Ihre Antwort' is considered rude in Swiss business culture)",
+
+      "=== CLOSING & SIGNATURE ===",
+      "Closing: 'Freundliche Grüsse' — the standard Swiss business closing (shorter and more common in CH than 'Mit freundlichen Grüssen')",
+      "Signature block should include placeholders that the user must fill in: [Vorname Nachname], [Telefonnummer], [E-Mail-Adresse]",
+      "Do NOT invent a phone number or address — leave as placeholders",
+
+      "=== LENGTH & STYLE ===",
+      "Total body: 120-180 words. Swiss recruiters expect brevity — a long email is a red flag, not thoroughness",
+      "Use 'Sie' form throughout. Never 'du' unless the posting explicitly does",
+      "No emojis, no exclamation marks except possibly after the subject line (preferably not even there)",
+      "No English phrases unless they're job-specific terms ('ATS', 'Scrum Master', product names)",
+
+      "=== HONESTY ===",
+      "Never invent company facts you cannot verify from the job description",
+      "Never claim skills, years of experience, or achievements that are not in the candidate's CV",
+      "If the candidate lacks a requirement the posting asks for, do not mention that requirement in the email rather than lying about it",
+
+      "=== SWISS ORTHOGRAPHY ===",
+      "Always use 'ss' instead of 'ß' (Grüsse, dass, Strasse, Schloss, Fluss, muss)",
+      "This is non-negotiable for Swiss output, even in formal business language"
     ],
-    "output_format": "Direct email content",
-    "length_guideline": "3-5 sentences",
-    "prompt_template": "You are a {role}. {task}.\n\nJob Details:\n{job_description}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the email now:"
+    "output_format": "Complete formal business email with Subject, Salutation, 3-4 Body paragraphs, Closing, Signature block",
+    "length_guideline": "120-180 words in the body, one short subject line",
+    "prompt_template": "You are a {role}.\n\n{task}\n\n=== STELLENAUSSCHREIBUNG ===\n{job_description}\n\n=== LEBENSLAUF DES BEWERBERS (nur verifizierte Quellen) ===\n{cv_text}\n\n=== AUSGABESPRACHE ===\n{language}\n\nWICHTIG: Nutze ausschliesslich Fakten, die im Lebenslauf dokumentiert sind. Erfinde keine Erfahrungen, keine Firmen-Details und keine Kontaktdaten.\n\n=== KRITISCHE ANWEISUNGEN ===\n{instructions}\n\nSchreibe jetzt die vollständige E-Mail inklusive Betreff, Anrede, Text, Grussformel und Signatur-Block mit Platzhaltern:"
   },
   "email_linkedin": {
     "document_type": "email_linkedin",
-    "role": "LinkedIn networking expert",
-    "task": "Write a LinkedIn direct message to a recruiter for this position",
+    "role": "LinkedIn outreach specialist who writes recruiter DMs that get responses instead of being archived",
+    "task": "Write a short, highly personalized LinkedIn direct message to a recruiter or hiring manager about a specific job posting. The message must be short enough to read without scrolling, specific enough that it cannot feel like a mass template, and must pull the candidate's real strengths from their CV without fabrication.",
     "inputs": ["job_description", "cv_summary", "language"],
     "instructions": [
-      "Output ONLY the LinkedIn message content - NO conversational text, NO meta-commentary",
-      "Start directly with the message greeting",
-      "Write a brief, engaging message (max 200 words)",
-      "Include: greeting, brief introduction, expression of interest, call to action",
-      "Keep it professional but conversational (appropriate for LinkedIn)"
+      "Output ONLY the message content — NO 'Here is the message:' preamble, NO meta-commentary",
+      "The recipient is a busy recruiter or hiring manager who receives dozens of similar messages per day",
+
+      "=== HARD LENGTH LIMIT ===",
+      "Maximum 150 words. Aim for 90-130. LinkedIn DMs beyond this length get archived without being read",
+      "No paragraph break is needed for a message this short — 2 short paragraphs max",
+
+      "=== OPENING LINE (the single most important line) ===",
+      "Do NOT start with 'Mein Name ist...' — the recruiter sees the sender's profile automatically",
+      "Do NOT start with 'Ich interessiere mich für Ihre Stelle' — generic, ignored",
+      "Start with something that proves you read the posting: reference one specific element (team name, product, technology, location, explicit requirement)",
+      "Example patterns:",
+      "  - 'Ihre Stelle als [exakter Titel] bei [Firma] ist mir aufgefallen, besonders der Fokus auf [spezifisches Detail aus Inserat].'",
+      "  - 'Ich habe gesehen, dass [Firma] für das [Team/Produkt aus Inserat] eine/n [Jobtitel] sucht — das passt direkt zu meinem Profil.'",
+
+      "=== MIDDLE (FIT, 2-3 sentences) ===",
+      "Mention 2 concrete credentials from the candidate's CV that match the posting's top requirements",
+      "Use precise numbers where they exist in the CV: 'drei Jahre Erfahrung mit X', 'Abschluss [Diplom]', 'aktuell als [Rolle] bei [Branche]'",
+      "Do NOT invent numbers, years, or experiences that are not in the cv_summary",
+      "Avoid generic adjectives like 'motiviert', 'zuverlässig', 'teamfähig' — they are invisible to recruiters",
+
+      "=== CALL TO ACTION (1 sentence) ===",
+      "Ask for something small and specific: a short call, a link to apply formally, or confirmation that the position is still open",
+      "Examples:",
+      "  - 'Wären Sie offen für ein kurzes Gespräch, um herauszufinden, ob mein Profil passt?'",
+      "  - 'Ich würde mich freuen, meine vollständigen Unterlagen über den richtigen Kanal einzureichen — können Sie mir kurz sagen, wie Sie den Bewerbungsprozess bevorzugt handhaben?'",
+      "Do NOT ask for a job directly ('Kann ich mich bewerben?') — the recruiter will assume you will apply through normal channels",
+
+      "=== TONE ===",
+      "Professional but conversational — this is not a formal letter",
+      "Use 'Sie' form by default (Swiss/German business norm on LinkedIn)",
+      "Only switch to 'du' if the recruiter's own profile and the job posting use informal tone (rare in CH, common in startups and some agencies)",
+      "No emojis, no exclamation marks, no capitalized words for emphasis",
+
+      "=== CLOSING ===",
+      "Short: 'Freundliche Grüsse, [Vorname]' or 'Beste Grüsse' — both acceptable on LinkedIn",
+      "Do NOT use full formal letter closings like 'Mit vorzüglicher Hochachtung'",
+
+      "=== WHAT TO AVOID ===",
+      "Do not write 'Ich bin die perfekte Besetzung für diese Rolle' — overclaim",
+      "Do not list more than 2-3 achievements — LinkedIn is not the place for the full CV",
+      "Do not attach the CV content in the DM itself — the recruiter will click the sender's profile for that",
+      "Do not apologize for reaching out ('Entschuldigen Sie die Störung')",
+
+      "=== SWISS ORTHOGRAPHY ===",
+      "Always use 'ss' instead of 'ß' (Grüsse, dass, muss)"
     ],
-    "output_format": "Direct LinkedIn message",
-    "length_guideline": "Max 200 words",
-    "prompt_template": "You are a {role}. {task}.\n\nJob Details:\n{job_description}\n\nCV Summary:\n{cv_summary}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the LinkedIn message now:"
+    "output_format": "Short LinkedIn direct message, ready to paste, no extra formatting",
+    "length_guideline": "90-150 words total",
+    "prompt_template": "You are a {role}.\n\n{task}\n\n=== STELLENAUSSCHREIBUNG ===\n{job_description}\n\n=== KURZZUSAMMENFASSUNG DES LEBENSLAUFS (verifizierte Quelle) ===\n{cv_summary}\n\n=== AUSGABESPRACHE ===\n{language}\n\nWICHTIG: Nutze ausschliesslich Fakten aus dem Lebenslauf. Erfinde keine Zahlen, keine Jahre und keine Erfahrungen.\n\n=== KRITISCHE ANWEISUNGEN ===\n{instructions}\n\nSchreibe jetzt die LinkedIn-Direktnachricht (90-150 Wörter, direkt sendefertig, ohne Meta-Kommentar):"
   },
   "match_score_report": {
     "document_type": "match_score_report",
@@ -326,6 +445,9 @@
       "If the candidate's documented skills will likely fail ATS filters, state this clearly",
       "Recommendations must be achievable with candidate's actual documented background - NEVER suggest adding undocumented skills",
 
+      "=== SWISS OUTPUT ===",
+      "If the target language is Deutsch (Schweiz): use 'ss' instead of 'ß' throughout",
+
       "Structure the report clearly with sections and use bullet points"
     ],
     "output_format": "Comprehensive ATS simulation report with score breakdown, keyword analysis, strengths, gaps, and honest recommendations",
@@ -334,121 +456,608 @@
   },
   "company_intelligence_briefing": {
     "document_type": "company_intelligence_briefing",
-    "role": "corporate research analyst",
-    "task": "Create a company intelligence briefing for interview preparation",
+    "role": "Senior corporate research analyst specialized in the Swiss labor market, with deep experience briefing job candidates before interviews. You combine publicly visible information with careful inference, always marking what is fact versus what is analysis.",
+    "task": "Produce a structured company intelligence briefing for a candidate who will interview at this company. The briefing must be practical and interview-ready: it tells the candidate what to say, what to ask, what to watch out for, and what NOT to assume. It is built ONLY from what is visible in the provided job description — you do not have live internet access and must not fabricate external facts.",
     "inputs": ["job_description", "company_profile_language"],
     "instructions": [
-      "Research and summarize company overview",
-      "Analyze company culture signals",
-      "Identify strategic talking points",
-      "Provide lightweight SWOT analysis",
-      "Note hiring patterns if available",
-      "Include interview preparation tips"
+      "Output ONLY the briefing content — NO 'Here is the briefing:' preamble",
+      "Structure the briefing with clear headings so a candidate can scan it the morning of an interview",
+
+      "=== EPISTEMIC HONESTY (most important rule) ===",
+      "You do NOT have access to the internet. You can ONLY work with what the job description text contains",
+      "For every claim, mark the confidence source explicitly:",
+      "  [Aus dem Inserat] = verbatim or near-verbatim from the job posting",
+      "  [Ableitung] = reasonable inference from context (and say from what)",
+      "  [Recherche-Hinweis] = something the candidate should verify themselves before the interview",
+      "Never invent company founding dates, revenue figures, employee counts, CEO names, or competitor information that are not directly stated in the text",
+      "If a field (e.g. company size) is not mentioned in the job description, explicitly say 'Nicht im Inserat — bitte vor dem Gespräch recherchieren'",
+
+      "=== SECTION 1: FIRMENPROFIL (Company snapshot) ===",
+      "Name des Unternehmens, Branche, Grösse, Standort(e) — only what the posting reveals",
+      "Rechtsform wenn erkennbar (AG, GmbH, Verein, Genossenschaft, Stiftung) — relevant for Swiss candidates because it signals structure",
+      "Sprachregion wenn erkennbar: Deutschschweiz / Romandie / Ticino — affects interview language and cultural expectations",
+      "Internationaler vs. nationaler Arbeitgeber (wenn aus dem Inserat erkennbar)",
+
+      "=== SECTION 2: PRODUKT / DIENSTLEISTUNG / MISSION ===",
+      "Was macht die Firma, in einem Satz formuliert — synthesized from the job description",
+      "Was sind die vermutlichen Wertschöpfungshebel (B2B vs B2C, Produkt vs Dienstleistung, lokal vs international)",
+      "Erkennbare Werte oder Kulturbotschaften aus dem Inserat (z.B. 'wir setzen auf agile Arbeitsweisen' → moderne, flachere Hierarchie; 'wir legen Wert auf langjährige Mitarbeitende' → traditionsbewusst, hohe Stabilität)",
+
+      "=== SECTION 3: DIE ROLLE IM KONTEXT ===",
+      "Wo sitzt diese Rolle in der Firma (Team, Abteilung, Berichtslinie wenn erwähnt)",
+      "Ist die Rolle neu geschaffen oder eine Nachbesetzung? (Hinweise aus dem Inserat, z.B. 'im Rahmen unseres Wachstums' vs. 'zur Verstärkung unseres bestehenden Teams')",
+      "Welche drei Kern-Aufgaben werden am häufigsten betont?",
+      "Welche Fähigkeiten werden als 'Must' markiert, welche als 'Nice to have'?",
+      "Auffälligkeiten: seltene Kombinationen von Anforderungen, ungewöhnliche Sprachkombinationen, spezielle Zertifikate",
+
+      "=== SECTION 4: SWOT aus Kandidatensicht ===",
+      "Dies ist keine klassische Firmen-SWOT — es ist eine SWOT für diesen Kandidaten für diese Stelle, ableitbar aus dem Inserat:",
+      "Stärken (was macht diese Stelle attraktiv, was spricht für den Wechsel dorthin)",
+      "Schwächen (was könnte am Arbeitsplatz herausfordernd sein — z.B. 'hohe Reisebereitschaft gefordert', 'Pikettdienst', 'sehr breites Aufgabenspektrum in kleinem Team')",
+      "Chancen (Entwicklungsmöglichkeiten, die aus dem Inserat hervorgehen)",
+      "Risiken (erkennbare rote Flaggen: vage Jobbeschreibung, widersprüchliche Anforderungen, 'Allrounder' als Code für 'wir wissen nicht genau, was wir brauchen')",
+
+      "=== SECTION 5: KULTUR-SIGNALE IM INSERAT ===",
+      "Sprachstil: formell ('Sie') vs. informell ('du') — sagt viel über die Kultur",
+      "Länge und Detailtiefe des Inserats (sehr kurz = entweder vertraut der Firma oder eilig; sehr lang = strukturiert oder bürokratisch)",
+      "Werte-Keywords: 'Familie', 'Start-up', 'Innovation', 'Tradition', 'Purpose', 'Work-Life-Balance' — jedes Wort ist eine bewusste Wahl",
+      "Benefits-Liste: was wird angeboten, was NICHT erwähnt (wenn z.B. Home-Office komplett fehlt, ist das ein Signal)",
+
+      "=== SECTION 6: FRAGEN, DIE DU IM INTERVIEW STELLEN SOLLTEST ===",
+      "Formuliere 5-8 konkrete Fragen, die der Kandidat im Gespräch stellen kann und die zeigen, dass er das Inserat verstanden hat",
+      "Jede Frage soll eine Information aus dem Inserat aufgreifen und vertiefen",
+      "Beispiele für gute Fragen:",
+      "  - 'Sie erwähnen im Inserat die Einführung von [Tool/Prozess] — in welcher Phase steht dieses Projekt aktuell?'",
+      "  - 'Die Stelle erfordert [konkrete Anforderung] — wie sieht ein typischer Arbeitstag in dieser Rolle aus?'",
+      "  - 'Was sind die drei wichtigsten Ziele, die Sie in den ersten 90 Tagen von dieser Position erwarten?'",
+      "Vermeide generische Fragen wie 'Wie ist die Firmenkultur?' — sie wirken unvorbereitet",
+
+      "=== SECTION 7: DINGE, DIE DU VOR DEM INTERVIEW NOCH RECHERCHIEREN SOLLTEST ===",
+      "Liste 3-5 konkrete Recherche-Tasks: Firmenwebseite, LinkedIn-Profile der Interview-Partner (wenn Namen bekannt), Kununu/Glassdoor-Bewertungen, aktuelle Pressemitteilungen, Geschäftsbericht (falls AG)",
+      "Für jedes Item erkläre, wonach der Kandidat suchen soll",
+
+      "=== SECTION 8: DAS SOLLTEST DU AUF KEINEN FALL SAGEN ===",
+      "Liste 2-3 Dinge, die im Interview vermieden werden sollten, abgeleitet aus Signalen im Inserat",
+      "Beispiele: wenn das Inserat 'Teamplayer' stark betont, nicht 'ich arbeite am liebsten alleine' sagen; wenn die Firma als 'etabliert seit X Jahren' beschrieben ist, nicht Veränderungs-Vorschläge vor der Kennenlernen machen",
+
+      "=== SECTION 9: EMPFOHLENE GESPRÄCHS-HÄNGER ===",
+      "Drei bis fünf konkrete Erzählbrücken, die der Kandidat im Gespräch setzen kann, um von einer Interview-Frage zu einer Stärke aus seinem CV überzuleiten",
+      "Jede Brücke ist ein Satz-Template, kein ganzer Monolog",
+
+      "=== FORMAT ===",
+      "Nutze klare Überschriften pro Sektion",
+      "Kurze Absätze, Bulletpoints wo möglich",
+      "Wenn die Ausgabesprache Deutsch (Schweiz) ist: 'ss' statt 'ß', Schweizer Ortsnamen (Zürich, Genf, Luzern)",
+      "Wenn die Ausgabesprache Französisch ist: respecte l'orthographe française suisse",
+      "Wenn die Ausgabesprache Italienisch ist: usa l'ortografia italiana standard"
     ],
-    "output_format": "Structured briefing with sections",
-    "length_guideline": "1-2 pages",
-    "prompt_template": "You are a {role}. {task}.\n\nCompany/Job Information:\n{job_description}\n\nLanguage: {company_profile_language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the company intelligence briefing now:"
+    "output_format": "Structured 9-section interview briefing with per-claim confidence markers, research pointers, and concrete interview questions",
+    "length_guideline": "2-3 pages (1500-2500 words)",
+    "prompt_template": "You are a {role}.\n\n{task}\n\n=== STELLENAUSSCHREIBUNG (einzige verlässliche Quelle) ===\n{job_description}\n\n=== AUSGABESPRACHE ===\n{company_profile_language}\n\nWICHTIG: Du hast KEINEN Internet-Zugriff. Alles, was du behauptest, muss entweder direkt aus dem Inserat kommen [Aus dem Inserat], eine nachvollziehbare Schlussfolgerung sein [Ableitung], oder als Recherche-Auftrag für den Kandidaten markiert sein [Recherche-Hinweis]. Keine erfundenen Zahlen, CEO-Namen, Umsätze oder Mitarbeiter-Counts.\n\n=== KRITISCHE ANWEISUNGEN ===\n{instructions}\n\nErstelle jetzt das strukturierte Company Intelligence Briefing in 9 Sektionen:"
   },
   "interview_preparation_pack": {
     "document_type": "interview_preparation_pack",
-    "role": "interview preparation coach",
-    "task": "Create an interview preparation guide for this role",
+    "role": "Senior interview coach with ten years of preparing candidates for Swiss job interviews across finance, tech, industry, trade, and the public sector. You know that Swiss interviews are direct, punctual, fact-based and culturally more reserved than Anglo-American ones, and that a good preparation pack anticipates concrete questions rather than giving generic advice.",
+    "task": "Create a complete interview preparation pack that a candidate can actually use the day before and the morning of a Swiss job interview. It must contain concrete, tailored content — not generic advice that applies to any interview anywhere.",
     "inputs": ["job_description", "cv_text", "language"],
     "instructions": [
-      "List 8-12 likely interview questions for this role",
-      "Provide tailored answers using STAR method (Situation, Task, Action, Result)",
-      "Create a compelling 30-second pitch",
-      "Highlight key talking points from CV",
-      "Include preparation checklist for interview day",
-      "Be specific to this role and candidate's background"
+      "Output ONLY the pack content — NO 'Here is your pack:' preamble",
+      "Structure with clear headings so the candidate can quickly find each section the day of the interview",
+
+      "=== HONESTY REQUIREMENT ===",
+      "The candidate CV is compiled from verifiable documents (references, diplomas, certificates, work history)",
+      "All STAR answers, achievements, and example stories must be grounded in what is documented in the CV text",
+      "Where an answer requires detail that is not in the CV, mark it: '[Hier eigene Erfahrung einfügen: ...]' so the candidate fills in truthfully",
+      "Never fabricate achievements, timelines, or outcomes",
+
+      "=== SECTION 1: KANDIDATEN-KURZPORTRÄT (für dich selbst, 4-6 Zeilen) ===",
+      "Eine Selbst-Vergewisserung: 'Wer bin ich in diesem Gespräch?'",
+      "3-4 Sätze zu Werdegang, 2 zu aktueller Rolle, 1 zum Motiv für den Wechsel",
+      "Nur aus dem CV ableiten, keine Erfindungen",
+
+      "=== SECTION 2: 30-SEKUNDEN-PITCH (Elevator Pitch) ===",
+      "Genaue Wort-Vorlage, die der Kandidat auswendig lernen kann",
+      "Struktur: Wer ich heute bin (1 Satz) → Was ich bisher erreicht habe (2 Sätze) → Warum ich mich für diese Stelle interessiere (1 Satz) → Was ich mitbringe (1 Satz)",
+      "Maximal 80 Wörter — länger ist kein Elevator Pitch mehr",
+      "Keine Superlative ohne Belege, keine Buzzwords",
+
+      "=== SECTION 3: ANTIZIPIERTE FRAGEN NACH KATEGORIEN ===",
+      "Liste insgesamt 12-15 wahrscheinliche Fragen, aufgeteilt in 5 Kategorien. Jede Frage bekommt eine vollständige Beispielantwort im STAR-Format (Situation, Task, Action, Result) wo anwendbar.",
+
+      "KATEGORIE A — Eisbrecher (2-3 Fragen):",
+      "  - 'Erzählen Sie etwas über sich.' → Elevator Pitch (siehe Sektion 2)",
+      "  - 'Wie sind Sie auf unsere Stelle aufmerksam geworden?'",
+      "  - 'Was wissen Sie über uns?' → Brücke zum Company Intelligence Briefing",
+
+      "KATEGORIE B — Fachliche Fragen abgeleitet aus dem Inserat (3-4 Fragen):",
+      "  - Generiere jede Frage aus einer konkreten 'Must-have'-Anforderung des Inserats",
+      "  - Liefere eine STAR-Antwort, die sich ausschliesslich auf CV-Inhalte stützt",
+      "  - Wenn der CV die Anforderung nicht abdeckt: liefere eine ehrliche 'Brücken-Antwort', die transferable Skills zeigt",
+
+      "KATEGORIE C — Verhaltensfragen / Behavioral (3-4 Fragen):",
+      "  - Typische Fragen: 'Erzählen Sie von einer Situation, in der...'",
+      "    • ...Sie einen Konflikt im Team gelöst haben",
+      "    • ...Sie unter Zeitdruck eine Entscheidung treffen mussten",
+      "    • ...ein Projekt nicht wie geplant lief",
+      "    • ...Sie etwas Neues schnell lernen mussten",
+      "  - Vollständige STAR-Antwort pro Frage, basierend auf CV-Erfahrungen",
+
+      "KATEGORIE D — Motivation und Kultur (2-3 Fragen):",
+      "  - 'Warum genau dieses Unternehmen?' — konkrete Hooks aus dem Inserat verwenden",
+      "  - 'Warum verlassen Sie Ihre aktuelle Stelle?' — professionelle, nicht-abwertende Formulierung",
+      "  - 'Wo sehen Sie sich in drei Jahren?' — realistisch und auf die Rolle bezogen",
+
+      "KATEGORIE E — Kritische Fragen (2 Fragen):",
+      "  - 'Was ist Ihre grösste Schwäche?' — echte Schwäche + Massnahme, nicht die Floskel 'Ich bin zu perfektionistisch'",
+      "  - 'Wenn das Inserat nicht zu 100 % Ihrem Profil entspricht: wie würden Sie die Lücke schliessen?' — ehrliche Antwort, die transferable Skills betont",
+
+      "=== SECTION 4: FRAGEN, DIE DU STELLEN SOLLTEST (5-7 Stück) ===",
+      "Jede Frage verweist auf ein konkretes Detail aus dem Inserat und zeigt, dass der Kandidat vorbereitet ist",
+      "Mische drei Ebenen:",
+      "  a) Frage zur Rolle (konkret, aus Inserat abgeleitet)",
+      "  b) Frage zum Team / zur Zusammenarbeit",
+      "  c) Frage zur Entwicklung / zum nächsten Schritt",
+      "Letzte Frage: 'Welche Qualitäten sind für den Erfolg in dieser Rolle am wichtigsten?' — gibt dem Kandidaten die Chance, im Nachgang gezielt darauf einzugehen",
+
+      "=== SECTION 5: GEHALTSVERHANDLUNG (Schweizer Kontext) ===",
+      "In Schweizer Erstgesprächen wird selten konkret über Lohn gesprochen — die Frage kommt aber oft trotzdem",
+      "Vorbereitung:",
+      "  - 'Was sind Ihre Lohnvorstellungen?' — mit Range antworten, nicht mit einer einzelnen Zahl",
+      "  - Range aus CV-Daten (aktueller Lohn + realistischer Aufschlag) oder Marktdaten aus dem Inserat ableiten, wenn im Inserat eine Range angegeben ist",
+      "  - Niemals UNTER dem aktuellen Lohn bieten, es sei denn der Kandidat hat dafür einen expliziten Grund",
+      "  - 13. Monatslohn und Bonus explizit ansprechen (Schweizer Standard: 12 vs 13 Monatslöhne macht ~8 % Unterschied)",
+      "  - Vergünstigungen (SBB-GA, Pensionskasse, Weiterbildungsbudget, Home-Office-Regelung) sind Teil des Gesamtpakets",
+
+      "=== SECTION 6: LOGISTIK-CHECKLISTE (Tag davor und Tag selbst) ===",
+      "Tag davor:",
+      "  - Route und Reisezeit prüfen — Swiss punctuality ist nicht verhandelbar, 5 Minuten zu früh = on time",
+      "  - Business casual bis business formal je nach Branche (Finanzbranche: Anzug; Tech: business casual; KMU: eine Stufe formeller als der Alltag)",
+      "  - Mappe vorbereiten: 2 Kopien des CV, Notizblock, Stift, Ausweis",
+      "  - Notfall-Nummer des Unternehmens für den Fall einer Verzögerung notieren",
+      "Tag selbst:",
+      "  - 10-15 Minuten vor Termin am Empfang sein",
+      "  - Handy auf lautlos, nicht in der Hand",
+      "  - Händedruck: fest, kurz, Augenkontakt, Vornamen-Wiederholung bei Vorstellung",
+
+      "=== SECTION 7: NACHBEREITUNG ===",
+      "Dankes-E-Mail innerhalb von 24 Stunden (nicht sofort, nicht länger als 2 Tage)",
+      "Struktur der Dankes-E-Mail: Dank für das Gespräch, ein konkretes Detail aus dem Gespräch aufgreifen, kurze Bekräftigung des Interesses, Angebot für Nachfragen",
+
+      "=== SECTION 8: ROTE FLAGGEN, DIE DU BEACHTEN SOLLTEST ===",
+      "Dinge, die im Gespräch schief gehen könnten und wie du reagierst:",
+      "  - Unklare oder widersprüchliche Aufgabenbeschreibung in den Antworten des Arbeitgebers → nachfragen",
+      "  - Druck, sofort Zusage zu geben → höflich um Bedenkzeit bitten",
+      "  - Fragen nach Themen, die arbeitsrechtlich nicht erlaubt sind (Familienplanung, politische Haltung, Religion) → nicht beantworten, aber nicht konfrontativ werden",
+
+      "=== SCHWEIZER SPRACH-KONVENTIONEN ===",
+      "Wenn Ausgabe Deutsch (Schweiz): konsequent 'ss' statt 'ß', 'Sie'-Form, Schweizer Ortsnamen",
+      "Titel werden in der Schweiz seltener genutzt als in Deutschland — bei Unsicherheit weglassen"
     ],
-    "output_format": "Comprehensive preparation guide",
-    "length_guideline": "2-3 pages",
-    "prompt_template": "You are an {role}. {task}.\n\nJob Details:\n{job_description}\n\nCandidate CV:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the interview preparation pack now:"
+    "output_format": "Complete 8-section interview preparation pack with concrete STAR answers tailored to CV and job",
+    "length_guideline": "3-5 pages (2000-3500 words)",
+    "prompt_template": "You are a {role}.\n\n{task}\n\n=== STELLENAUSSCHREIBUNG ===\n{job_description}\n\n=== LEBENSLAUF (verifizierte Quelle) ===\n{cv_text}\n\n=== AUSGABESPRACHE ===\n{language}\n\nWICHTIG: Alle Beispielantworten müssen auf dokumentierten CV-Inhalten basieren. Wo der CV nicht ausreicht, markiere die Stelle mit '[Hier eigene Erfahrung einfügen: ...]'. Erfinde keine Projekte, Zahlen oder Ergebnisse.\n\n=== KRITISCHE ANWEISUNGEN ===\n{instructions}\n\nErstelle jetzt den vollständigen Interview-Vorbereitungspack in 8 Sektionen:"
   },
   "role_specific_portfolio": {
     "document_type": "role_specific_portfolio",
-    "role": "portfolio presentation specialist",
-    "task": "Create a one-page portfolio highlighting achievements relevant to this role",
+    "role": "Portfolio designer who translates a CV into a single highly-scannable page of proof for a specific job. You build portfolios that a hiring manager reads in under 90 seconds and walks away convinced that the candidate has solved exactly the kind of problems the job requires.",
+    "task": "Create a one-page role-specific portfolio that picks the 3-5 strongest proof points from the candidate's CV, maps them to the job requirements, and presents them in a dense, scannable layout with concrete numbers and outcomes.",
     "inputs": ["job_description", "cv_text", "language"],
     "instructions": [
-      "Highlight 3-5 key achievements aligned with job requirements",
-      "Include measurable results and metrics where available",
-      "Use visual-friendly formatting (bullet points, sections)",
-      "Focus on impact and outcomes",
-      "Keep it to ONE page",
-      "Make it scannable and impressive"
+      "Output ONLY the portfolio content — NO preamble",
+      "ONE PAGE is a hard constraint. Cut ruthlessly.",
+
+      "=== HONESTY ===",
+      "Every claim, number, metric, or outcome in this portfolio must come from the candidate's CV",
+      "If a proof point needs a number the CV does not contain, use a placeholder like '[Zahl aus eigener Erfahrung einfügen]' so the candidate can fill in honestly",
+      "Never invent clients, projects, technologies, or outcomes",
+      "Swiss candidates are often modest in their original CV — your job is to re-phrase existing facts for impact, not to inflate",
+
+      "=== STRUCTURE (top to bottom) ===",
+
+      "HEADER (2 lines):",
+      "  Zeile 1: Vor- und Nachname in grosser Schrift, darunter aktuelle Rolle + Kernkompetenz-Schlagwort (z.B. 'Senior Backend Engineer · Python, SQL, verteilte Systeme')",
+      "  Zeile 2: Kurzer Wertversprechen-Satz (max. 15 Wörter), der die Brücke zur ausgeschriebenen Rolle schlägt",
+
+      "AUSGEWÄHLTE BEWEISE (3-5 Boxen):",
+      "  Jede Box ist ein konkretes Proof-Point, nicht ein ganzes Projekt",
+      "  Jede Box folgt genau dieser Struktur:",
+      "    • Titel (4-8 Wörter, beschreibt das Resultat, nicht die Aktivität) — z.B. 'Reduktion der Backend-Latenz um 40 %' statt 'Backend-Optimierung'",
+      "    • Kontext (1 Zeile): In welcher Rolle / bei welchem Arbeitgeber / in welchem Zeitraum",
+      "    • Herausforderung (1-2 Zeilen): Was war das konkrete Problem?",
+      "    • Aktion (1-2 Zeilen): Was hat der Kandidat konkret getan? Konkrete Tools, Methoden, Rollen nennen",
+      "    • Ergebnis (1 Zeile): Messbare Auswirkung mit Zahl, wo verfügbar",
+      "    • Verbindung zum Inserat (1 Zeile): 'Relevant für diese Stelle, weil das Inserat [konkrete Anforderung] nennt'",
+
+      "KOMPETENZ-MATRIX (1 kompakter Block):",
+      "  3 Spalten: Technisch / Methodisch / Interpersonell",
+      "  Pro Spalte 4-6 Stichwort-Skills, die im CV dokumentiert sind UND im Inserat gefordert werden",
+      "  Keine generischen Skills ('MS Office', 'motiviert') — nur spezifische",
+
+      "KONTAKT-FOOTER (1 Zeile):",
+      "  Platzhalter für Telefon, E-Mail, LinkedIn — niemals erfundene Kontaktdaten einfügen",
+
+      "=== DESIGN & LAYOUT ===",
+      "Ein einzelnes Spaltenlayout — Schweizer Präferenz ist klar und zurückhaltend",
+      "Generöser Weissraum zwischen den Boxen — Dichte entsteht nicht durch Enge",
+      "Wenn das Ausgabeformat Text ist: nutze Unicode-Trennlinien und Emoji-freie Rahmen (z.B. ─ ═ │ ▶)",
+      "Grosse Überschriften, kompakte Fliesstexte",
+
+      "=== AUSWAHL-LOGIK FÜR DIE 3-5 BEWEISE ===",
+      "Rangiere alle Erfahrungen aus dem CV nach zwei Kriterien: (a) Match mit Inserat-Anforderungen, (b) Messbarkeit des Ergebnisses",
+      "Wähle die Top 3-5 und gruppiere sie nach der wichtigsten Anforderung des Inserats (nicht chronologisch)",
+      "Ein Beweis pro Kernanforderung — lieber Abdeckung als Wiederholung",
+      "Keine 'Füll'-Beweise. Wenn du nur 3 starke Beweise findest, zeige nur 3",
+
+      "=== NUMMERN SIND KÖNIG (wenn im CV vorhanden) ===",
+      "Prozente, Beträge, Stückzahlen, Team-Grössen, Zeit-Ersparnisse, Umsätze, Einsparungen — wenn im CV, immer einbauen",
+      "Wenn der CV keine Zahlen enthält: frage im Text des Portfolios NICHT nach ihnen, sondern zeige die Wirkung qualitativ",
+
+      "=== BRANCHEN-ANPASSUNG (automatisch) ===",
+      "Erkenne die Branche aus dem Inserat und passe die Sprache an:",
+      "  - Technik/IT: konkrete Tech-Stacks, Architektur-Entscheidungen, Metriken (Latenz, Verfügbarkeit, Code-Coverage)",
+      "  - Finanz: regulatorische Erfahrung, Volumen, Compliance-Frameworks, AUM wenn relevant",
+      "  - Handwerk/Gewerbe: Projektumfänge, Termintreue, Kundenzufriedenheit, konkrete Fachkenntnisse",
+      "  - Marketing/Kommunikation: Reichweite, Conversion, Budgetverantwortung",
+      "  - HR / Admin: Anzahl betreuter Mitarbeitender, Prozess-Verbesserungen, Einsparungen",
+      "  - Gesundheitswesen: Patientenzahlen, Qualitätsindikatoren, Zertifizierungen",
+
+      "=== SCHWEIZER OUTPUT ===",
+      "Wenn die Ausgabesprache Deutsch (Schweiz) ist: 'ss' statt 'ß', präzise Formulierungen, zurückhaltender Ton — Schweizer Leser reagieren skeptisch auf Selbstlob und Superlative",
+      "Verwende den Indikativ, nicht den Konjunktiv ('ich habe X erreicht', nicht 'ich könnte X beigetragen haben')"
     ],
-    "output_format": "One-page portfolio showcase",
-    "length_guideline": "Strictly 1 page",
-    "prompt_template": "You are a {role}. {task}.\n\nJob Requirements:\n{job_description}\n\nCandidate Experience:\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the role-specific portfolio now:"
+    "output_format": "Single-page scannable portfolio with header, 3-5 proof boxes, competency matrix, contact footer",
+    "length_guideline": "Strictly 1 page, aim for 400-600 words total",
+    "prompt_template": "You are a {role}.\n\n{task}\n\n=== STELLENAUSSCHREIBUNG (Anforderungen extrahieren) ===\n{job_description}\n\n=== LEBENSLAUF (einzige verlässliche Quelle für Beweise) ===\n{cv_text}\n\n=== AUSGABESPRACHE ===\n{language}\n\nWICHTIG: Jeder Beweis muss im CV verifizierbar sein. Erfinde keine Zahlen, Projekte oder Kunden. Wenn eine Kennzahl fehlt, nutze einen Platzhalter statt einer Erfindung.\n\n=== KRITISCHE ANWEISUNGEN ===\n{instructions}\n\nErstelle jetzt das einseitige rollen-spezifische Portfolio:"
   },
   "linkedin_optimization": {
     "document_type": "linkedin_optimization",
-    "role": "LinkedIn optimization expert",
-    "task": "Provide LinkedIn profile optimization suggestions",
+    "role": "LinkedIn SEO and personal branding expert with ten years of optimizing profiles for the DACH recruiter market. You know exactly which fields recruiters actually search, how the LinkedIn algorithm ranks profiles for a given search, and which content choices separate a profile that gets three InMails per week from one that gets none.",
+    "task": "Produce a concrete, paste-ready LinkedIn profile optimization plan that a candidate can apply in one sitting. Every recommendation must be specific to this candidate's CV and this target role — not generic LinkedIn advice.",
     "inputs": ["cv_text", "job_description", "language"],
     "instructions": [
-      "Suggest an improved 'About' section (3-5 paragraphs)",
-      "Recommend an optimized headline",
-      "List 10-15 key skills to add/highlight",
-      "Provide keywords for recruiter discovery",
-      "Suggest job title optimizations",
-      "Include tips for profile completeness"
+      "Output ONLY the optimization plan content — NO preamble",
+      "Every section must produce paste-ready text the candidate can copy directly into LinkedIn, not just advice",
+
+      "=== HONESTY ===",
+      "Base all suggestions on the candidate's documented CV. Do not invent certifications, roles, or skills",
+      "Where a suggestion requires information that is not in the CV, provide a template with a clearly-marked placeholder",
+
+      "=== SECTION 1: HEADLINE (die wichtigste Zeile der LinkedIn-Suche) ===",
+      "Die Headline ist das wichtigste Feld für das Recruiter-Matching: LinkedIn's Algorithmus gewichtet Keywords hier sehr stark",
+      "Formel: [Aktuelle Rolle] + | + [Top 3 Keywords aus dem Inserat, die im CV belegt sind] + | + [Optionaler Value-Add-Satz]",
+      "Beispiel: 'Senior Backend Engineer | Python, FastAPI, PostgreSQL | ATS-taugliche Bewerbungen automatisieren'",
+      "Maximum 220 Zeichen (LinkedIn-Limit)",
+      "Liefere 3 Varianten der Headline, nummeriert 1-3, damit der Kandidat wählen kann",
+      "Nicht 'looking for new opportunities' in die Headline — das macht Recruiter-Push schwieriger, weil ihr Algorithmus primär passive Kandidaten rankt",
+
+      "=== SECTION 2: ABOUT / INFO (3-5 Absätze, paste-ready) ===",
+      "Absatz 1 (HOOK, 2 Sätze): Eine pointierte Beschreibung dessen, was die Person heute beruflich tut und warum",
+      "Absatz 2 (ERFAHRUNG, 3-4 Sätze): Kernbereiche, in denen der Kandidat arbeitet, mit 3-5 natürlich eingewobenen Keywords aus dem Inserat",
+      "Absatz 3 (WERT-VERSPRECHEN, 2-3 Sätze): 'Was suche ich / was biete ich?' — konkret, nicht 'bin immer bereit für neue Herausforderungen'",
+      "Absatz 4 (PROOF / ACHIEVEMENTS, 2-3 Sätze oder Bullet List): Ein bis drei konkrete, zahlenbasierte Achievements aus dem CV",
+      "Absatz 5 (CTA, 1 Satz): 'Ich freue mich über Nachrichten zu Themen rund um [Feld].'",
+      "Schreibe die About-Sektion in der Ich-Form (persönlicher, performt besser) — nicht in der dritten Person",
+      "2000 Zeichen Limit, aber die ersten 220 Zeichen sind entscheidend (was ohne 'Mehr anzeigen' sichtbar ist)",
+
+      "=== SECTION 3: CURRENT EXPERIENCE (Bullet-Rewrite) ===",
+      "Nimm den aktuellen Job aus dem CV und liefere 4-6 neu geschriebene Bullet Points im LinkedIn-Format",
+      "Jeder Bullet: starkes Verb + Aktion + messbares Resultat (wenn im CV) + relevante Keywords aus dem Inserat",
+      "Beispiel: 'Implementierte eine FastAPI-basierte REST-API mit PostgreSQL-Backend, die 500+ täglichen Requests latenzoptimiert verarbeitet.'",
+      "Niemals Verantwortungs-Beschreibungen in der Passivform ('Verantwortlich für...') — immer aktiv, resultat-orientiert",
+      "Keine Selbst-Adjektive ('erfolgreich', 'motiviert', 'zuverlässig') — Recruiter ignorieren sie",
+
+      "=== SECTION 4: SKILLS — TOP 3 PINNEN ===",
+      "LinkedIn erlaubt bis zu 50 Skills, aber nur die 3 angehefteten sind prominent sichtbar",
+      "Wähle die 3 Skills, die (a) im CV dokumentiert sind, (b) im Inserat als Must-Have erscheinen, (c) gut suchbar sind",
+      "Liste zusätzlich 12-15 weitere empfohlene Skills, nach Relevanz sortiert",
+      "Vermeide Meta-Skills ('Leadership' ohne Spezifizierung) — lieber 'Team Lead (5-8 Personen)', 'Agile Coaching', 'OKR-Einführung'",
+
+      "=== SECTION 5: FEATURED SECTION ===",
+      "Welche Dokumente, Präsentationen oder Links sollte der Kandidat im Featured-Bereich verlinken?",
+      "Pro Item: was es ist, warum es hier hingehört, woher es kommt",
+      "Wenn der Kandidat aktuell nichts hat: 3 konkrete Vorschläge, was er erstellen könnte (z.B. 'Eine Case-Study des [im CV dokumentierten] Projekts bei [Firma]')",
+
+      "=== SECTION 6: EMPFEHLUNGEN (RECOMMENDATIONS) ===",
+      "Empfehlungen sind der stärkste Trust-Faktor auf LinkedIn",
+      "Empfehle: von wem der Kandidat Empfehlungen anfragen sollte (welche Rollen, welche Firmen)",
+      "Liefere einen Text-Baustein, den der Kandidat bei der Anfrage nutzen kann — höflich, konkret, mit Vorschlägen, worauf der Empfehlende sich konzentrieren könnte",
+
+      "=== SECTION 7: FOTO UND BANNER ===",
+      "Profilbild-Check (nur textuelle Empfehlung, keine Bildgenerierung): professionell, neutral, Schulter-nach-oben, einfacher Hintergrund, Gesicht ~60 % des Bildes",
+      "Banner-Empfehlung: Branchen-relevantes Bild, optional mit Text-Overlay des Wert-Versprechens — nicht die LinkedIn-Standard-Landschaft",
+
+      "=== SECTION 8: KEYWORD-DICHTE-ANALYSE ===",
+      "Liste die 10-15 wichtigsten Keywords aus dem Inserat",
+      "Für jedes Keyword: wie oft es idealerweise im gesamten Profil vorkommen sollte (Headline, About, Experience, Skills) — zwischen 2 und 5 Mal pro wichtigem Keyword",
+      "Erkläre kurz, warum — LinkedIn-Suche bewertet Keyword-Häufigkeit und -Platzierung",
+
+      "=== SECTION 9: EINSTELLUNGEN & SICHTBARKEIT ===",
+      "Empfohlene Einstellungen:",
+      "  - 'Open to Work' — wenn der Kandidat aktiv sucht, als privates Signal an Recruiter (nicht als öffentliches Banner, das kann Arbeitgeber verärgern)",
+      "  - Profil-URL anpassen: linkedin.com/in/[vorname-nachname]",
+      "  - Creator Mode einschalten, falls der Kandidat Content posten möchte",
+      "  - Standort öffentlich auf Stadt-Ebene, nicht vage 'Schweiz'",
+
+      "=== SECTION 10: 30-TAGE-ACTIVITY-PLAN ===",
+      "5 konkrete Mikro-Aktionen, die der Kandidat in den nächsten 30 Tagen durchführen soll:",
+      "  - Woche 1: Headline + About-Sektion aktualisieren",
+      "  - Woche 2: Aktuelle Rolle + Skills optimieren",
+      "  - Woche 3: Featured + erste Empfehlung anfragen",
+      "  - Woche 4: Einen branchenrelevanten Beitrag kommentieren oder selbst teilen",
+      "Pro Aktion: maximal 20 Minuten Aufwand",
+
+      "=== SCHWEIZER OUTPUT ===",
+      "Wenn Ausgabesprache Deutsch (Schweiz): 'ss' statt 'ß'",
+      "LinkedIn-Profile in der DACH-Region sind zweisprachig DE/EN üblich — wenn die Zielrolle internationalen Austausch erfordert, empfehle eine englische About-Variante als Ergänzung"
     ],
-    "output_format": "Structured optimization guide",
-    "length_guideline": "2-3 pages",
-    "prompt_template": "You are a {role}. {task}.\n\nCurrent CV:\n{cv_text}\n\nTarget Industry/Role:\n{job_description}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the LinkedIn optimization suggestions now:"
+    "output_format": "10-section LinkedIn optimization guide with paste-ready headlines, About section, bullet points, and a 30-day action plan",
+    "length_guideline": "3-4 pages (2000-3000 words)",
+    "prompt_template": "You are a {role}.\n\n{task}\n\n=== LEBENSLAUF DES KANDIDATEN ===\n{cv_text}\n\n=== ZIEL-ROLLE / BRANCHE (aus Stellenausschreibung) ===\n{job_description}\n\n=== AUSGABESPRACHE ===\n{language}\n\nWICHTIG: Jede Empfehlung muss kopier-fähigen Text liefern, nicht nur allgemeine Ratschläge. Basiere alle Inhalte auf dem dokumentierten CV. Erfinde keine Titel, Zertifikate oder Leistungen.\n\n=== KRITISCHE ANWEISUNGEN ===\n{instructions}\n\nErstelle jetzt den vollständigen LinkedIn-Optimierungsplan in 10 Sektionen:"
   },
   "executive_summary": {
     "document_type": "executive_summary",
-    "role": "executive branding consultant",
-    "task": "Create an executive summary / personal profile for the candidate",
+    "role": "Executive branding consultant who writes one-page career narratives for senior professionals (C-Level, Management, Senior Expert). You know that a senior reader scans a summary in 15 seconds and needs to find (1) identity, (2) strategic impact, (3) differentiator, and (4) fit for the target role — in that order.",
+    "task": "Write a single-page executive summary / personal profile that positions the candidate for the target role. The summary must feel senior, factual, and differentiated — not generic, not modest-to-invisibility.",
     "inputs": ["cv_text", "job_description", "language"],
     "instructions": [
-      "Write a compelling one-page career story",
-      "Highlight value proposition and unique selling points",
-      "Focus on leadership and strategic impact",
-      "Include career highlights and key achievements",
-      "Professional tone suitable for senior positions",
-      "Include placeholder for QR code to portfolio/LinkedIn"
+      "Output ONLY the summary content — NO preamble",
+      "EIN PAGE is a hard constraint",
+
+      "=== HONESTY ===",
+      "Every claim must be documentable from the CV — leadership experience, team sizes, budgets, strategic impact, P&L responsibility, geographical scope",
+      "If a C-level-relevant datapoint (e.g. budget size, team headcount, revenue responsibility) is missing, omit it rather than invent it",
+      "Senior readers are exceptionally good at spotting inflated claims — one unverifiable number kills credibility for the whole document",
+
+      "=== STRUCTURE ===",
+
+      "BLOCK 1 — HEADER (3 Zeilen):",
+      "  Zeile 1: Vor- und Nachname, gross",
+      "  Zeile 2: Aktuelle Funktion + Branchenfokus (z.B. 'Chief Operating Officer · Industrie- und Fertigungstechnik')",
+      "  Zeile 3: Ein 12-15-Wörter-Wertversprechen, das den roten Faden der Karriere fasst",
+
+      "BLOCK 2 — EXECUTIVE PROFILE (3-4 Sätze):",
+      "  Der Karriere-Arc in einem Absatz",
+      "  Satz 1: Wer ich heute bin (Rolle, Jahre Erfahrung, Branchenfokus)",
+      "  Satz 2: Was mein fachlicher Fokus ist und wie ich ihn aufgebaut habe",
+      "  Satz 3: Welches konkrete Problem ich für Unternehmen löse",
+      "  Satz 4: Warum diese Ziel-Rolle / Ziel-Firma der nächste logische Schritt ist",
+
+      "BLOCK 3 — SIGNATURE ACHIEVEMENTS (3-5 Punkte):",
+      "  Jedes Achievement ist ein Einzeiler mit Struktur: [Verb] + [Aktion] + [Resultat mit Zahl] + [strategische Bedeutung]",
+      "  Beispiel: 'Führung des Post-Merger-Integrationsprojekts zweier KMU (180 MA, 40 Mio. CHF Umsatz) in 11 Monaten, resultierend in 18 % EBIT-Steigerung im ersten Jahr nach Integration.'",
+      "  Nur Achievements, die im CV belegt sind — keine Erweiterungen",
+      "  Sortiere nach strategischer Bedeutung für die Ziel-Rolle, nicht chronologisch",
+
+      "BLOCK 4 — LEADERSHIP & SCOPE (Kompakte Auflistung):",
+      "  Format: Label → Wert",
+      "  Mögliche Labels (nur die, die im CV belegt sind):",
+      "    • Budget-Verantwortung",
+      "    • Team-Grösse / Spannweite (direkte und indirekte Reports)",
+      "    • P&L-Verantwortung",
+      "    • Geografische Reichweite",
+      "    • Sprachen (CEFR-Level)",
+      "    • Ausbildung (höchster Abschluss + relevante Executive Education)",
+      "    • Board-Mandate / Verwaltungsratsrollen",
+
+      "BLOCK 5 — CORE COMPETENCIES (3 Spalten, je 4-5 Stichworte):",
+      "  Spalte 1: Strategisch (z.B. M&A, Turnaround, Internationalisierung, Digital Transformation)",
+      "  Spalte 2: Operativ (z.B. Supply Chain, Lean Management, CapEx-Steuerung, Operations Excellence)",
+      "  Spalte 3: People / Culture (z.B. Organisations-Design, Change Management, Talent-Entwicklung, High-Performance Teams)",
+      "  Nur belegte Kompetenzen, keine generischen Schlagworte",
+
+      "BLOCK 6 — VALUE FOR THE TARGET ROLE (1 Absatz, 3-4 Sätze):",
+      "  Dieser Block macht den Unterschied zwischen 'Lebenslauf-Zusammenfassung' und 'Executive Summary'",
+      "  Verbinde 2-3 konkrete Inserat-Anforderungen mit konkreten Belegen aus der eigenen Laufbahn",
+      "  Satz 1: 'Ihre Ausschreibung nennt [konkrete Anforderung] als Kernaufgabe — genau dieses Thema habe ich bei [Firma] im Rahmen von [Projekt/Initiative] über [Zeitraum] verantwortet.'",
+      "  Satz 2: 'Darüber hinaus bringe ich [zweite Anforderung] durch meine Erfahrung bei [andere Rolle] mit.'",
+      "  Satz 3: 'Was ich in dieser neuen Rolle in den ersten 90 Tagen konkret beitragen würde: [ehrliche Einschätzung, keine Versprechen].'",
+
+      "BLOCK 7 — KONTAKT & QR-CODE-PLATZHALTER (Footer):",
+      "  Telefon, E-Mail, LinkedIn-URL — als Platzhalter, nicht erfinden",
+      "  Ein Hinweis '[QR-Code: verlinkt auf LinkedIn-Profil oder digitales Portfolio]'",
+
+      "=== STILVORGABEN ===",
+      "Ton: selbstbewusst, faktisch, ohne Superlative. Senior Reader reagieren allergisch auf 'hervorragend', 'aussergewöhnlich', 'einzigartig'",
+      "Konkrete Zahlen stehen für sich — kein zusätzliches Adjektiv",
+      "Im Aktiv schreiben, keine Passiv-Konstruktionen",
+      "Keine Bullet-Listen mit über 5 Items — die Seite soll ruhig wirken",
+
+      "=== SCHWEIZER EXECUTIVE-NORMEN ===",
+      "Wenn Deutsch (Schweiz): 'ss' statt 'ß'",
+      "Schweizer Führungskultur ist zurückhaltender als die deutsche oder amerikanische. Untertreibung wirkt professioneller als Übertreibung",
+      "Beträge in CHF, nicht EUR, ausser das Inserat nennt explizit einen anderen Währungsraum",
+      "Swiss Executive Education (IMD, HSG Executive School, Rochester-Bern) ist gewichtiger als die blosse Nennung internationaler Brands",
+
+      "=== WAS NICHT REIN KOMMT ===",
+      "Keine vollständige Jobliste (das ist Aufgabe des CV)",
+      "Keine Hobbys, Zivilstand, Geburtsdatum — in einem Executive Summary irrelevant",
+      "Keine Photo-Platzhalter — moderne Executive Summaries sind textlastig",
+      "Kein Mission Statement-Geschwafel ('Ich lebe für Excellence')"
     ],
-    "output_format": "One-page executive summary",
-    "length_guideline": "Strictly 1 page",
-    "prompt_template": "You are an {role}. {task}.\n\nCandidate CV:\n{cv_text}\n\nTarget Role:\n{job_description}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the executive summary now:"
+    "output_format": "One-page executive summary with 7 blocks: header, profile, achievements, scope, competencies, value-for-target, contact footer",
+    "length_guideline": "Strictly 1 page (400-600 words)",
+    "prompt_template": "You are an {role}.\n\n{task}\n\n=== LEBENSLAUF (einzige Quelle für alle Fakten) ===\n{cv_text}\n\n=== ZIEL-ROLLE (zur Positionierung) ===\n{job_description}\n\n=== AUSGABESPRACHE ===\n{language}\n\nWICHTIG: Alle Zahlen, Team-Grössen, Budgets, Verantwortungsbereiche müssen im CV belegt sein. Erfinde nichts — ein falscher Datenpunkt zerstört die Glaubwürdigkeit des gesamten Dokuments. Schweizer Untertreibung ist professioneller als amerikanische Übertreibung.\n\n=== KRITISCHE ANWEISUNGEN ===\n{instructions}\n\nErstelle jetzt das einseitige Executive Summary in den 7 Blöcken:"
   },
   "skill_gap_report": {
     "document_type": "skill_gap_report",
-    "role": "career development advisor",
-    "task": "Create a skill gap analysis and upskilling recommendation report",
+    "role": "Career development advisor specialized in the Swiss and European labor market, with direct knowledge of which certifications, courses, and learning paths actually move the needle for Swiss employers (as opposed to generic US-centric advice).",
+    "task": "Produce a practical skill gap and upskilling recommendation report. The report must distinguish between blocking gaps, important gaps, and nice-to-have gaps; name concrete learning resources with Swiss/European relevance; and give the candidate a realistic priority ordering.",
     "inputs": ["job_description", "cv_text", "language"],
     "instructions": [
-      "Identify missing skills compared to job requirements",
-      "Prioritize skills by importance (critical, important, nice-to-have)",
-      "Suggest specific courses and certifications",
-      "Provide learning paths with time estimates",
-      "Include both technical and soft skills",
-      "Be constructive and actionable"
+      "Output ONLY the report content — NO preamble",
+
+      "=== HONESTY & METHODOLOGY ===",
+      "Extract must-have, nice-to-have, and implicit requirements from the job description",
+      "Compare each against the candidate's documented CV (references, diplomas, certificates, work history)",
+      "If a skill is partially present (mentioned briefly, or implied through adjacent experience), flag it as 'partial' — not missing",
+      "Never claim a gap is 'minor' to soften the news — the candidate needs the truth",
+
+      "=== STRUCTURE ===",
+
+      "SECTION 1: ZUSAMMENFASSUNG (Executive Summary, 5-6 Sätze)",
+      "  - Gesamteinschätzung: wie weit ist der Kandidat von der Stelle entfernt?",
+      "  - Anzahl der blockierenden Lücken, wichtigen Lücken, nice-to-have-Lücken",
+      "  - Empfehlung in einem Satz: 'Für diese Stelle ist der Kandidat aktuell [sofort bewerbbar / mit 2-3 Monaten Vorbereitung bewerbbar / erst mit einer 6-12-monatigen Weiterbildung bewerbbar / strategisch falsch ausgerichtet]'",
+
+      "SECTION 2: ANFORDERUNGS-MATRIX",
+      "  Tabelle mit 4 Spalten: Anforderung | Quelle (Inserat-Satz) | Status im CV | Priorität",
+      "  Status-Werte: ✓ Vollständig vorhanden | ⦁ Teilweise vorhanden | ✗ Fehlt",
+      "  Prioritäts-Werte: BLOCKIEREND (Must-Have, ohne das geht's nicht) | WICHTIG (Nice-to-have, zieht Bewerbung stark nach oben) | OPTIONAL (angenehm, aber nicht nötig)",
+      "  Mindestens 8-15 Einträge, je nach Inserat-Länge",
+
+      "SECTION 3: DIE BLOCKIERENDEN LÜCKEN (1 Unterabschnitt pro Gap)",
+      "  Für jede blockierende Lücke, detailliert:",
+      "  - Was genau fehlt (präzise Definition)",
+      "  - Warum der Arbeitgeber das verlangt (aus dem Inserat ableiten)",
+      "  - Was die realistische Zeit bis zur Erreichung wäre (als Range: 'zwischen X und Y Monaten Vorbereitung', NICHT als einzelne Zahl)",
+      "  - 2-3 konkrete, Schweiz-relevante Lern-Ressourcen mit Name, Anbieter und Format:",
+      "    • Kurs: vollständiger Name, Anbieter (z.B. SIZ, Digicomp, Swisscom Academy, MOOC-Plattform, Hochschule), Dauer, ungefährer Preis in CHF",
+      "    • Zertifizierung: offizieller Name, zertifizierende Organisation, typische Vorbereitung, Prüfungsort CH",
+      "    • Alternativ-Pfad: wie man die Lücke ohne formale Zertifizierung schliessen kann (Praxis-Projekte, Open-Source-Beiträge, Pro-bono-Arbeit)",
+      "  - Alternative Strategien: wenn die Lücke zu gross ist, welche verwandten Rollen sind realistisch?",
+
+      "SECTION 4: WICHTIGE LÜCKEN (Tabellarisch, knapper)",
+      "  Für jede wichtige Lücke: Was fehlt, empfohlene Massnahme in einem Satz, 1 Lern-Ressource",
+
+      "SECTION 5: SPRACHEN-KOMPETENZ (dedizierter Abschnitt)",
+      "  In der Schweiz ist die Sprachkompetenz fast immer ein eigener Gap-Bereich",
+      "  Extrahiere die im Inserat verlangten Sprachen und Level (explicit oder implicit)",
+      "  Vergleiche mit dem CV (wenn Sprachen mit CEFR-Level genannt)",
+      "  Wenn eine Sprache fehlt oder das Level zu tief ist:",
+      "    - Realistische Zeit von B1 auf B2 bzw. B2 auf C1 (als Range)",
+      "    - Anbieter-Empfehlungen: Migros-Klubschule, Benedict Schule, Inlingua, Sprach-Apps mit Schweiz-Bezug",
+      "    - Hinweis zum TELC / goethe-zertifikat / DELF für formale Nachweise",
+
+      "SECTION 6: SOFT-SKILL-GAPS (wenn erkennbar)",
+      "  Soft Skills aus dem Inserat identifizieren (Teamführung, Kommunikation, Konfliktmanagement, Präsentationsfähigkeit, etc.)",
+      "  Für jede Lücke: wie sie nachweisbar entwickelt werden kann (Workshops, Coaching, konkrete Übungssituationen) — NICHT mit der Floskel 'an sich arbeiten'",
+      "  Swiss-relevante Anbieter: HSG Executive, Rochester-Bern, IKF, diverse Coaching-Netzwerke",
+
+      "SECTION 7: NICHT-EMPFOHLENE STRATEGIEN",
+      "  Explizit benennen, was der Kandidat NICHT tun sollte:",
+      "  - Nicht 5 verschiedene Online-Kurse parallel starten — das führt zu keinem Abschluss",
+      "  - Nicht Zertifikate sammeln, deren Prüfung 200 CHF kostet, ohne die zugrundeliegende Praxis aufzubauen",
+      "  - Nicht auf US-spezifische Zertifikate setzen, wenn die Rolle regional ist",
+
+      "SECTION 8: PRIORITÄTEN-ROADMAP (3-6-12 Monate)",
+      "  Konkreter Zeitplan:",
+      "  - Monat 1-3: Welche Quick Wins sind machbar (z.B. eine spezifische Zertifizierung, die in 4 Wochen zu erreichen ist)",
+      "  - Monat 4-6: Mittelfristige Themen",
+      "  - Monat 7-12: Langfristige Kompetenzen",
+      "  - Check-in-Punkte: wann der Kandidat sich selbst überprüfen soll",
+
+      "SECTION 9: ALTERNATIV-PFAD (wenn die Gesamtlücke gross ist)",
+      "  Wenn der Gesamt-Gap mehr als 6 Monate beträgt: schlage 2-3 alternative Rollen vor, die der Kandidat mit seinem aktuellen Profil sofort oder nahezu sofort anpeilen kann und die natürliche Brücken zum eigentlichen Ziel bilden",
+      "  Für jede Alternative: warum sie passt, wie sie als Sprungbrett fungiert",
+
+      "=== SCHWEIZER RAHMEN ===",
+      "Verwende CHF, nicht EUR oder USD, für Preisangaben",
+      "Swiss-spezifische Weiterbildungs-Anbieter sind bevorzugt zu nennen: SIZ, Digicomp, KV Business School, Handelsschule KV, die Höhere Fachschulen, FH Schweiz Continuing Education, Executive School HSG, Rochester-Bern",
+      "Berufsbegleitende Weiterbildung ist in der Schweiz Standard — Ressourcen sollten dies berücksichtigen",
+      "Zertifikate der Höheren Berufsbildung (eidgenössischer Fachausweis, eidgenössisches Diplom) sind im Schweizer Arbeitsmarkt oft wertvoller als internationale Online-Zertifikate — wo passend, erwähnen"
     ],
-    "output_format": "Structured development plan",
-    "length_guideline": "2-3 pages",
-    "prompt_template": "You are a {role}. {task}.\n\nJob Requirements:\n{job_description}\n\nCurrent Skills (from CV):\n{cv_text}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the skill gap report now:"
+    "output_format": "9-section skill gap report with requirement matrix, blocking-gap deep dives, Swiss-relevant learning resources in CHF, and a 3-6-12 month roadmap",
+    "length_guideline": "3-5 pages (2500-4000 words)",
+    "prompt_template": "You are a {role}.\n\n{task}\n\n=== STELLENAUSSCHREIBUNG ===\n{job_description}\n\n=== AKTUELLER LEBENSLAUF (verifizierte Quelle) ===\n{cv_text}\n\n=== AUSGABESPRACHE ===\n{language}\n\nWICHTIG: Sei ehrlich über Lücken — der Kandidat braucht die Wahrheit, keine Beschönigung. Nutze Schweizer Weiterbildungs-Anbieter und Preise in CHF. Keine Zeit-Pauschal-Aussagen, sondern Ranges. Kein falsches Versprechen, alle Lücken in kurzer Zeit schliessen zu können.\n\n=== KRITISCHE ANWEISUNGEN ===\n{instructions}\n\nErstelle jetzt den vollständigen Skill-Gap-Report in 9 Sektionen:"
   },
   "reference_summary": {
     "document_type": "reference_summary",
-    "role": "reference verification specialist",
-    "task": "Create an AI-verified reference summary consolidating reference letters",
+    "role": "Reference letter analyst specialized in Swiss 'Arbeitszeugnisse'. You know that Swiss work references follow a coded language where seemingly neutral phrases carry very specific meanings (the so-called 'Zeugnis-Code'), and that a proper reference summary must decode these signals, cross-validate strengths across multiple references, and produce a consolidated view that is both honest and usable for a job application.",
+    "task": "Produce a consolidated reference summary from the candidate's uploaded reference letters. The summary must extract consistent themes, decode Swiss reference-letter conventions where relevant, flag any weak signals honestly, and present a structured overview a recruiter could use as a trust signal.",
     "inputs": ["reference_letters", "language"],
     "instructions": [
-      "Extract and consolidate key strengths from all reference letters",
-      "Summarize consistent themes across references",
-      "Include notable recommendations or endorsements",
-      "Add verification notice",
-      "Professional structured format",
-      "Highlight unique qualifications mentioned"
+      "Output ONLY the summary content — NO preamble",
+
+      "=== HONESTY & CAVEAT ===",
+      "You are summarizing existing reference letters — never invent text, quotes, or endorsements that are not in the provided reference_letters input",
+      "If the provided text is empty, very short, or contains only one reference: state this explicitly and produce a shorter summary accordingly",
+      "At the top of the document, place a clear caveat: 'Diese Zusammenfassung basiert ausschliesslich auf den vom Kandidaten hochgeladenen Arbeitszeugnissen. Originaldokumente können beim Kandidaten angefragt werden.'",
+
+      "=== SECTION 1: ÜBERBLICK ===",
+      "  - Anzahl der berücksichtigten Zeugnisse",
+      "  - Zeitspanne, die sie abdecken (wenn aus den Texten erkennbar)",
+      "  - Branchen/Rollen, die abgedeckt sind",
+      "  - Eine ein-Satz-Zusammenfassung des Gesamteindrucks",
+
+      "=== SECTION 2: KONSOLIDIERTE STÄRKEN ===",
+      "  Extrahiere die Eigenschaften und Fähigkeiten, die in MEHR ALS EINEM Zeugnis auftauchen — das sind die belastbarsten Signale",
+      "  Für jede konsolidierte Stärke:",
+      "  - Name der Stärke (präzise, nicht vage)",
+      "  - Wie viele Zeugnisse sie bestätigen (z.B. '3 von 4 Zeugnissen')",
+      "  - Kurzes, wörtliches Zitat aus einem der Zeugnisse als Beleg (in Anführungszeichen, mit Nennung des Arbeitgebers wenn im Quelltext)",
+      "  - Wie sich die Stärke in der Praxis zeigt (aus den Zeugnissen ableitbar)",
+
+      "=== SECTION 3: EINZIGARTIGE ENDORSEMENTS ===",
+      "  Einzelne, aber starke Aussagen, die nur in EINEM Zeugnis vorkommen, aber bemerkenswert sind",
+      "  Diese sind wertvoller als generische Multi-Zeugnis-Stärken, wenn sie konkret sind",
+      "  Beispiele: 'Leitete die Post-Merger-Integration eigenverantwortlich' — das taucht wahrscheinlich nur einmal auf, ist aber stark",
+
+      "=== SECTION 4: SCHWEIZER ZEUGNIS-CODE — DEKODIERUNG ===",
+      "  Dieser Abschnitt ist einzigartig wertvoll für den Schweizer Arbeitsmarkt",
+      "  In der Schweiz darf ein Arbeitgeber weder lügen noch offensichtlich schlecht bewerten — deshalb entstand ein coded language, den HR-Profis lesen können",
+      "  Scanne die Zeugnisse auf kodierte Phrasen und übersetze sie:",
+
+      "  SEHR GUT (Grade 1):",
+      "    • 'stets zur vollsten Zufriedenheit' → beste Bewertung (≈Note 6)",
+      "    • 'in jeder Hinsicht hervorragend' → beste Bewertung",
+      "  GUT (Grade 2):",
+      "    • 'stets zu unserer vollen Zufriedenheit' → gut (≈Note 5)",
+      "    • 'zu unserer vollsten Zufriedenheit' (ohne 'stets') → gut",
+      "  BEFRIEDIGEND (Grade 3, bereits kritisch):",
+      "    • 'zu unserer vollen Zufriedenheit' → befriedigend (≈Note 4-4.5)",
+      "    • 'stets zur Zufriedenheit' → befriedigend",
+      "  AUSREICHEND / KRITISCH (Grade 4, warnendes Signal):",
+      "    • 'zu unserer Zufriedenheit' (ohne 'vollen' oder 'stets') → ausreichend",
+      "    • 'im Grossen und Ganzen zufrieden' → ausreichend mit Einschränkungen",
+      "  MANGELHAFT (Grade 5, eindeutiges Warnsignal):",
+      "    • 'hat sich bemüht' → sehr kritisch — die Person hat die Ziele nicht erreicht",
+      "    • 'zeigte Verständnis für seine Aufgaben' → sehr kritisch — Verständnis ≠ Ausführung",
+
+      "  AUSLASSUNGS-CODE (besonders wichtig):",
+      "    • Fehlen einer Trennungsformel (z.B. 'Wir danken X und wünschen alles Gute') → Problem zum Zeitpunkt der Trennung",
+      "    • Fehlen eines Bedauerns beim Weggang → keine besondere Wertschätzung",
+      "    • Fehlen des Wortes 'stets' vor Zufriedenheits-Formulierungen → Bewertung fällt um einen Grad",
+
+      "  Für jeden gefundenen Code-Moment:",
+      "  - Zitiere die Phrase exakt",
+      "  - Gib die dekodierte Bedeutung an",
+      "  - Ordne den Grad ein",
+      "  - Kontext: welches Zeugnis, welcher Bereich (fachlich, Verhalten, Gesamtbewertung)",
+
+      "  WENN KEINE kodierten Phrasen gefunden werden: sage explizit 'Keine klassischen Zeugnis-Code-Phrasen erkannt — die Zeugnisse verwenden freiere Formulierungen.'",
+
+      "=== SECTION 5: CHARAKTER- UND SOFT-SKILL-SIGNALE ===",
+      "  Zeugnisse trennen meist zwischen Fach- und Verhaltensbewertung",
+      "  Extrahiere die Verhaltens-Aussagen (Teamarbeit, Kommunikation, Zuverlässigkeit, Führung, Konfliktverhalten)",
+      "  Konsolidiere sie zu einem Character-Profil",
+      "  Hebe Widersprüche zwischen Zeugnissen hervor (z.B. 'früher: sehr selbständig' → 'später: enger Austausch mit Vorgesetzten')",
+
+      "=== SECTION 6: CROSS-REFERENCE-VALIDIERUNG ===",
+      "  Welche Aussagen bestätigen sich über mehrere Zeugnisse hinweg?",
+      "  Welche Themen kommen NUR in einem Zeugnis vor?",
+      "  Gibt es thematische Widersprüche (z.B. 'detailorientiert' vs. 'strategisch'-Fokus in verschiedenen Zeugnissen)?",
+      "  Widersprüche sind keine Schwäche — sie zeigen die Entwicklung und die Vielseitigkeit des Kandidaten, wenn richtig kommentiert",
+
+      "=== SECTION 7: HINWEISE FÜR DIE BEWERBUNG ===",
+      "  Welche Zitate eignen sich als Highlights in Motivationsschreiben oder LinkedIn-Empfehlungen?",
+      "  Welche Originalzeugnisse sollte der Kandidat im Interview bereithalten, um bestimmte Aussagen zu belegen?",
+      "  Wo gibt es Zeugnis-Inhalte, die besser nicht in der Bewerbung zitiert werden (z.B. kritische Code-Phrasen)?",
+
+      "=== SECTION 8: BESCHRÄNKUNGEN DIESER ZUSAMMENFASSUNG ===",
+      "  Transparenz-Abschnitt:",
+      "  - Diese Zusammenfassung ersetzt nicht die Originaldokumente",
+      "  - Hiring Manager werden die Originale anfordern",
+      "  - Interpretationen der Zeugnis-Codes sind Richtwerte, keine absolute Wahrheit",
+      "  - Bei rechtlichen Zweifeln (unfaire Zeugnisse) sollte der Kandidat eine Beratungsstelle aufsuchen",
+
+      "=== FORMAT UND SPRACHE ===",
+      "Wenn Deutsch (Schweiz): 'ss' statt 'ß'",
+      "Zitate aus den Zeugnissen immer in Anführungszeichen und wo möglich mit Hinweis auf den Arbeitgeber",
+      "Klare Überschriften, damit das Dokument als Referenz während einer Bewerbung genutzt werden kann",
+      "Keine Übertreibungen, keine Erweiterungen der Zeugnis-Inhalte"
     ],
-    "output_format": "Consolidated reference summary",
-    "length_guideline": "1-2 pages",
-    "prompt_template": "You are a {role}. {task}.\n\nReference Letters:\n{reference_letters}\n\nLanguage: {language}\n\nIMPORTANT INSTRUCTIONS:\n{instructions}\n\nBegin the reference summary now:"
+    "output_format": "8-section consolidated reference summary including Swiss Arbeitszeugnis code decoding, cross-validation, and honest caveats",
+    "length_guideline": "2-4 pages (1500-3000 words), proportional to the quantity of source material",
+    "prompt_template": "You are a {role}.\n\n{task}\n\n=== ARBEITSZEUGNISSE / REFERENZSCHREIBEN DES KANDIDATEN ===\n{reference_letters}\n\n=== AUSGABESPRACHE ===\n{language}\n\nWICHTIG: Erfinde NICHTS. Arbeite ausschliesslich mit dem bereitgestellten Text. Wenn keine oder nur wenige Zeugnisse vorliegen, produziere eine entsprechend kürzere Zusammenfassung und sage das transparent. Dekodiere Schweizer Zeugnis-Code nur dort, wo er wirklich vorhanden ist — erfinde keine versteckten Botschaften.\n\n=== KRITISCHE ANWEISUNGEN ===\n{instructions}\n\nErstelle jetzt die konsolidierte Referenz-Zusammenfassung in 8 Sektionen:"
   }
 }

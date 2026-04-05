@@ -24,6 +24,10 @@ from app.database import get_db
 from app.limiter import limiter
 from app.models import DocumentTemplate, DocumentType, LlmModel, User
 from app.seed_catalog_to_db import seed_document_types, seed_llm_models
+from app.services.llm_provider_sync import (
+    fetch_all_providers,
+    result_to_dict,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -690,6 +694,267 @@ async def preview_document_template_prompt(
         "unresolved_placeholders": unresolved,
         "sample_values": PREVIEW_SAMPLE_VALUES,
     }
+
+
+# ---------------------------------------------------------------------------
+# Seed endpoint (admin only, used by the UI "Seed Catalog" button)
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# LLM provider sync: check for deprecated / new models across providers
+# ---------------------------------------------------------------------------
+
+
+class LlmImportItem(BaseModel):
+    provider: str
+    model_id: str = Field(min_length=1, max_length=128)
+    display_name: str = Field(min_length=1, max_length=128)
+
+    @field_validator("provider")
+    @classmethod
+    def validate_provider(cls, value: str) -> str:
+        if value not in VALID_PROVIDERS:
+            raise ValueError(
+                f"provider muss einer von {sorted(VALID_PROVIDERS)} sein"
+            )
+        return value
+
+
+class LlmImportRequest(BaseModel):
+    models: list[LlmImportItem]
+
+
+def _pick_replacement_model(
+    deprecated_model: LlmModel,
+    live_result_models: set[str],
+    db: Session,
+) -> Optional[dict]:
+    """Suggest a replacement for a deprecated model.
+
+    Strategy: pick the first *active* model from the same provider whose
+    ``model_id`` still appears in the provider's live list and which is
+    not the deprecated model itself. We use ``sort_order`` so the latest
+    (lowest sort_order in our seed ordering) wins.
+    """
+    candidate = (
+        db.query(LlmModel)
+        .filter(
+            LlmModel.provider == deprecated_model.provider,
+            LlmModel.is_active.is_(True),
+            LlmModel.id != deprecated_model.id,
+        )
+        .order_by(LlmModel.sort_order, LlmModel.id)
+        .all()
+    )
+    for row in candidate:
+        if row.model_id in live_result_models:
+            return {
+                "provider": row.provider,
+                "model_id": row.model_id,
+                "display_name": row.display_name,
+            }
+    return None
+
+
+def _referencing_templates(
+    provider: str, model_id: str, db: Session
+) -> list[dict]:
+    rows = (
+        db.query(DocumentTemplate)
+        .filter(
+            DocumentTemplate.llm_provider == provider,
+            DocumentTemplate.llm_model == model_id,
+        )
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "doc_type": r.doc_type,
+            "display_name": r.display_name,
+        }
+        for r in rows
+    ]
+
+
+@llm_models_router.post("/sync-check")
+@limiter.limit("10/minute")
+async def sync_check_llm_models(
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_admin_user),
+) -> dict:
+    """Compare the ``llm_models`` table against what each provider lists live.
+
+    Returns per provider:
+    - ``available``: whether we could reach the provider at all
+    - ``error``: message if not available
+    - ``deprecated``: rows in the DB that the provider no longer offers,
+      annotated with the templates that reference them and a suggested
+      replacement from the same provider
+    - ``new``: models the provider offers but that we don't have in the DB
+    """
+    results = fetch_all_providers()
+    now = datetime.now(timezone.utc).isoformat()
+    response_providers: dict[str, dict] = {}
+
+    for provider_name, result in results.items():
+        base = result_to_dict(result)
+
+        if not result.available:
+            # Provider not reachable — skip diff, pass through error
+            base["deprecated"] = []
+            base["new"] = []
+            response_providers[provider_name] = base
+            continue
+
+        live_ids = result.model_ids
+        db_rows = (
+            db.query(LlmModel)
+            .filter(LlmModel.provider == provider_name)
+            .all()
+        )
+        db_ids = {r.model_id for r in db_rows}
+
+        # Deprecated = in DB, not in live list
+        deprecated: list[dict] = []
+        for row in db_rows:
+            if row.model_id not in live_ids:
+                suggestion = _pick_replacement_model(row, live_ids, db)
+                deprecated.append(
+                    {
+                        "id": row.id,
+                        "provider": row.provider,
+                        "model_id": row.model_id,
+                        "display_name": row.display_name,
+                        "is_active": row.is_active,
+                        "referencing_templates": _referencing_templates(
+                            row.provider, row.model_id, db
+                        ),
+                        "suggested_replacement": suggestion,
+                    }
+                )
+
+        # New = in live list, not in DB
+        new_models = [
+            {
+                "provider": m.provider,
+                "model_id": m.model_id,
+                "display_name": m.display_name,
+                "created_at": m.created_at,
+            }
+            for m in result.models
+            if m.model_id not in db_ids
+        ]
+
+        base["deprecated"] = deprecated
+        base["new"] = new_models
+        # Drop the full live list from the response — admins only need the diff.
+        base.pop("live_models", None)
+        response_providers[provider_name] = base
+
+    record_activity(
+        db,
+        admin,
+        "admin_llm_sync_check",
+        request=request,
+        metadata=json.dumps(
+            {
+                "providers_available": [
+                    p for p, r in response_providers.items() if r["available"]
+                ],
+                "deprecated_count": sum(
+                    len(r["deprecated"]) for r in response_providers.values()
+                ),
+                "new_count": sum(
+                    len(r["new"]) for r in response_providers.values()
+                ),
+            }
+        ),
+    )
+    logger.info(
+        "Admin %d ran sync-check across %d providers",
+        admin.id,
+        len(response_providers),
+    )
+
+    return {"checked_at": now, "providers": response_providers}
+
+
+@llm_models_router.post("/import")
+@limiter.limit("10/minute")
+async def import_llm_models(
+    payload: LlmImportRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_admin_user),
+) -> dict:
+    """Bulk-insert newly-discovered LLM models from the sync-check flow.
+
+    Items whose ``(provider, model_id)`` already exists are skipped silently.
+    """
+    created = 0
+    skipped = 0
+    created_items: list[dict] = []
+    now = datetime.now(timezone.utc)
+
+    # Compute the next sort_order per provider so new entries land at the end.
+    next_sort: dict[str, int] = {}
+    for p in VALID_PROVIDERS:
+        max_so = (
+            db.query(LlmModel)
+            .filter(LlmModel.provider == p)
+            .order_by(LlmModel.sort_order.desc())
+            .first()
+        )
+        next_sort[p] = (max_so.sort_order + 1) if max_so else 0
+
+    for item in payload.models:
+        existing = (
+            db.query(LlmModel)
+            .filter(
+                LlmModel.provider == item.provider,
+                LlmModel.model_id == item.model_id,
+            )
+            .first()
+        )
+        if existing is not None:
+            skipped += 1
+            continue
+
+        row = LlmModel(
+            provider=item.provider,
+            model_id=item.model_id,
+            display_name=item.display_name,
+            sort_order=next_sort[item.provider],
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(row)
+        db.flush()
+        next_sort[item.provider] += 1
+        created += 1
+        created_items.append(_serialize_llm_model(row))
+
+    db.commit()
+
+    record_activity(
+        db,
+        admin,
+        "admin_llm_import",
+        request=request,
+        metadata=json.dumps({"created": created, "skipped": skipped}),
+    )
+    logger.info(
+        "Admin %d imported %d LLM models (%d skipped)",
+        admin.id,
+        created,
+        skipped,
+    )
+
+    return {"created": created, "skipped": skipped, "items": created_items}
 
 
 # ---------------------------------------------------------------------------

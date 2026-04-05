@@ -262,6 +262,53 @@ export interface TemplatePromptPreview {
   sample_values: Record<string, string>;
 }
 
+// --- LLM provider sync (check for deprecated / new models) --------------
+
+export interface LlmSyncDeprecatedEntry {
+  id: number;
+  provider: LlmProvider;
+  model_id: string;
+  display_name: string;
+  is_active: boolean;
+  referencing_templates: {
+    id: number;
+    doc_type: string;
+    display_name: string;
+  }[];
+  suggested_replacement: {
+    provider: LlmProvider;
+    model_id: string;
+    display_name: string;
+  } | null;
+}
+
+export interface LlmSyncNewEntry {
+  provider: LlmProvider;
+  model_id: string;
+  display_name: string;
+  created_at: string | null;
+}
+
+export interface LlmSyncProviderResult {
+  provider: LlmProvider;
+  available: boolean;
+  error: string | null;
+  live_model_count: number;
+  deprecated: LlmSyncDeprecatedEntry[];
+  new: LlmSyncNewEntry[];
+}
+
+export interface LlmSyncCheckResult {
+  checked_at: string;
+  providers: Record<LlmProvider, LlmSyncProviderResult>;
+}
+
+export interface LlmImportRequestItem {
+  provider: LlmProvider;
+  model_id: string;
+  display_name: string;
+}
+
 class ApiClient {
   private baseUrl: string;
   private token: string | null = null;
@@ -758,6 +805,23 @@ class ApiClient {
         body: JSON.stringify({ prompt_template: promptTemplate ?? null }),
       }
     );
+  }
+
+  async syncCheckLlmModels() {
+    return this.request<LlmSyncCheckResult>("/admin/llm-models/sync-check", {
+      method: "POST",
+    });
+  }
+
+  async importLlmModels(models: LlmImportRequestItem[]) {
+    return this.request<{
+      created: number;
+      skipped: number;
+      items: LlmModel[];
+    }>("/admin/llm-models/import", {
+      method: "POST",
+      body: JSON.stringify({ models }),
+    });
   }
 
   async downloadJobDescriptionPDF(applicationId: number) {

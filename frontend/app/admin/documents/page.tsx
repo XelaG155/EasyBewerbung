@@ -17,6 +17,7 @@ import api, {
 import PromptBuilderModal from "@/components/PromptBuilderModal";
 import PlaceholderExplorer from "@/components/PlaceholderExplorer";
 import TemplateEditorDrawer from "@/components/TemplateEditorDrawer";
+import LlmSyncCheckModal from "@/components/LlmSyncCheckModal";
 
 type StatusMessage = { kind: "success" | "error"; text: string };
 
@@ -437,6 +438,7 @@ function LlmModelsManager({
   setStatus: (s: StatusMessage) => void;
 }) {
   const [formOpen, setFormOpen] = useState(false);
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [draft, setDraft] = useState<LlmModelCreate>({
     provider: "openai",
     model_id: "",
@@ -529,15 +531,25 @@ function LlmModelsManager({
           </h2>
           <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
             Liste der verfügbaren Modelle. Werden im Template-Editor als Auswahl
-            angeboten. Neue Modelle kannst du hier ohne Deploy hinzufügen.
+            angeboten. Neue Modelle kannst du hier ohne Deploy hinzufügen — oder
+            per <em>LLM-Update prüfen</em> direkt von den Providern holen.
           </p>
         </div>
-        <button
-          onClick={() => setFormOpen((o) => !o)}
-          className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 text-sm"
-        >
-          {formOpen ? "Abbrechen" : "Neues Modell"}
-        </button>
+        <div className="flex gap-2 flex-shrink-0">
+          <button
+            onClick={() => setSyncModalOpen(true)}
+            className="px-3 py-2 rounded bg-purple-600 text-white hover:bg-purple-700 text-sm"
+            title="Prüft live bei OpenAI, Anthropic und Google auf veraltete und neue Modelle."
+          >
+            LLM-Update prüfen
+          </button>
+          <button
+            onClick={() => setFormOpen((o) => !o)}
+            className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 text-sm"
+          >
+            {formOpen ? "Abbrechen" : "Neues Modell"}
+          </button>
+        </div>
       </div>
 
       {formOpen && (
@@ -646,6 +658,13 @@ function LlmModelsManager({
           ))}
         </div>
       )}
+
+      <LlmSyncCheckModal
+        isOpen={syncModalOpen}
+        onClose={() => setSyncModalOpen(false)}
+        onChanged={onRefresh}
+        setStatus={setStatus}
+      />
     </section>
   );
 }
