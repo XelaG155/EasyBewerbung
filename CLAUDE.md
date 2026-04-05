@@ -59,11 +59,13 @@ Commands:
 - Logs: `docker-compose logs -f [service]`
 
 ## Deployment
-- Pushes to `main` trigger automatic deployment via GitHub webhook
-- Webhook: `systemctl status easybewerbung-webhook`
-- Webhook pulls code and runs `docker-compose build --no-cache`
-- Then runs `docker-compose up -d` to restart containers
-- Telegram notifications for deployment status
+- Pushes to `main` trigger automatic deployment via the central `bigvmcontrol-webhook` service (it handles multiple repos from `~/bigvmcontrol/config.yaml`, not a per-project webhook).
+- Service status: `systemctl status bigvmcontrol-webhook`
+- Logs: `journalctl -u bigvmcontrol-webhook -f`
+- Per-deploy log file: `~/bigvmcontrol/webhook.log`
+- Config (repo list, webhook secrets, deploy type): `~/bigvmcontrol/config.yaml`
+- Deploy sequence: `git pull origin main` → `docker compose down` → `docker compose build --no-cache` → `docker compose up -d`. Typical duration ~2 minutes.
+- Telegram notifications for deployment status.
 
 ## Security
 - Never commit API keys or tokens
