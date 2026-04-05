@@ -6,7 +6,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.limiter import limiter
 # from app.csrf import CSRFMiddleware  # Uncomment to enable CSRF protection
 
-from app.api.endpoints import documents, jobs, applications, users, admin, document_templates
+from app.api.endpoints import documents, jobs, applications, users, admin, document_templates, document_types
 from app.database import init_db
 
 app = FastAPI(
@@ -55,4 +55,18 @@ app.include_router(
     document_templates.router,
     prefix="/admin/document-templates",
     tags=["admin", "document-templates"]
+)
+app.include_router(
+    document_types.document_types_router,
+    prefix="/admin/document-types",
+    tags=["admin", "document-types"],
+)
+app.include_router(
+    document_types.llm_models_router,
+    prefix="/admin/llm-models",
+    tags=["admin", "llm-models"],
+)
+app.include_router(
+    document_types.router,
+    tags=["admin", "catalog"],
 )

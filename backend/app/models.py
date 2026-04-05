@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, UniqueConstraint
 from sqlalchemy.orm import relationship, declarative_base
 from datetime import datetime, timezone
 from app.language_catalog import DEFAULT_LANGUAGE
@@ -197,6 +197,79 @@ class PromptTemplate(Base):
     name = Column(String, nullable=False)
     content = Column(Text, nullable=False)
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+
+class DocumentType(Base):
+    """
+    Single source of truth for which document types exist in the platform.
+
+    Replaces the hard-coded dicts in ``app/document_catalog.py``. A ``DocumentTemplate``
+    references a ``DocumentType`` by its ``key`` (via ``DocumentTemplate.doc_type``)
+    so existing business logic (``ALLOWED_GENERATED_DOC_TYPES``, Celery tasks) keeps
+    working without changes.
+    """
+
+    __tablename__ = "document_types"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Stable machine key (e.g. "tailored_cv_pdf"). Referenced by DocumentTemplate.doc_type.
+    key = Column(String, unique=True, nullable=False, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+
+    # JSON-encoded list of output formats (e.g. '["PDF", "DOCX"]').
+    # Stored as Text so both SQLite (dev) and PostgreSQL (prod) are happy.
+    outputs = Column(Text, nullable=False, default="[]")
+
+    # One of: "essential_pack", "high_impact_addons", "premium_documents", or custom.
+    category = Column(String, nullable=False, default="essential_pack", index=True)
+
+    sort_order = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
+class LlmModel(Base):
+    """
+    Admin-manageable catalog of LLM models available in the application.
+
+    Replaces the hard-coded ``availableModels`` dict in
+    ``frontend/app/admin/documents/page.tsx`` and centralizes which models can be
+    chosen for a given ``DocumentTemplate``.
+    """
+
+    __tablename__ = "llm_models"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    provider = Column(String, nullable=False, index=True)  # "openai" | "anthropic" | "google"
+    model_id = Column(String, nullable=False)  # e.g. "gpt-5.2", "claude-sonnet-4-5-20250929"
+    display_name = Column(String, nullable=False)
+
+    context_window = Column(Integer, nullable=True)  # informational, tokens
+    notes = Column(Text, nullable=True)
+
+    sort_order = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    __table_args__ = (
+        UniqueConstraint("provider", "model_id", name="uq_llm_models_provider_model"),
+    )
 
 
 class DocumentTemplate(Base):

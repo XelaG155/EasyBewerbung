@@ -160,6 +160,86 @@ export interface PromptBuilderResponse {
   generated_prompt: string;
 }
 
+// --- Document types & LLM models catalog ---------------------------------
+
+export type DocumentCategory =
+  | 'essential_pack'
+  | 'high_impact_addons'
+  | 'premium_documents';
+
+export interface DocumentType {
+  id: number;
+  key: string;
+  title: string;
+  description: string | null;
+  notes: string | null;
+  outputs: string[];
+  category: DocumentCategory;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface DocumentTypeCreate {
+  key: string;
+  title: string;
+  description?: string | null;
+  notes?: string | null;
+  outputs?: string[];
+  category?: DocumentCategory;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export interface DocumentTypeUpdate {
+  title?: string;
+  description?: string | null;
+  notes?: string | null;
+  outputs?: string[];
+  category?: DocumentCategory;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export type LlmProvider = 'openai' | 'anthropic' | 'google';
+
+export interface LlmModel {
+  id: number;
+  provider: LlmProvider;
+  model_id: string;
+  display_name: string;
+  context_window: number | null;
+  notes: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface LlmModelCreate {
+  provider: LlmProvider;
+  model_id: string;
+  display_name: string;
+  context_window?: number | null;
+  notes?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export interface LlmModelUpdate {
+  display_name?: string;
+  context_window?: number | null;
+  notes?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export interface CatalogSeedResult {
+  document_types: { created: number; updated: number; skipped: number };
+  llm_models: { created: number; updated: number; skipped: number };
+}
+
 class ApiClient {
   private baseUrl: string;
   private token: string | null = null;
@@ -584,6 +664,67 @@ class ApiClient {
     return this.request<PromptBuilderResponse>("/admin/generate-prompt", {
       method: "POST",
       body: JSON.stringify(request),
+    });
+  }
+
+  // --- Document Types (new catalog-in-DB) --------------------------------
+  async listDocumentTypes(includeInactive = false) {
+    const q = includeInactive ? "?include_inactive=true" : "";
+    return this.request<DocumentType[]>(`/admin/document-types/${q}`);
+  }
+
+  async createDocumentType(payload: DocumentTypeCreate) {
+    return this.request<DocumentType>("/admin/document-types/", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateDocumentType(id: number, payload: DocumentTypeUpdate) {
+    return this.request<DocumentType>(`/admin/document-types/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteDocumentType(id: number) {
+    return this.request<{ message: string; key: string }>(
+      `/admin/document-types/${id}`,
+      { method: "DELETE" }
+    );
+  }
+
+  // --- LLM Models (admin-manageable) -------------------------------------
+  async listLlmModels(includeInactive = false) {
+    const q = includeInactive ? "?include_inactive=true" : "";
+    return this.request<LlmModel[]>(`/admin/llm-models/${q}`);
+  }
+
+  async createLlmModel(payload: LlmModelCreate) {
+    return this.request<LlmModel>("/admin/llm-models/", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateLlmModel(id: number, payload: LlmModelUpdate) {
+    return this.request<LlmModel>(`/admin/llm-models/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteLlmModel(id: number) {
+    return this.request<{ message: string; provider: string; model_id: string }>(
+      `/admin/llm-models/${id}`,
+      { method: "DELETE" }
+    );
+  }
+
+  async seedCatalog(forceUpdate = false) {
+    const q = forceUpdate ? "?force_update=true" : "";
+    return this.request<CatalogSeedResult>(`/admin/catalog/seed${q}`, {
+      method: "POST",
     });
   }
 
