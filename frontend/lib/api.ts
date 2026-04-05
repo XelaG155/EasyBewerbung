@@ -146,18 +146,161 @@ export interface DocumentTemplateUpdate {
   is_active?: boolean;
 }
 
-export interface PromptBuilderRequest {
-  tone: string;
-  length: string;
-  focus: string[];
-  audience: string;
-  description: string;
-  llm_provider: string;
-  llm_model: string;
+// --- Document types & LLM models catalog ---------------------------------
+
+export type DocumentCategory =
+  | 'essential_pack'
+  | 'high_impact_addons'
+  | 'premium_documents';
+
+export interface DocumentType {
+  id: number;
+  key: string;
+  title: string;
+  description: string | null;
+  notes: string | null;
+  outputs: string[];
+  category: DocumentCategory;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
-export interface PromptBuilderResponse {
-  generated_prompt: string;
+export interface DocumentTypeCreate {
+  key: string;
+  title: string;
+  description?: string | null;
+  notes?: string | null;
+  outputs?: string[];
+  category?: DocumentCategory;
+  sort_order?: number;
+  is_active?: boolean;
+  /**
+   * When true (default server-side) the endpoint also creates a draft
+   * DocumentTemplate with this key so the admin can immediately open the
+   * drawer and configure LLM / prompt. Set to false in import scripts.
+   */
+  create_draft_template?: boolean;
+}
+
+/** Response from POST /admin/document-types/ — extends DocumentType with the
+ *  optional id of the freshly-created draft DocumentTemplate. */
+export interface DocumentTypeCreateResponse extends DocumentType {
+  draft_template_id: number | null;
+}
+
+export interface DocumentTypeUpdate {
+  title?: string;
+  description?: string | null;
+  notes?: string | null;
+  outputs?: string[];
+  category?: DocumentCategory;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export type LlmProvider = 'openai' | 'anthropic' | 'google';
+
+export interface LlmModel {
+  id: number;
+  provider: LlmProvider;
+  model_id: string;
+  display_name: string;
+  context_window: number | null;
+  notes: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface LlmModelCreate {
+  provider: LlmProvider;
+  model_id: string;
+  display_name: string;
+  context_window?: number | null;
+  notes?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export interface LlmModelUpdate {
+  display_name?: string;
+  context_window?: number | null;
+  notes?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export interface CatalogSeedResult {
+  document_types: { created: number; updated: number; skipped: number };
+  llm_models: { created: number; updated: number; skipped: number };
+}
+
+export interface TemplatePromptPreview {
+  template_id: number;
+  doc_type: string;
+  source_length: number;
+  rendered_length: number;
+  rendered_prompt: string;
+  unresolved_placeholders: string[];
+  sample_values: Record<string, string>;
+  /** Real runtime values for {role}, {task}, {instructions} resolved from
+   *  backend/app/document_prompts.json — what the LLM actually sees. */
+  resolved_components: {
+    role: string;
+    task: string;
+    instructions: string;
+    source: string;
+  };
+}
+
+// --- LLM provider sync (check for deprecated / new models) --------------
+
+export interface LlmSyncDeprecatedEntry {
+  id: number;
+  provider: LlmProvider;
+  model_id: string;
+  display_name: string;
+  is_active: boolean;
+  referencing_templates: {
+    id: number;
+    doc_type: string;
+    display_name: string;
+  }[];
+  suggested_replacement: {
+    provider: LlmProvider;
+    model_id: string;
+    display_name: string;
+  } | null;
+}
+
+export interface LlmSyncNewEntry {
+  provider: LlmProvider;
+  model_id: string;
+  display_name: string;
+  created_at: string | null;
+}
+
+export interface LlmSyncProviderResult {
+  provider: LlmProvider;
+  available: boolean;
+  error: string | null;
+  live_model_count: number;
+  deprecated: LlmSyncDeprecatedEntry[];
+  new: LlmSyncNewEntry[];
+}
+
+export interface LlmSyncCheckResult {
+  checked_at: string;
+  providers: Record<LlmProvider, LlmSyncProviderResult>;
+}
+
+export interface LlmImportRequestItem {
+  provider: LlmProvider;
+  model_id: string;
+  display_name: string;
 }
 
 class ApiClient {
@@ -580,10 +723,91 @@ class ApiClient {
     );
   }
 
-  async generatePrompt(request: PromptBuilderRequest): Promise<PromptBuilderResponse> {
-    return this.request<PromptBuilderResponse>("/admin/generate-prompt", {
+  // --- Document Types (new catalog-in-DB) --------------------------------
+  async listDocumentTypes(includeInactive = false) {
+    const q = includeInactive ? "?include_inactive=true" : "";
+    return this.request<DocumentType[]>(`/admin/document-types/${q}`);
+  }
+
+  async createDocumentType(payload: DocumentTypeCreate) {
+    return this.request<DocumentTypeCreateResponse>("/admin/document-types/", {
       method: "POST",
-      body: JSON.stringify(request),
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateDocumentType(id: number, payload: DocumentTypeUpdate) {
+    return this.request<DocumentType>(`/admin/document-types/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteDocumentType(id: number) {
+    return this.request<{ message: string; key: string }>(
+      `/admin/document-types/${id}`,
+      { method: "DELETE" }
+    );
+  }
+
+  // --- LLM Models (admin-manageable) -------------------------------------
+  async listLlmModels(includeInactive = false) {
+    const q = includeInactive ? "?include_inactive=true" : "";
+    return this.request<LlmModel[]>(`/admin/llm-models/${q}`);
+  }
+
+  async createLlmModel(payload: LlmModelCreate) {
+    return this.request<LlmModel>("/admin/llm-models/", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateLlmModel(id: number, payload: LlmModelUpdate) {
+    return this.request<LlmModel>(`/admin/llm-models/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteLlmModel(id: number) {
+    return this.request<{ message: string; provider: string; model_id: string }>(
+      `/admin/llm-models/${id}`,
+      { method: "DELETE" }
+    );
+  }
+
+  async seedCatalog(forceUpdate = false) {
+    const q = forceUpdate ? "?force_update=true" : "";
+    return this.request<CatalogSeedResult>(`/admin/catalog/seed${q}`, {
+      method: "POST",
+    });
+  }
+
+  async previewTemplatePrompt(templateId: number, promptTemplate?: string) {
+    return this.request<TemplatePromptPreview>(
+      `/admin/document-templates/${templateId}/preview`,
+      {
+        method: "POST",
+        body: JSON.stringify({ prompt_template: promptTemplate ?? null }),
+      }
+    );
+  }
+
+  async syncCheckLlmModels() {
+    return this.request<LlmSyncCheckResult>("/admin/llm-models/sync-check", {
+      method: "POST",
+    });
+  }
+
+  async importLlmModels(models: LlmImportRequestItem[]) {
+    return this.request<{
+      created: number;
+      skipped: number;
+      items: LlmModel[];
+    }>("/admin/llm-models/import", {
+      method: "POST",
+      body: JSON.stringify({ models }),
     });
   }
 

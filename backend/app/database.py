@@ -18,9 +18,18 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def init_db() -> None:
-    """Create database tables and seed required data if missing."""
+    """Create database tables and seed required data if missing.
+
+    Notes on the 2026-04-05 admin-forms refactor:
+    ``Base.metadata.create_all`` creates the new ``document_types`` and
+    ``llm_models`` tables automatically because their SQLAlchemy models are
+    part of ``Base``. However, the production deploy pipeline does **not**
+    run Alembic (CMD is ``uvicorn``). This function therefore also seeds
+    the new tables on first boot so the refactor ships without manual
+    steps. Idempotent: only runs when each table is empty.
+    """
     import logging
-    from app.models import LanguageSetting, DocumentTemplate
+    from app.models import DocumentTemplate, DocumentType, LanguageSetting, LlmModel
     from app.language_catalog import LANGUAGE_OPTIONS
 
     logger = logging.getLogger(__name__)
@@ -47,7 +56,26 @@ def init_db() -> None:
             db.commit()
             logger.info(f"Seeded {len(LANGUAGE_OPTIONS)} languages")
 
-        # Seed document templates if empty
+        # Seed document_types + llm_models if empty (post-refactor catalog).
+        try:
+            from app.seed_catalog_to_db import (
+                seed_document_types,
+                seed_llm_models,
+            )
+
+            if db.query(DocumentType).count() == 0:
+                logger.info("Seeding document_types from static catalog...")
+                dt_result = seed_document_types(db, force_update=False)
+                logger.info(f"Seeded document_types: {dt_result}")
+
+            if db.query(LlmModel).count() == 0:
+                logger.info("Seeding llm_models from static list...")
+                lm_result = seed_llm_models(db, force_update=False)
+                logger.info(f"Seeded llm_models: {lm_result}")
+        except Exception as e:  # noqa: BLE001 — boot must not crash
+            logger.warning(f"Could not seed document_types/llm_models: {e}")
+
+        # Seed document templates if empty (legacy prompt seed).
         if db.query(DocumentTemplate).count() == 0:
             logger.info("Seeding document templates...")
             try:

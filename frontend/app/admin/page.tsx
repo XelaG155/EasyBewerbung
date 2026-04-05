@@ -10,6 +10,7 @@ import api, {
   PromptTemplate,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { adminBtn } from "@/lib/admin-ui";
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -180,7 +181,18 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 p-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Admin Konsole</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          Admin Konsole
+        </h1>
+        <button
+          onClick={() => router.push("/dashboard")}
+          className={adminBtn.secondary("lg")}
+          title="Zurück zum Dashboard / Hauptmenu"
+        >
+          <span aria-hidden="true">←</span> Zurück zum Dashboard
+        </button>
+      </div>
       {status && (
         <div className="rounded bg-green-100 text-green-800 px-4 py-2 text-sm" role="status">
           {status}
@@ -194,9 +206,9 @@ export default function AdminPage() {
         </p>
         <button
           onClick={() => router.push("/admin/documents")}
-          className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+          className={adminBtn.primary("lg")}
         >
-          Document Templates verwalten
+          Dokument-Vorlagen verwalten
         </button>
       </SectionCard>
 

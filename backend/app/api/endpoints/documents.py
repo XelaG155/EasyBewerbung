@@ -15,7 +15,11 @@ logger = logging.getLogger(__name__)
 
 from app.database import get_db
 from app.models import Document, User
-from app.document_catalog import DOCUMENT_CATALOG, DOCUMENT_PACKAGES
+from app.document_catalog import (
+    DOCUMENT_CATALOG,
+    DOCUMENT_PACKAGES,
+    get_document_catalog_for_api,
+)
 from app.auth import get_current_user
 from app.limiter import limiter
 
@@ -171,10 +175,15 @@ async def upload_document(
 
 
 @router.get("/catalog")
-async def document_catalog():
-    """Expose the full catalog of documents and bundles the platform can generate."""
+async def document_catalog(db: Session = Depends(get_db)):
+    """Expose the full catalog of documents and bundles the platform can generate.
+
+    Reads from the ``document_types`` table (post-2026-04-05 refactor) and
+    falls back to the static constants when the table is empty (fresh
+    install, pre-seed). See ``app.document_catalog.get_document_catalog_for_api``.
+    """
     return {
-        "catalog": DOCUMENT_CATALOG,
+        "catalog": get_document_catalog_for_api(db),
         "packages": DOCUMENT_PACKAGES,
     }
 

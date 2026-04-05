@@ -20,7 +20,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
 from app.database import get_db
-from app.document_catalog import ALLOWED_GENERATED_DOC_TYPES
+from app.document_catalog import get_allowed_generated_doc_types
 from app.models import Application, GeneratedDocument, User, Document, JobOffer, MatchingScore, GenerationTask, DocumentTemplate, MatchingScoreTask
 from app.auth import get_current_user
 from app.language_catalog import DEFAULT_LANGUAGE, normalize_language
@@ -109,117 +109,15 @@ def generate_with_llm(client, model: str, provider: str, prompt: str) -> str:
         return response.choices[0].message.content
 
 
-def generate_document_prompt(doc_type: str, job_description: str, cv_text: str, application) -> Optional[str]:
-    """Generate OpenAI prompt based on document type using JSON prompt templates."""
-
-    # Get prompt configuration from JSON
-    prompt_config = DOCUMENT_PROMPTS.get(doc_type)
-    if not prompt_config:
-        logging.warning(f"No prompt configuration found for document type: {doc_type}")
-        return None
-
-    # Get language settings
-    lang = application.documentation_language or 'English'
-    lang_instruction = get_language_instruction(lang)
-
-    # Determine which language to use based on document type
-    if doc_type == "company_intelligence_briefing":
-        language_to_use = get_language_instruction(application.company_profile_language or lang)
-    else:
-        language_to_use = lang_instruction
-
-    # Get localized display name for the document type
-    fallback_display = prompt_config.get("document_type", doc_type).replace("_", " ").title()
-    doc_type_display = get_doc_type_display(doc_type.upper(), lang, fallback_display)
-
-    # Prepare input variables
-    inputs = {
-        "job_description": job_description,
-        "cv_text": cv_text,
-        "cv_summary": cv_text[:2000] if len(cv_text) > 2000 else cv_text,
-        "language": language_to_use,
-        "company_profile_language": get_language_instruction(application.company_profile_language or lang),
-        "role": prompt_config.get("role", ""),
-        "task": prompt_config.get("task", ""),
-        "doc_type": doc_type,
-        "doc_type_display": doc_type_display,
-    }
-
-    # Format instructions
-    instructions_list = prompt_config.get("instructions", [])
-    instructions_text = "\n".join([f"{i+1}. {instr}" for i, instr in enumerate(instructions_list)])
-    inputs["instructions"] = instructions_text
-
-    # Build prompt from template
-    template = prompt_config.get("prompt_template", "")
-    try:
-        prompt = template.format(**inputs)
-        return prompt
-    except KeyError as e:
-        logging.error(f"Missing variable in prompt template for {doc_type}: {e}")
-        return None
-
-
-def generate_document_prompt_from_template(
-    template: DocumentTemplate,
-    job_description: str,
-    cv_text: str,
-    user: User,
-    application
-) -> Optional[str]:
-    """Generate prompt using a DocumentTemplate from the database."""
-
-    # Get language based on template configuration
-    language_source = template.language_source or "documentation_language"
-    lang = get_language_from_user(user, language_source)
-    lang_instruction = get_language_instruction(lang)
-
-    # For company_intelligence_briefing, use company_profile_language
-    if template.doc_type == "company_intelligence_briefing":
-        language_to_use = get_language_instruction(application.company_profile_language or lang)
-    else:
-        language_to_use = lang_instruction
-
-    # Get prompt configuration from JSON for role, task, instructions
-    prompt_config = DOCUMENT_PROMPTS.get(template.doc_type, {})
-
-    # Prepare input variables
-    inputs = {
-        "job_description": job_description,
-        "cv_text": cv_text,
-        "cv_summary": cv_text[:2000] if len(cv_text) > 2000 else cv_text,
-        "language": language_to_use,
-        "company_profile_language": get_language_instruction(application.company_profile_language or lang),
-        "role": prompt_config.get("role", ""),
-        "task": prompt_config.get("task", ""),
-        "reference_letters": cv_text,  # For reference_summary document type
-        "doc_type": template.doc_type,
-        "doc_type_display": get_doc_type_display(template.doc_type, lang, template.display_name),
-    }
-
-    # Format instructions from JSON config
-    instructions_list = prompt_config.get("instructions", [])
-    instructions_text = "\n".join([f"{i+1}. {instr}" for i, instr in enumerate(instructions_list)])
-    inputs["instructions"] = instructions_text
-
-    # Build prompt from database template
-    try:
-        prompt = template.prompt_template.format(**inputs)
-        return prompt
-    except KeyError as e:
-        logging.error(f"Missing variable in prompt template for {template.doc_type}: {e}")
-        # Try to return a basic version without the missing variable
-        try:
-            # Try with a simpler approach, replacing missing vars with empty strings
-            import re
-            simple_prompt = template.prompt_template
-            for match in re.findall(r'\{(\w+)\}', simple_prompt):
-                if match not in inputs:
-                    inputs[match] = ""
-            prompt = simple_prompt.format(**inputs)
-            return prompt
-        except Exception:
-            return None
+# NOTE: The legacy prompt builders `generate_document_prompt` and
+# `generate_document_prompt_from_template` used to live here but were never
+# imported from outside this module — the real generation path is in
+# `app/tasks.py::generate_document_prompt_from_template`, which uses
+# `_resolve_prompt_components` to pull role/task/instructions from
+# `document_prompts.json`. The duplicate copies carried a stale
+# `cv_text[:2000]` truncation and a bug where `reference_letters = cv_text`,
+# so they were removed on 2026-04-05 (commit after 6991e9c) to prevent
+# drift between two prompt-building code paths.
 
 
 class ApplicationCreate(BaseModel):
@@ -527,8 +425,9 @@ async def attach_generated_documents(
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
 
+    allowed_doc_types = get_allowed_generated_doc_types(db)
     for doc in payload.documents:
-        if doc.doc_type not in ALLOWED_GENERATED_DOC_TYPES:
+        if doc.doc_type not in allowed_doc_types:
             raise HTTPException(
                 status_code=422,
                 detail=f"Unsupported doc_type '{doc.doc_type}'. Check the /documents/catalog list.",
