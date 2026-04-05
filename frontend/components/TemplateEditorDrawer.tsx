@@ -15,10 +15,11 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import type {
+import api, {
   DocumentTemplate,
   DocumentTemplateUpdate,
   LlmModel,
+  TemplatePromptPreview,
 } from "@/lib/api";
 
 type Tab = "basics" | "language" | "llm" | "prompt" | "preview";
@@ -67,6 +68,8 @@ export default function TemplateEditorDrawer({
   const [form, setForm] = useState<DocumentTemplateUpdate>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<TemplatePromptPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   // Reset the form when a new template is loaded into the drawer.
   useEffect(() => {
@@ -81,6 +84,7 @@ export default function TemplateEditorDrawer({
         is_active: template.is_active,
       });
       setError(null);
+      setPreview(null);
       setTab("basics");
     }
   }, [template]);
@@ -118,6 +122,27 @@ export default function TemplateEditorDrawer({
       llm_provider: provider,
       llm_model: firstModel ? firstModel.model_id : "",
     }));
+  };
+
+  const handlePreview = async () => {
+    if (!template) return;
+    setError(null);
+    setPreviewLoading(true);
+    try {
+      const result = await api.previewTemplatePrompt(
+        template.id,
+        form.prompt_template ?? undefined
+      );
+      setPreview(result);
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Vorschau konnte nicht geladen werden."
+      );
+    } finally {
+      setPreviewLoading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -368,19 +393,52 @@ export default function TemplateEditorDrawer({
           )}
 
           {tab === "preview" && (
-            <div className="space-y-3">
-              <HelpText>
-                Vorschau des Prompts, wie er mit den aktuellen Einstellungen
-                gespeichert würde. Placeholder werden <em>nicht</em> ersetzt —
-                das passiert erst beim Generieren.
-              </HelpText>
-              <pre className="rounded border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 p-3 text-xs font-mono whitespace-pre-wrap text-gray-900 dark:text-gray-100 overflow-auto max-h-[60vh]">
-                {form.prompt_template ?? "(leer)"}
-              </pre>
-              <div className="text-xs text-gray-600 dark:text-gray-400">
-                Länge: {form.prompt_template?.length ?? 0} Zeichen · Modell:{" "}
-                <code>{form.llm_provider}/{form.llm_model}</code>
+            <div className="space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <HelpText>
+                  Vorschau des Prompts. Klick auf <em>Dry-Run starten</em>, um
+                  Placeholder (wie <code>{"{language}"}</code>,{" "}
+                  <code>{"{cv_summary}"}</code>) mit Beispielwerten zu ersetzen.
+                  Es wird <strong>kein LLM-Call</strong> ausgeführt — rein
+                  lokale Substitution, kostenlos und sicher.
+                </HelpText>
+                <button
+                  type="button"
+                  onClick={handlePreview}
+                  disabled={previewLoading}
+                  className="px-3 py-1.5 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 flex-shrink-0 disabled:opacity-50"
+                >
+                  {previewLoading ? "Lädt..." : "Dry-Run starten"}
+                </button>
               </div>
+
+              {preview ? (
+                <>
+                  {preview.unresolved_placeholders.length > 0 && (
+                    <div className="rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-700 text-amber-900 dark:text-amber-200 px-3 py-2 text-xs">
+                      <strong>Warnung:</strong> unbekannte Placeholder im
+                      Prompt — werden beim Generieren nicht ersetzt:
+                      <div className="mt-1 font-mono">
+                        {preview.unresolved_placeholders.join(", ")}
+                      </div>
+                    </div>
+                  )}
+                  <pre className="rounded border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 p-3 text-xs font-mono whitespace-pre-wrap text-gray-900 dark:text-gray-100 overflow-auto max-h-[50vh]">
+                    {preview.rendered_prompt}
+                  </pre>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    Quelle: {preview.source_length} Zeichen · Gerendert:{" "}
+                    {preview.rendered_length} Zeichen · Modell:{" "}
+                    <code>
+                      {form.llm_provider}/{form.llm_model}
+                    </code>
+                  </div>
+                </>
+              ) : (
+                <pre className="rounded border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 p-3 text-xs font-mono whitespace-pre-wrap text-gray-900 dark:text-gray-100 overflow-auto max-h-[50vh]">
+                  {form.prompt_template ?? "(leer)"}
+                </pre>
+              )}
             </div>
           )}
 

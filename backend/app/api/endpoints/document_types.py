@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import datetime, timezone
 from typing import List, Optional
 
@@ -21,7 +22,8 @@ from app.api.endpoints.users import record_activity
 from app.auth import get_current_user
 from app.database import get_db
 from app.limiter import limiter
-from app.models import DocumentType, LlmModel, User
+from app.models import DocumentTemplate, DocumentType, LlmModel, User
+from app.seed_catalog_to_db import seed_document_types, seed_llm_models
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +36,57 @@ router = APIRouter()
 
 VALID_CATEGORIES = {"essential_pack", "high_impact_addons", "premium_documents"}
 VALID_PROVIDERS = {"openai", "anthropic", "google"}
+
+# ---------------------------------------------------------------------------
+# Prompt preview (dry-run) — sample values used for admin preview only.
+# Kept here as constants so the test suite can import and assert on them.
+# ---------------------------------------------------------------------------
+
+PREVIEW_SAMPLE_VALUES: dict[str, str] = {
+    "{language}": "Deutsch (Schweiz)",
+    "{documentation_language}": "Deutsch (Schweiz)",
+    "{company_profile_language}": "Deutsch (Schweiz)",
+    "{role}": "[Beispiel] ATS-optimized professional CV writer",
+    "{task}": "[Beispiel] Create a tailored CV that aligns with the job posting",
+    "{instructions}": (
+        "[Beispiel] 1. Be completely honest\n"
+        "2. Only use information that exists in the CV\n"
+        "3. Optimize for the specific job requirements"
+    ),
+    "{doc_type}": "tailored_cv_pdf",
+    "{doc_type_display}": "Lebenslauf",
+    "{job_description}": (
+        "[Beispiel] Stellenausschreibung: Software Engineer bei ACME AG in Zürich. "
+        "Erfahrung mit Python, FastAPI und PostgreSQL. Englisch und Deutsch fliessend."
+    ),
+    "{cv_text}": (
+        "[Beispiel] Max Mustermann, geboren 1990 in Zürich. "
+        "5 Jahre Berufserfahrung als Backend-Entwickler bei zwei KMU."
+    ),
+    "{cv_summary}": (
+        "[Beispiel] Backend-Entwickler mit Python/FastAPI-Fokus, 5 Jahre Praxis, "
+        "solide PostgreSQL-Kenntnisse."
+    ),
+    "{reference_letters}": "[Beispiel] Keine Referenzschreiben hochgeladen.",
+}
+
+
+_PLACEHOLDER_RE = re.compile(r"\{[a-z_][a-z0-9_]*\}")
+
+
+def render_preview(prompt_template: str) -> tuple[str, list[str]]:
+    """Substitute known placeholders with sample values.
+
+    Returns the rendered prompt and a list of placeholders that could not be
+    resolved, so the admin sees immediately if their prompt uses a name that
+    does not exist at runtime.
+    """
+    rendered = prompt_template or ""
+    for key, value in PREVIEW_SAMPLE_VALUES.items():
+        rendered = rendered.replace(key, value)
+
+    unresolved = sorted(set(_PLACEHOLDER_RE.findall(rendered)))
+    return rendered, unresolved
 
 
 def _parse_outputs(raw: str | None) -> list[str]:
@@ -105,7 +158,11 @@ class DocumentTypeBase(BaseModel):
 
 
 class DocumentTypeCreate(DocumentTypeBase):
-    pass
+    # When True (default) the endpoint also creates a draft DocumentTemplate
+    # for this key so the admin can immediately open the drawer and configure
+    # LLM / prompt. Set to False only for import scripts that will create
+    # templates separately.
+    create_draft_template: bool = True
 
 
 class DocumentTypeUpdate(BaseModel):
@@ -201,6 +258,17 @@ async def list_document_types(
     return [_serialize_document_type(row) for row in query.all()]
 
 
+DRAFT_PROMPT_TEMPLATE = (
+    "[ENTWURF] Bitte anpassen.\n\n"
+    "Du bist ein professioneller Autor für Bewerbungsdokumente.\n"
+    "Sprache: {language}\n"
+    "Dokumenttyp: {doc_type_display}\n\n"
+    "Berücksichtige die folgende Stellenausschreibung:\n{job_description}\n\n"
+    "Und die folgende Lebenslauf-Zusammenfassung:\n{cv_summary}\n\n"
+    "Erstelle ein klares, professionelles {doc_type_display} auf {language}."
+)
+
+
 @document_types_router.post("/", status_code=status.HTTP_201_CREATED)
 @limiter.limit("20/minute")
 async def create_document_type(
@@ -230,6 +298,32 @@ async def create_document_type(
         updated_at=now,
     )
     db.add(row)
+    db.flush()  # populate row.id before creating the draft template
+
+    draft_template_id: int | None = None
+    if payload.create_draft_template:
+        existing_template = (
+            db.query(DocumentTemplate)
+            .filter(DocumentTemplate.doc_type == payload.key)
+            .first()
+        )
+        if existing_template is None:
+            draft = DocumentTemplate(
+                doc_type=payload.key,
+                display_name=payload.title,
+                credit_cost=1,
+                language_source="documentation_language",
+                llm_provider="openai",
+                llm_model="gpt-4o",
+                prompt_template=DRAFT_PROMPT_TEMPLATE,
+                is_active=False,  # draft: admin opens it, edits prompt, then activates
+                created_at=now,
+                updated_at=now,
+            )
+            db.add(draft)
+            db.flush()
+            draft_template_id = draft.id
+
     db.commit()
     db.refresh(row)
 
@@ -238,10 +332,23 @@ async def create_document_type(
         admin,
         "admin_document_type_create",
         request=request,
-        metadata=json.dumps({"key": row.key, "title": row.title}),
+        metadata=json.dumps(
+            {
+                "key": row.key,
+                "title": row.title,
+                "draft_template_id": draft_template_id,
+            }
+        ),
     )
-    logger.info("Admin %s created DocumentType %s", admin.email, row.key)
-    return _serialize_document_type(row)
+    logger.info(
+        "Admin %d created DocumentType %s (draft template id=%s)",
+        admin.id,
+        row.key,
+        draft_template_id,
+    )
+    result = _serialize_document_type(row)
+    result["draft_template_id"] = draft_template_id
+    return result
 
 
 @document_types_router.put("/{document_type_id}")
@@ -265,8 +372,14 @@ async def update_document_type(
         )
 
     update_data = payload.model_dump(exclude_unset=True)
-    if "outputs" in update_data and update_data["outputs"] is not None:
-        update_data["outputs"] = json.dumps(update_data["outputs"])
+    # outputs is a non-nullable JSON string column. Drop explicit-None payloads
+    # so a client sending {"outputs": null} does not violate the NOT NULL
+    # constraint. Serialize valid lists to JSON before assignment.
+    if "outputs" in update_data:
+        if update_data["outputs"] is None:
+            del update_data["outputs"]
+        else:
+            update_data["outputs"] = json.dumps(update_data["outputs"])
 
     for field, value in update_data.items():
         setattr(row, field, value)
@@ -282,7 +395,7 @@ async def update_document_type(
         request=request,
         metadata=json.dumps({"id": row.id, "key": row.key, "fields": list(update_data.keys())}),
     )
-    logger.info("Admin %s updated DocumentType %s", admin.email, row.key)
+    logger.info("Admin %d updated DocumentType %s", admin.id, row.key)
     return _serialize_document_type(row)
 
 
@@ -305,6 +418,24 @@ async def delete_document_type(
             detail="Dokumenttyp nicht gefunden.",
         )
 
+    # Refuse to orphan any DocumentTemplate referencing this key. There is no
+    # real foreign key in the DB (doc_type is a string), so this is enforced
+    # in application code.
+    referencing = (
+        db.query(DocumentTemplate)
+        .filter(DocumentTemplate.doc_type == row.key)
+        .count()
+    )
+    if referencing > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Dokumenttyp '{row.key}' wird noch von {referencing} "
+                "Template(s) referenziert. Lösche oder verschiebe zuerst "
+                "die Templates, dann kann der Typ entfernt werden."
+            ),
+        )
+
     key = row.key
     db.delete(row)
     db.commit()
@@ -316,7 +447,7 @@ async def delete_document_type(
         request=request,
         metadata=json.dumps({"id": document_type_id, "key": key}),
     )
-    logger.info("Admin %s deleted DocumentType %s", admin.email, key)
+    logger.info("Admin %d deleted DocumentType %s", admin.id, key)
     return {"message": "Dokumenttyp gelöscht.", "key": key}
 
 
@@ -404,7 +535,7 @@ async def create_llm_model(
         request=request,
         metadata=json.dumps({"provider": row.provider, "model_id": row.model_id}),
     )
-    logger.info("Admin %s created LlmModel %s/%s", admin.email, row.provider, row.model_id)
+    logger.info("Admin %d created LlmModel %s/%s", admin.id, row.provider, row.model_id)
     return _serialize_llm_model(row)
 
 
@@ -447,7 +578,7 @@ async def update_llm_model(
         ),
     )
     logger.info(
-        "Admin %s updated LlmModel %s/%s", admin.email, row.provider, row.model_id
+        "Admin %d updated LlmModel %s/%s", admin.id, row.provider, row.model_id
     )
     return _serialize_llm_model(row)
 
@@ -467,6 +598,26 @@ async def delete_llm_model(
             detail="LLM-Modell nicht gefunden.",
         )
 
+    # Refuse to remove a model that templates still reference, otherwise the
+    # next generation against those templates would fail at the LLM call.
+    referencing = (
+        db.query(DocumentTemplate)
+        .filter(
+            DocumentTemplate.llm_provider == row.provider,
+            DocumentTemplate.llm_model == row.model_id,
+        )
+        .count()
+    )
+    if referencing > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Modell '{row.provider}/{row.model_id}' wird noch von "
+                f"{referencing} Template(s) genutzt. Bitte zuerst die "
+                "Templates auf ein anderes Modell umstellen."
+            ),
+        )
+
     provider = row.provider
     model_id = row.model_id
     db.delete(row)
@@ -481,8 +632,64 @@ async def delete_llm_model(
             {"id": llm_model_id, "provider": provider, "model_id": model_id}
         ),
     )
-    logger.info("Admin %s deleted LlmModel %s/%s", admin.email, provider, model_id)
+    logger.info("Admin %d deleted LlmModel %s/%s", admin.id, provider, model_id)
     return {"message": "LLM-Modell gelöscht.", "provider": provider, "model_id": model_id}
+
+
+# ---------------------------------------------------------------------------
+# Prompt preview endpoint (dry-run, no LLM call)
+# ---------------------------------------------------------------------------
+
+
+class PromptPreviewRequest(BaseModel):
+    """Body for the prompt preview endpoint.
+
+    ``prompt_template`` is optional — if omitted, the saved template prompt
+    is used instead. This lets the admin preview both the saved state and
+    unsaved edits from the drawer.
+    """
+
+    prompt_template: Optional[str] = None
+
+
+@router.post("/admin/document-templates/{template_id}/preview")
+@limiter.limit("30/minute")
+async def preview_document_template_prompt(
+    template_id: int,
+    payload: PromptPreviewRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_admin_user),
+) -> dict:
+    """Render the template prompt with sample placeholder values.
+
+    This does **not** call an LLM — it's a dry-run that only substitutes
+    known placeholders with example strings so the admin can validate the
+    prompt structure before saving.
+    """
+    template = (
+        db.query(DocumentTemplate)
+        .filter(DocumentTemplate.id == template_id)
+        .first()
+    )
+    if template is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Template nicht gefunden.",
+        )
+
+    source_prompt = payload.prompt_template or template.prompt_template or ""
+    rendered, unresolved = render_preview(source_prompt)
+
+    return {
+        "template_id": template.id,
+        "doc_type": template.doc_type,
+        "source_length": len(source_prompt),
+        "rendered_length": len(rendered),
+        "rendered_prompt": rendered,
+        "unresolved_placeholders": unresolved,
+        "sample_values": PREVIEW_SAMPLE_VALUES,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -499,8 +706,6 @@ async def seed_catalog_endpoint(
     admin: User = Depends(get_admin_user),
 ) -> dict:
     """Run the catalog seeder from the admin UI."""
-    from app.seed_catalog_to_db import seed_document_types, seed_llm_models
-
     dt = seed_document_types(db, force_update=force_update)
     lm = seed_llm_models(db, force_update=force_update)
 

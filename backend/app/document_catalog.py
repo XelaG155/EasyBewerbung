@@ -1,5 +1,28 @@
-"""Catalog of generated application documents and packages for EasyBewerbung."""
-from typing import Dict, List, Set
+"""Catalog of generated application documents and packages for EasyBewerbung.
+
+⚠ DEPRECATED as the authoritative source.
+
+As of the 2026-04-05 admin-forms refactor the real catalog lives in the
+``document_types`` table (see ``app.models.DocumentType``). The constants in
+this module are still used as:
+
+1. A **seed source** for the ``document_types`` table on first boot
+   (via ``app.seed_catalog_to_db``).
+2. A **fallback** when the database is empty or unreachable, so the
+   application-generation pipeline never crashes during bootstrap.
+
+New code should read from the database via
+``app.document_catalog.get_allowed_generated_doc_types`` or
+``app.document_catalog.get_document_catalog_for_api`` — both accept a
+SQLAlchemy ``Session`` and fall back to the constants below when the table
+is empty.
+
+Follow-up ticket (post-pilot): move the bundle definitions in ``PACKAGES``
+to the database as well, then delete this file.
+"""
+from typing import Dict, List, Optional, Set
+
+from sqlalchemy.orm import Session
 
 # Individual document definitions
 ESSENTIAL_PACK = [
@@ -173,3 +196,76 @@ ALLOWED_GENERATED_DOC_TYPES: Set[str] = {
     for section in [ESSENTIAL_PACK, HIGH_IMPACT_ADDONS, PREMIUM_DOCUMENTS]
     for item in section
 }
+
+
+# ---------------------------------------------------------------------------
+# DB-backed accessors (post-refactor) with static fallback
+# ---------------------------------------------------------------------------
+
+
+def get_allowed_generated_doc_types(db: Optional[Session] = None) -> Set[str]:
+    """Return the set of doc_type keys that are valid for document generation.
+
+    Reads from the ``document_types`` table first (including inactive rows —
+    inactive means "hidden from users", not "unsupported by the pipeline"
+    which would make existing generated documents invalid retroactively).
+    Falls back to the static constants if the DB is empty, unreachable, or
+    the model is not imported yet (e.g. during migrations).
+    """
+    if db is None:
+        return ALLOWED_GENERATED_DOC_TYPES
+
+    try:
+        # Local import avoids a circular between models.py and this module.
+        from app.models import DocumentType
+
+        rows = db.query(DocumentType.key).all()
+        if rows:
+            return {r[0] for r in rows}
+    except Exception:  # noqa: BLE001 — fallback path, never crash callers
+        pass
+
+    return ALLOWED_GENERATED_DOC_TYPES
+
+
+def get_document_catalog_for_api(db: Optional[Session] = None) -> Dict[str, List[dict]]:
+    """Return the user-facing catalog shape used by ``GET /documents/catalog``.
+
+    Reads from the ``document_types`` table, groups by ``category``, and only
+    includes active entries. Falls back to the static constants when the
+    table is empty (fresh install, pre-seed).
+    """
+    if db is None:
+        return DOCUMENT_CATALOG
+
+    try:
+        from app.models import DocumentType
+        import json
+
+        rows = (
+            db.query(DocumentType)
+            .filter(DocumentType.is_active.is_(True))
+            .order_by(DocumentType.category, DocumentType.sort_order)
+            .all()
+        )
+        if not rows:
+            return DOCUMENT_CATALOG
+
+        grouped: Dict[str, List[dict]] = {}
+        for row in rows:
+            try:
+                outputs = json.loads(row.outputs or "[]")
+            except json.JSONDecodeError:
+                outputs = []
+            grouped.setdefault(row.category, []).append(
+                {
+                    "key": row.key,
+                    "title": row.title,
+                    "outputs": outputs,
+                    "description": row.description,
+                    "notes": row.notes,
+                }
+            )
+        return grouped
+    except Exception:  # noqa: BLE001 — fallback path, never crash callers
+        return DOCUMENT_CATALOG

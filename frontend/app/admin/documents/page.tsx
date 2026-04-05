@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/lib/auth-context";
 import api, {
+  DocumentCategory,
   DocumentTemplate,
   DocumentTemplateUpdate,
   DocumentType,
+  DocumentTypeCreate,
   LlmModel,
   LlmModelCreate,
   LlmProvider,
@@ -103,6 +105,35 @@ export default function AdminDocumentsPage() {
     }
   }, [user, loadAll]);
 
+  const [advancedSeedOpen, setAdvancedSeedOpen] = useState(false);
+
+  /**
+   * Initial-Seed: runs both seeders in the right order (catalog first so
+   * templates can reference doc_type keys, then template prompts). This is
+   * the button a non-developer admin should use; the force-update and
+   * individual seeders are hidden behind an "Erweitert" section.
+   */
+  const handleInitialSeed = async () => {
+    setSeeding(true);
+    try {
+      const catalog = await api.seedCatalog(false);
+      const prompts = await api.seedDocumentTemplates(false);
+      setStatus({
+        kind: "success",
+        text:
+          `Seed abgeschlossen — Dokumenttypen: +${catalog.document_types.created}, ` +
+          `LLM-Modelle: +${catalog.llm_models.created}, ` +
+          `Template-Prompts: +${prompts.created} (${prompts.skipped} bereits vorhanden).`,
+      });
+      await loadAll();
+    } catch (error) {
+      console.error(error);
+      setStatus({ kind: "error", text: "Initial-Seed fehlgeschlagen." });
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   const handleSeedCatalog = async (forceUpdate: boolean) => {
     setSeeding(true);
     try {
@@ -192,31 +223,42 @@ export default function AdminDocumentsPage() {
               und Prompt in einem fokussierten Editor anzupassen.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col items-end gap-2">
             <button
-              onClick={() => handleSeedCatalog(false)}
+              onClick={handleInitialSeed}
               disabled={seeding}
-              className="px-3 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm disabled:opacity-50"
-              title="Erzeugt fehlende Dokumenttypen und LLM-Modelle aus dem Code-Katalog."
+              className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 text-sm disabled:opacity-50"
+              title="Initialer Seed: Dokumenttypen + LLM-Modelle + Template-Prompts aus dem Code-Katalog. Sicher für erste Befüllung und wiederholbar."
             >
-              {seeding ? "Seeding..." : "Katalog seeden"}
+              {seeding ? "Seeding..." : "Initial-Seed (alles)"}
             </button>
             <button
-              onClick={() => handleSeedCatalog(true)}
-              disabled={seeding}
-              className="px-3 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm disabled:opacity-50"
-              title="Ueberschreibt bestehende Dokumenttypen und LLM-Modelle mit den Werten aus dem Code."
+              type="button"
+              onClick={() => setAdvancedSeedOpen((o) => !o)}
+              className="text-xs text-gray-600 dark:text-gray-400 hover:underline"
             >
-              Katalog force-update
+              {advancedSeedOpen ? "Erweitert ausblenden" : "Erweitert…"}
             </button>
-            <button
-              onClick={() => handleSeedLegacyTemplates(false)}
-              disabled={seeding}
-              className="px-3 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm disabled:opacity-50"
-              title="Befuellt die prompt_templates aus document_prompts.json."
-            >
-              Prompts seeden
-            </button>
+            {advancedSeedOpen && (
+              <div className="flex flex-wrap gap-2 justify-end">
+                <button
+                  onClick={() => handleSeedCatalog(true)}
+                  disabled={seeding}
+                  className="px-3 py-1.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-900/60 text-xs disabled:opacity-50"
+                  title="Überschreibt bestehende Dokumenttypen und LLM-Modelle mit den Code-Werten (destruktiv)."
+                >
+                  Katalog force-update
+                </button>
+                <button
+                  onClick={() => handleSeedLegacyTemplates(true)}
+                  disabled={seeding}
+                  className="px-3 py-1.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-900/60 text-xs disabled:opacity-50"
+                  title="Überschreibt bestehende Prompts mit document_prompts.json (destruktiv)."
+                >
+                  Prompts force-update
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -325,6 +367,7 @@ export default function AdminDocumentsPage() {
         types={documentTypes}
         onRefresh={loadAll}
         setStatus={setStatus}
+        onDraftTemplateCreated={(id) => setEditorTemplateId(id)}
       />
 
       {/* Placeholder Explorer */}
@@ -429,6 +472,20 @@ function LlmModelsManager({
   };
 
   const handleToggleActive = async (model: LlmModel) => {
+    // Deactivating a model makes it unavailable in the template editor. Any
+    // template already pointing at this model keeps working until an admin
+    // changes it, but the model will no longer be offered for new templates.
+    // Activating is non-destructive and does not need a confirm.
+    if (
+      model.is_active &&
+      !window.confirm(
+        `Modell ${model.provider}/${model.model_id} deaktivieren? ` +
+          "Es wird im Template-Editor nicht mehr als Auswahl angeboten. " +
+          "Bestehende Templates, die dieses Modell referenzieren, laufen weiter."
+      )
+    ) {
+      return;
+    }
     try {
       await api.updateLlmModel(model.id, { is_active: !model.is_active });
       await onRefresh();
@@ -601,11 +658,25 @@ function DocumentTypesManager({
   types,
   onRefresh,
   setStatus,
+  onDraftTemplateCreated,
 }: {
   types: DocumentType[];
   onRefresh: () => Promise<void>;
   setStatus: (s: StatusMessage) => void;
+  /** Called after a new DocumentType was created and a draft template was
+   *  auto-attached. The parent uses this to open the drawer on the draft. */
+  onDraftTemplateCreated: (templateId: number) => void;
 }) {
+  const [formOpen, setFormOpen] = useState(false);
+  const [draft, setDraft] = useState<DocumentTypeCreate>({
+    key: "",
+    title: "",
+    description: "",
+    outputs: ["PDF"],
+    category: "essential_pack",
+    is_active: true,
+  });
+
   const grouped = useMemo(() => {
     const map: Record<string, DocumentType[]> = {};
     for (const t of types) {
@@ -619,6 +690,19 @@ function DocumentTypesManager({
   }, [types]);
 
   const handleToggleActive = async (dt: DocumentType) => {
+    // Deactivation is user-visible: the document type disappears from the
+    // user's generation picker (see get_document_catalog_for_api on the
+    // backend), so require confirmation.
+    if (
+      dt.is_active &&
+      !window.confirm(
+        `"${dt.title}" (${dt.key}) deaktivieren? ` +
+          "Der Typ verschwindet sofort aus der Benutzeroberfläche. " +
+          "Bereits generierte Dokumente dieses Typs bleiben erhalten."
+      )
+    ) {
+      return;
+    }
     try {
       await api.updateDocumentType(dt.id, { is_active: !dt.is_active });
       await onRefresh();
@@ -633,18 +717,198 @@ function DocumentTypesManager({
     }
   };
 
+  const handleDelete = async (dt: DocumentType) => {
+    if (
+      !window.confirm(
+        `Dokumenttyp "${dt.title}" (${dt.key}) wirklich löschen? ` +
+          "Vorhandene Templates mit diesem Key werden verwaist."
+      )
+    ) {
+      return;
+    }
+    try {
+      await api.deleteDocumentType(dt.id);
+      setStatus({ kind: "success", text: "Dokumenttyp gelöscht." });
+      await onRefresh();
+    } catch (e) {
+      setStatus({
+        kind: "error",
+        text:
+          e instanceof Error
+            ? e.message
+            : "Dokumenttyp konnte nicht gelöscht werden.",
+      });
+    }
+  };
+
+  const handleCreate = async () => {
+    const keyTrim = draft.key.trim();
+    const titleTrim = draft.title.trim();
+    if (!keyTrim || !titleTrim) {
+      setStatus({ kind: "error", text: "Key und Titel sind Pflicht." });
+      return;
+    }
+    if (!/^[a-z][a-z0-9_]*$/.test(keyTrim)) {
+      setStatus({
+        kind: "error",
+        text: "Key muss mit Kleinbuchstabe starten und darf nur a-z, 0-9 und Unterstrich enthalten.",
+      });
+      return;
+    }
+    try {
+      const result = await api.createDocumentType({
+        ...draft,
+        key: keyTrim,
+        title: titleTrim,
+        create_draft_template: true,
+      });
+      setStatus({
+        kind: "success",
+        text:
+          "Dokumenttyp angelegt. Draft-Template wurde vorbereitet — " +
+          "öffne den Editor und passe Prompt + LLM an, dann aktiviere das Template.",
+      });
+      setDraft({
+        key: "",
+        title: "",
+        description: "",
+        outputs: ["PDF"],
+        category: "essential_pack",
+        is_active: true,
+      });
+      setFormOpen(false);
+      await onRefresh();
+      if (result.draft_template_id !== null) {
+        onDraftTemplateCreated(result.draft_template_id);
+      }
+    } catch (e) {
+      setStatus({
+        kind: "error",
+        text:
+          e instanceof Error
+            ? e.message
+            : "Dokumenttyp konnte nicht angelegt werden.",
+      });
+    }
+  };
+
   return (
     <section className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-800">
-      <div className="mb-4">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-          Dokumenttypen
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-          Das Modell: welche Dokumente die Plattform überhaupt generieren kann.
-          Aktivieren/Deaktivieren steuert die Sichtbarkeit. Neue Typen werden im
-          Seed-Workflow oder später über ein Formular angelegt.
-        </p>
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            Dokumenttypen
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+            Das Modell: welche Dokumente die Plattform überhaupt generieren kann.
+            Neue Typen kannst du hier direkt anlegen — beim Speichern wird
+            automatisch ein inaktives Draft-Template mit Standard-Prompt
+            angelegt, das du danach im Editor anpasst.
+          </p>
+        </div>
+        <button
+          onClick={() => setFormOpen((o) => !o)}
+          className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 text-sm flex-shrink-0"
+        >
+          {formOpen ? "Abbrechen" : "Neuer Typ"}
+        </button>
       </div>
+
+      {formOpen && (
+        <div className="rounded border border-gray-200 dark:border-gray-800 p-4 mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2 rounded bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-3 py-2 text-xs text-blue-900 dark:text-blue-200">
+            <strong>Ablauf:</strong> Nach dem Speichern wird automatisch ein
+            inaktives Draft-Template mit Standard-Prompt erstellt. Der
+            Editor öffnet sich direkt — passe dort Prompt, LLM und Credits an
+            und setze das Template dann auf <em>aktiv</em>.
+          </div>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+              Key (Maschinenlesbar, snake_case)
+            </span>
+            <input
+              type="text"
+              value={draft.key}
+              onChange={(e) => setDraft({ ...draft, key: e.target.value })}
+              placeholder="z.B. salary_expectation_pdf"
+              className="rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2 py-1.5 text-sm font-mono"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+              Titel (angezeigt)
+            </span>
+            <input
+              type="text"
+              value={draft.title}
+              onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+              placeholder="z.B. Lohnvorstellung (PDF)"
+              className="rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2 py-1.5 text-sm"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+              Kategorie
+            </span>
+            <select
+              value={draft.category}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  category: e.target.value as DocumentCategory,
+                })
+              }
+              className="rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2 py-1.5 text-sm"
+            >
+              <option value="essential_pack">Essential Pack</option>
+              <option value="high_impact_addons">High-Impact Add-ons</option>
+              <option value="premium_documents">Premium</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+              Outputs (komma-separiert, z.B. PDF, DOCX)
+            </span>
+            <input
+              type="text"
+              value={(draft.outputs ?? []).join(", ")}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  outputs: e.target.value
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                })
+              }
+              placeholder="PDF"
+              className="rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2 py-1.5 text-sm font-mono"
+            />
+          </label>
+          <label className="flex flex-col gap-1 sm:col-span-2">
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+              Beschreibung (optional)
+            </span>
+            <textarea
+              value={draft.description ?? ""}
+              onChange={(e) =>
+                setDraft({ ...draft, description: e.target.value })
+              }
+              rows={2}
+              placeholder="Kurze Beschreibung für Admins und Endnutzer."
+              className="rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2 py-1.5 text-sm"
+            />
+          </label>
+          <div className="sm:col-span-2 flex justify-end">
+            <button
+              onClick={handleCreate}
+              className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 text-sm"
+            >
+              Speichern
+            </button>
+          </div>
+        </div>
+      )}
 
       {types.length === 0 ? (
         <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -677,12 +941,20 @@ function DocumentTypesManager({
                           {t.key} · outputs: {t.outputs.join(", ") || "—"}
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleToggleActive(t)}
-                        className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-xs hover:bg-gray-200 dark:hover:bg-gray-700 flex-shrink-0"
-                      >
-                        {t.is_active ? "Deaktiv." : "Aktiv."}
-                      </button>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => handleToggleActive(t)}
+                          className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-xs hover:bg-gray-200 dark:hover:bg-gray-700"
+                        >
+                          {t.is_active ? "Deaktiv." : "Aktiv."}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(t)}
+                          className="px-2 py-1 rounded bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs hover:bg-red-200 dark:hover:bg-red-950/60"
+                        >
+                          Löschen
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

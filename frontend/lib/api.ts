@@ -190,6 +190,18 @@ export interface DocumentTypeCreate {
   category?: DocumentCategory;
   sort_order?: number;
   is_active?: boolean;
+  /**
+   * When true (default server-side) the endpoint also creates a draft
+   * DocumentTemplate with this key so the admin can immediately open the
+   * drawer and configure LLM / prompt. Set to false in import scripts.
+   */
+  create_draft_template?: boolean;
+}
+
+/** Response from POST /admin/document-types/ — extends DocumentType with the
+ *  optional id of the freshly-created draft DocumentTemplate. */
+export interface DocumentTypeCreateResponse extends DocumentType {
+  draft_template_id: number | null;
 }
 
 export interface DocumentTypeUpdate {
@@ -238,6 +250,16 @@ export interface LlmModelUpdate {
 export interface CatalogSeedResult {
   document_types: { created: number; updated: number; skipped: number };
   llm_models: { created: number; updated: number; skipped: number };
+}
+
+export interface TemplatePromptPreview {
+  template_id: number;
+  doc_type: string;
+  source_length: number;
+  rendered_length: number;
+  rendered_prompt: string;
+  unresolved_placeholders: string[];
+  sample_values: Record<string, string>;
 }
 
 class ApiClient {
@@ -674,7 +696,7 @@ class ApiClient {
   }
 
   async createDocumentType(payload: DocumentTypeCreate) {
-    return this.request<DocumentType>("/admin/document-types/", {
+    return this.request<DocumentTypeCreateResponse>("/admin/document-types/", {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -726,6 +748,16 @@ class ApiClient {
     return this.request<CatalogSeedResult>(`/admin/catalog/seed${q}`, {
       method: "POST",
     });
+  }
+
+  async previewTemplatePrompt(templateId: number, promptTemplate?: string) {
+    return this.request<TemplatePromptPreview>(
+      `/admin/document-templates/${templateId}/preview`,
+      {
+        method: "POST",
+        body: JSON.stringify({ prompt_template: promptTemplate ?? null }),
+      }
+    );
   }
 
   async downloadJobDescriptionPDF(applicationId: number) {
