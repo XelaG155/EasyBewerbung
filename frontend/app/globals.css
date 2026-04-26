@@ -159,6 +159,33 @@ h1, h2, h3, h4, h5, h6, p, span, div, section, header, footer {
   transition: all 200ms ease;
 }
 
+/* Visible focus ring for keyboard navigation. WCAG 2.2 SC 2.4.7 (Focus
+ * Visible). Only :focus-visible — pointer clicks don't trigger it, so
+ * mouse users don't see a stray outline after every click. */
+.btn-base:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--accent-faint);
+}
+
+/* Honour the user's reduced-motion preference. Spinners still indicate
+ * pendency through colour and aria-live announcements; they just stop
+ * spinning for users with vestibular sensitivity. WCAG 2.3.3. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin {
+    animation: none;
+  }
+  .btn-base,
+  .input-base {
+    transition: none;
+  }
+}
+
 .btn-primary {
   background: var(--accent);
   color: var(--button-text-on-primary);

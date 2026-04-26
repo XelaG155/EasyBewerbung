@@ -60,15 +60,15 @@
     "creatingAccount": "Konto wird erstellt...",
     "welcomeBack": "Willkommen zurück",
     "loginSubtitle": "Melden Sie sich an, um Ihre Bewerbungen zu verwalten",
-    "privacyPolicyRequired": "You must accept the privacy policy to register",
-    "googleSignupFailed": "Google sign-up failed",
-    "googleInitFailed": "Google initialization failed",
-    "passwordMinLength": "Password must be at least 8 characters",
-    "registrationFailed": "Registration failed. Please try again.",
-    "acceptPrivacyPrefix": "I accept the",
+    "privacyPolicyRequired": "Bitte akzeptieren Sie die Datenschutzerklärung, um sich zu registrieren.",
+    "googleSignupFailed": "Anmeldung über Google fehlgeschlagen.",
+    "googleInitFailed": "Google-Anmeldung konnte nicht initialisiert werden.",
+    "passwordMinLength": "Das Passwort muss mindestens 8 Zeichen haben.",
+    "registrationFailed": "Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "acceptPrivacyPrefix": "Ich akzeptiere die",
     "privacyPolicy": "Privacy Policy",
-    "acceptPrivacySuffix": "and consent to the collection of my IP address for security purposes",
-    "close": "Close"
+    "acceptPrivacySuffix": "und willige in die Verarbeitung meiner IP-Adresse zu Sicherheitszwecken ein.",
+    "close": "Schliessen"
   },
   "dashboard": {
     "uploadDocuments": "Dokumente hochladen",
@@ -186,6 +186,6 @@
     "accountInformation": "Kontoinformationen",
     "accountCreated": "Konto erstellt",
     "cancel": "Abbrechen",
-    "saveFailed": "Failed to save settings"
+    "saveFailed": "Einstellungen konnten nicht gespeichert werden."
   }
 }
