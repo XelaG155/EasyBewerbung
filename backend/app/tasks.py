@@ -190,11 +190,16 @@ def generate_with_llm(client, model: str, provider: str, prompt: str) -> str:
 
 
 def get_language_instruction(lang_code: str) -> str:
-    """Convert language code to explicit LLM instruction with regional specifics."""
+    """Convert language code to explicit LLM instruction with regional specifics.
+
+    For German variants we default plain 'de' to Swiss Standard German
+    orthography (ss instead of ß) because the platform is CH-focused.
+    Users explicitly targeting Germany should use 'de-DE'.
+    """
     language_instructions = {
-        "de-CH": "Swiss German (Schweizerdeutsch) - CRITICAL: Use 'ss' instead of 'ß' (e.g., 'Strasse' not 'Straße', 'Grüsse' not 'Grüße', 'dass' not 'daß'). This is Swiss Standard German orthography.",
-        "de": "German (Standard German / Hochdeutsch) - Use standard German orthography including 'ß' where appropriate.",
-        "de-DE": "German (Germany) - Use standard German orthography including 'ß' where appropriate.",
+        "de-CH": "Swiss Standard German (Schweizer Hochdeutsch) - CRITICAL: Use 'ss' instead of 'ß' throughout (e.g., 'Strasse' not 'Straße', 'Grüsse' not 'Grüße', 'dass' not 'daß'). Use formal 'Sie' form. NEVER write Swiss-German dialect (Mundart).",
+        "de": "Swiss Standard German (Schweizer Hochdeutsch) - CRITICAL: Use 'ss' instead of 'ß' throughout. Use formal 'Sie' form. NEVER write dialect.",
+        "de-DE": "German (Germany) - Use standard German orthography including 'ß' where appropriate. Use formal 'Sie' form unless the job posting clearly uses informal 'Du'.",
         "en": "English",
         "fr": "French (Français)",
         "it": "Italian (Italiano)",
@@ -202,6 +207,70 @@ def get_language_instruction(lang_code: str) -> str:
         "pt": "Portuguese (Português)",
     }
     return language_instructions.get(lang_code, lang_code)
+
+
+# Document types whose recipient is the candidate themselves
+# (not the recruiter / employer). These are written in the user's spoken
+# language regardless of what language the job offer is in. Examples:
+# interview prep, skill gap report, company briefing for the candidate's
+# own preparation, etc.
+#
+# Documents NOT in this set go to the employer and are written in the
+# job-offer language (Application.documentation_language).
+CANDIDATE_FACING_DOC_TYPES = frozenset({
+    "match_score_report",
+    "company_intelligence_briefing",
+    "interview_preparation_pack",
+    "linkedin_optimization",
+    "executive_summary",
+    "skill_gap_report",
+    "reference_summary",
+    "role_specific_portfolio",
+})
+
+
+def _resolve_doc_language(template, application, user) -> str:
+    """Pick the correct language code for a document based on its recipient.
+
+    Resolution order:
+    1. If ``template.language_source`` is explicitly set to one of the
+       supported overrides, follow it.
+    2. Otherwise, infer from doc_type: candidate-facing docs use the user's
+       preferred language; employer-facing docs use the application's
+       documentation language (which should match the job offer).
+    3. Fall back to the user's documentation_language, then "en".
+    """
+    source = getattr(template, "language_source", None) or "documentation_language"
+    doc_type = getattr(template, "doc_type", "") or ""
+
+    user_lang = (
+        getattr(user, "preferred_language", None)
+        or getattr(user, "documentation_language", None)
+        or "en"
+    )
+    job_lang = (
+        getattr(application, "documentation_language", None)
+        or getattr(user, "documentation_language", None)
+        or user_lang
+    )
+    company_profile_lang = (
+        getattr(application, "company_profile_language", None)
+        or user_lang
+    )
+
+    # Explicit override on the template wins.
+    if source == "preferred_language":
+        return user_lang
+    if source == "company_profile_language":
+        return company_profile_lang
+    if source == "mother_tongue":
+        # Legacy option — treat as user-language until a dedicated field exists.
+        return user_lang
+
+    # Default ("documentation_language"): infer by recipient.
+    if doc_type in CANDIDATE_FACING_DOC_TYPES:
+        return user_lang
+    return job_lang
 
 
 # Document type translations for multi-language support
@@ -308,11 +377,30 @@ def generate_document_prompt_from_template(
     try:
         prompt = template.prompt_template
 
-        # Get user language preference
-        doc_lang = getattr(application, "documentation_language", None) or getattr(user, "documentation_language", "en")
+        # Recipient-aware language resolution: candidate-facing docs (briefings,
+        # interview prep, skill gaps) go in the user's language; employer-facing
+        # docs (CV, cover letter, motivational letter, formal email) go in the
+        # job-offer language. See CANDIDATE_FACING_DOC_TYPES and CLAUDE-2026.04.md.
+        doc_lang = _resolve_doc_language(template, application, user)
+        job_lang = (
+            getattr(application, "documentation_language", None)
+            or getattr(user, "documentation_language", None)
+            or doc_lang
+        )
+        user_lang = (
+            getattr(user, "preferred_language", None)
+            or getattr(user, "documentation_language", None)
+            or "en"
+        )
+        company_profile_lang = (
+            getattr(application, "company_profile_language", None)
+            or user_lang
+        )
 
-        # Get explicit language instruction for LLM
         language_instruction = get_language_instruction(doc_lang)
+        job_language_instruction = get_language_instruction(job_lang)
+        user_language_instruction = get_language_instruction(user_lang)
+        company_profile_language_instruction = get_language_instruction(company_profile_lang)
 
         # Resolve per-document-type role/task/instructions from document_prompts.json.
         # Falls back to generic values when the doc_type is not present in the JSON.
@@ -355,16 +443,21 @@ def generate_document_prompt_from_template(
         fallback_display = getattr(template, "display_name", None)
         doc_type_display = get_doc_type_display(doc_type, doc_lang, fallback_display)
 
-        # Replace all placeholders (single braces - matching template format)
+        # Replace all placeholders (single braces - matching template format).
+        # Distinct placeholders so a single template can mix recipient-aware
+        # language ({language}) with hard-coded job/user-language references
+        # when needed (e.g. "summarise the German job offer in English").
         prompt = prompt.replace("{job_description}", job_description)
         prompt = prompt.replace("{cv_text}", cv_text)
         prompt = prompt.replace("{cv_summary}", cv_summary)
         prompt = prompt.replace("{language}", language_instruction)
-        prompt = prompt.replace("{company_profile_language}", language_instruction)
+        prompt = prompt.replace("{job_language}", job_language_instruction)
+        prompt = prompt.replace("{user_language}", user_language_instruction)
+        prompt = prompt.replace("{company_profile_language}", company_profile_language_instruction)
+        prompt = prompt.replace("{documentation_language}", job_language_instruction)
         prompt = prompt.replace("{role}", role)
         prompt = prompt.replace("{task}", task)
         prompt = prompt.replace("{instructions}", instructions)
-        prompt = prompt.replace("{documentation_language}", language_instruction)
         prompt = prompt.replace("{reference_letters}", reference_letters)
         prompt = prompt.replace("{doc_type}", doc_type)
         prompt = prompt.replace("{doc_type_display}", doc_type_display)
