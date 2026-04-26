@@ -4,9 +4,19 @@ import { waitForPageLoad, mockAPIResponse } from '../utils/helpers';
 /**
  * End-to-End User Flow: Complete Job Application Process
  *
- * Tests the entire journey from adding a job to generating documents
+ * Tests the entire journey from adding a job to generating documents.
+ *
+ * STATUS (2026-04-26 — Iteration 2 of the re-review): MARKED fixme.
+ * Most spec bodies use ``if (await x.count() > 0) { ... }`` guards
+ * with no ``expect()`` afterwards, so they pass green even when the
+ * UI is broken. The Iteration-1 testing audit called this "test-
+ * shaped dead code" — false-positive coverage is worse than no
+ * coverage. Until each spec has at least one hard ``await expect(...)``
+ * after every interaction and the dashboard gains stable data-testid
+ * hooks, this suite is honest-broken via test.fixme() rather than
+ * pretending to pass.
  */
-test.describe('Job Application Flow', () => {
+test.describe.fixme('Job Application Flow', () => {
   test.beforeEach(async ({ page }) => {
     // Mock authentication
     await page.goto('/');

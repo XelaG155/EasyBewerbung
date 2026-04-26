@@ -4,9 +4,20 @@ import { waitForPageLoad, mockAPIResponse } from '../utils/helpers';
 /**
  * End-to-End User Flow: Document Generation Process
  *
- * Tests the complete document generation flow including progress tracking
+ * Tests the complete document generation flow including progress tracking.
+ *
+ * STATUS (2026-04-26 — Iteration 2 of the re-review): MARKED fixme.
+ * The previous incarnation of this suite contained ~30 sites of
+ * ``if (await x.count() > 0) { ... }`` guards with no ``expect()``
+ * after them, so the whole suite passed green even when the UI was
+ * broken. The Iteration-1 testing audit flagged this as a P0 — false-
+ * positive coverage is worse than no coverage. Until the assertions
+ * are rewritten with hard ``await expect(...)`` calls and stable
+ * data-testid hooks added to the dashboard's generate button / credit
+ * chip / error banner, this suite is honest-broken via test.fixme()
+ * rather than pretending to pass. Tracked in CLAUDE-2026.04.md.
  */
-test.describe('Document Generation Flow', () => {
+test.describe.fixme('Document Generation Flow', () => {
   const mockApplication = {
     id: 1,
     job_title: 'Software Engineer',

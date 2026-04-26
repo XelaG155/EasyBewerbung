@@ -1,7 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { waitForPageLoad, mockAPIResponse, mockAPIError } from '../utils/helpers';
 
-test.describe('Admin Page', () => {
+/**
+ * STATUS (2026-04-26 — Iteration 2 of the re-review): MARKED fixme.
+ * The spec uses 14 ``if (await x.count() > 0) { ... }`` guards
+ * without ``expect()`` afterwards, so it passes green even when the
+ * UI is broken. Replace with hard assertions and stable data-testid
+ * hooks before re-enabling. Tracked in CLAUDE-2026.04.md.
+ */
+test.describe.fixme('Admin Page', () => {
   const mockAdminUser = {
     id: 2,
     email: 'admin@example.com',
