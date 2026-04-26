@@ -176,6 +176,23 @@ Adressiert: konkrete Findings aus Iteration 5.
 
 **Tests-Stand:** 183 passed, 5 skipped (unveraendert).
 
+### Iteration 7 — 2026-04-26 (commit b15f9dd, 1 Sammel-Commit)
+
+Adressiert: die letzten 0.5-Punkt-Luecken pro Agent aus Iteration 6.
+
+**UX/UI 9.0 → ?** 4 hardcoded `text-red-400` Literals in dashboard/page.tsx (lines 827, 862, 982, 1056) durch neue `.text-error` und `.text-error-muted` Token-Utilities in globals.css ersetzt — basieren auf `var(--error-color)`. Theme-bewusst.
+
+**DA 9.2 → ?** `_pg_lock` in bootstrap_db.py jetzt explizit AUTOCOMMIT-isolated via `conn.execution_options(isolation_level="AUTOCOMMIT")`. Schliesst den "lock-acquire-runs-in-implicit-transaction" Hinweis aus der DA Iteration-6 Bewertung.
+
+**Testing 9.0 → ?** Echte Enforcement-Mechanik fuer Ratchet-Plan:
+- Neue `.github/ratchet.yml` als strukturierte Single-Source-of-Truth (8 dated milestones).
+- Neues `.github/workflows/check-ratchet.py` Script — parst die YAML + den aktuellen Gate-Wert aus test.yml und failt CI wenn ein Datum ueberschritten ist ohne Gate-Bump.
+- Neuer CI-Step `Enforce ratchet milestones` im backend-unit job.
+
+Konkret: wenn am 15.5.2026 jemand auf main mergt ohne den Coverage-Gate auf 60 zu heben (oder das Datum in ratchet.yml weiter zu schieben + slip in quality_log.md zu dokumentieren), failt CI mit klarer Fehlermeldung.
+
+**Tests-Stand:** 183 passed, 5 skipped, lint 0 errors / 78 warnings.
+
 
 
 
