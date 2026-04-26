@@ -40,15 +40,18 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def init_db() -> None:
-    """Create database tables and seed required data if missing.
+    """Seed required catalog rows if the tables are empty.
 
-    Notes on the 2026-04-05 admin-forms refactor:
-    ``Base.metadata.create_all`` creates the new ``document_types`` and
-    ``llm_models`` tables automatically because their SQLAlchemy models are
-    part of ``Base``. However, the production deploy pipeline does **not**
-    run Alembic (CMD is ``uvicorn``). This function therefore also seeds
-    the new tables on first boot so the refactor ships without manual
-    steps. Idempotent: only runs when each table is empty.
+    Schema-creation is now done by ``scripts/bootstrap_db.py`` via the
+    container entrypoint. This function therefore only handles the
+    *data* side: language settings, document_types, llm_models, and
+    the document_templates seed. Calling create_all here remains as a
+    defensive belt-and-braces no-op on already-bootstrapped DBs (it
+    does NOT add columns to existing tables, only creates missing
+    tables) and as a fallback for environments that bypass the
+    entrypoint (local pytest, ad-hoc scripts).
+
+    Idempotent: only seeds when each table is empty.
     """
     import logging
     from app.models import DocumentTemplate, DocumentType, LanguageSetting, LlmModel
@@ -56,9 +59,11 @@ def init_db() -> None:
 
     logger = logging.getLogger(__name__)
 
-    # Create all tables
+    # Defensive: ensure the schema is at least minimally present. The
+    # entrypoint script's bootstrap_db is the canonical path and runs
+    # Alembic; this is a fallback for non-container test runs.
     Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created/verified")
+    logger.debug("Database tables verified via init_db")
 
     # Seed data if missing
     db = SessionLocal()

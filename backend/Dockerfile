@@ -36,8 +36,17 @@ COPY . .
 # Create uploads directory
 RUN mkdir -p /app/uploads
 
+# Make entrypoint script executable (defensive — chmod is also set on host)
+RUN chmod +x /app/entrypoint.sh
+
 # Expose port
 EXPOSE 8000
 
-# Run the application
+# entrypoint.sh runs `alembic upgrade head` before exec'ing the CMD so
+# every container boot reconciles the schema — including the worker
+# service whose CMD is overridden in docker-compose.yml. This was the
+# fix for the silent-broken-token-revocation and silent-broken-credit-
+# refund bug: production was bootstrapped via init_db.create_all, and
+# create_all NEVER adds columns to existing tables.
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
