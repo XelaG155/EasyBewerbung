@@ -4,7 +4,6 @@ import os
 import json
 import re
 import logging
-import traceback
 from io import BytesIO
 from urllib.parse import quote
 
@@ -26,6 +25,7 @@ from app.language_catalog import DEFAULT_LANGUAGE, normalize_language
 from app.tasks import calculate_matching_score_task, generate_documents_task, delete_documents_task, get_doc_type_display
 from app.limiter import limiter
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Load JSON prompts
@@ -316,7 +316,7 @@ async def create_application(
             current_user.id,
             False,  # not a recalculate
         )
-        print(f"📊 Queued matching score calculation for application {application.id}")
+        logger.info("Queued matching score calculation for application %s", application.id)
 
     return serialize_application(application, db)
 
@@ -444,7 +444,7 @@ async def list_application_history(
 ):
     """List all applications for the current user."""
     try:
-        print(f"📋 Fetching application history for user {current_user.id}")
+        logger.debug("Fetching application history for user %s", current_user.id)
         applications = (
             db.query(Application)
             .options(joinedload(Application.generated_documents))
@@ -452,7 +452,7 @@ async def list_application_history(
             .order_by(Application.created_at.desc())
             .all()
         )
-        print(f"✅ Found {len(applications)} applications")
+        logger.debug("Found %s applications for user %s", len(applications), current_user.id)
 
         # Efficiently load job descriptions using a single query
         # This prevents N+1 query problem
@@ -461,7 +461,7 @@ async def list_application_history(
         if job_urls:
             job_offers = db.query(JobOffer).filter(JobOffer.url.in_(job_urls)).all()
             job_offers_map = {jo.url: jo.description for jo in job_offers}
-            print(f"✅ Loaded {len(job_offers_map)} job descriptions")
+            logger.debug("Loaded %s job descriptions", len(job_offers_map))
 
         # Build job_offers ID map for PDF access
         job_offers_id_map = {}
@@ -498,11 +498,13 @@ async def list_application_history(
             }
             result.append(serialized)
 
-        print(f"✅ Serialized {len(result)} applications successfully")
+        logger.debug("Serialized %s applications", len(result))
         return result
-    except Exception as e:
-        print(f"❌ ERROR in list_application_history: {str(e)}")
-        print(f"❌ Traceback: {traceback.format_exc()}")
+    except Exception:
+        # Never log raw exception messages — they can include LLM-derived
+        # output, scraped HTML, or user-supplied free text. logger.exception
+        # records the traceback under WARNING-level handler config.
+        logger.exception("list_application_history failed for user %s", current_user.id)
         raise HTTPException(
             status_code=500,
             detail="Error loading application history. Please try again later.",
@@ -602,7 +604,7 @@ async def delete_application(
     db.delete(application)
     db.commit()
 
-    print(f"🗑️ Deleted application ID: {application_id} for user {current_user.id}")
+    logger.info("Deleted application %s for user %s", application_id, current_user.id)
 
     return {"message": "Application deleted successfully", "id": application_id}
 

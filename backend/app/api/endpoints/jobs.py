@@ -5,11 +5,11 @@ from sqlalchemy.orm import Session
 import requests
 from urllib.parse import urlparse
 import ipaddress
+import logging
 import socket
 import re
 import os
 import uuid
-import traceback
 from app.limiter import limiter
 from bs4 import BeautifulSoup
 from typing import Optional
@@ -20,6 +20,7 @@ from app.database import get_db
 from app.models import JobOffer, User
 from app.auth import get_current_user
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Constants for scraping configuration
@@ -185,8 +186,8 @@ def clean_job_title_with_ai(raw_title: str) -> str:
         else:
             return raw_title
 
-    except Exception as e:
-        print(f"⚠️ Warning: AI title cleaning failed: {str(e)}")
+    except Exception:
+        logger.warning("AI title cleaning failed", exc_info=True)
         return raw_title
 
 
@@ -210,9 +211,8 @@ def save_original_pdf(html_content: str, user_id: int, job_title: str = None) ->
         # Convert HTML to PDF using weasyprint
         HTML(string=html_content).write_pdf(filepath)
         return filepath
-    except Exception as e:
-        # If PDF conversion fails, log error but don't fail the entire job analysis
-        print(f"Warning: Failed to save original PDF: {str(e)}")
+    except Exception:
+        logger.warning("Failed to save original job-offer PDF", exc_info=True)
         return None
 
 
@@ -387,9 +387,10 @@ def scrape_job_offer(url: str) -> dict:
         # (e.g. the "Response too large" path) as 500s and lose the
         # actionable client-facing status. Re-raise them unchanged.
         raise
-    except Exception as e:
-        print(f"❌ ERROR in scrape_job_offer: {str(e)}")
-        print(f"❌ Traceback: {traceback.format_exc()}")
+    except Exception:
+        # Never log raw exception details — scraped HTML / external API
+        # responses can include PII or large payloads that bloat logs.
+        logger.exception("scrape_job_offer failed")
         raise HTTPException(
             status_code=500,
             detail="Error analyzing job offer. Please try again later.",
@@ -437,11 +438,11 @@ async def analyze_job_offer(
     """
     try:
         url = str(job_data.url)
-        print(f"🔍 Analyzing job offer: {url}")
+        logger.debug("Analyzing job offer for user %s", current_user.id)
 
         # Scrape job information
         scraped_data = scrape_job_offer(url)
-        print(f"✅ Job scraped successfully: {scraped_data.get('title')}")
+        logger.debug("Job scraped successfully")
 
         # Save original HTML as PDF
         html_content = scraped_data.get("html_content")
@@ -452,7 +453,8 @@ async def analyze_job_offer(
                 current_user.id,
                 scraped_data.get("title")
             )
-            print(f"📄 PDF saved: {original_pdf_path}")
+            if original_pdf_path:
+                logger.debug("Original job-offer PDF saved")
 
         # Format title as: <Job Title> - <company>, <place of work>
         raw_title = scraped_data.get("title")
@@ -483,7 +485,7 @@ async def analyze_job_offer(
         db.add(job_offer)
         db.commit()
         db.refresh(job_offer)
-        print(f"💾 Job saved to database with ID: {job_offer.id}")
+        logger.info("Job offer %s saved for user %s", job_offer.id, current_user.id)
 
         return JobAnalysisResponse(
             title=job_offer.title,
@@ -496,9 +498,8 @@ async def analyze_job_offer(
     except HTTPException:
         # Re-raise HTTP exceptions (from scrape_job_offer)
         raise
-    except Exception as e:
-        print(f"❌ ERROR in analyze_job_offer endpoint: {str(e)}")
-        print(f"❌ Traceback: {traceback.format_exc()}")
+    except Exception:
+        logger.exception("analyze_job_offer failed for user %s", current_user.id)
         db.rollback()
         raise HTTPException(
             status_code=500,
@@ -528,14 +529,13 @@ async def delete_job_offer(
     if job_offer.original_pdf_path and os.path.exists(job_offer.original_pdf_path):
         try:
             os.remove(job_offer.original_pdf_path)
-            print(f"🗑️ Deleted PDF file: {job_offer.original_pdf_path}")
-        except Exception as e:
-            print(f"⚠️ Warning: Failed to delete PDF file: {str(e)}")
+        except Exception:
+            logger.warning("Failed to delete original PDF for job offer %s", job_offer_id, exc_info=True)
 
     # Delete the job offer from database
     db.delete(job_offer)
     db.commit()
-    print(f"🗑️ Deleted job offer ID: {job_offer_id}")
+    logger.info("Deleted job offer %s for user %s", job_offer_id, current_user.id)
 
     return {"message": "Job offer deleted successfully", "id": job_offer_id}
 
