@@ -8,7 +8,7 @@ tatsaechlichen Datenfluss; sie ist keine Rechtsberatung. Konkrete Verantwortlich
 Daten werden zur Inbetriebnahme durch den Betreiber befuellt.
 """
 
-PRIVACY_POLICY_VERSION = "2026.04.26"
+PRIVACY_POLICY_VERSION = "2026.04.26-honest"
 
 PRIVACY_POLICY_TEXT = """
 DATENSCHUTZERKLAERUNG — EasyBewerbung
@@ -91,13 +91,16 @@ in der Anwendung sichtbar.
     EU: Art. 46 Abs. 2 lit. c DSGVO (Standardvertragsklauseln) bzw.
     Art. 45 DSGVO (EU-US Data Privacy Framework, soweit anwendbar).
 
-(b) Auftragsverarbeitung: Wir haben mit jedem dieser Anbieter einen
-    Auftragsverarbeitungsvertrag (Data Processing Addendum, DPA)
-    abgeschlossen, in dem Zweckbindung, Sicherheits-Standards und
-    Speicherfristen festgelegt sind. Soweit verfuegbar, ist die
-    Zero-Data-Retention-Option aktiviert: die Anbieter loeschen Ihre
-    Daten unmittelbar nach der Generierung und nutzen sie weder zu
-    Trainingszwecken noch zur Modellverbesserung.
+(b) Auftragsverarbeitung: Vor Aufnahme des Pilotbetriebs mit echten
+    Bewerbungsdaten schliesst der Betreiber mit jedem genutzten Anbieter
+    einen Auftragsverarbeitungsvertrag (Data Processing Addendum, DPA)
+    ab, der Zweckbindung, Sicherheits-Standards und Speicherfristen
+    regelt. Soweit der Anbieter eine Zero-Data-Retention-Option
+    bereitstellt, wird diese aktiviert. Den jeweils aktuellen
+    Verarbeiter-Status (DPA abgeschlossen ja/nein, ZDR aktiv ja/nein)
+    publizieren wir in einem getrennten Status-Dokument; bis dort
+    "DPA aktiv" steht, gehen Ihre Bewerbungsdaten an diesen Anbieter
+    NICHT.
 
 (c) Hinweis nach EU-KI-VO: Saemtliche von der Plattform erstellten
     Texte sind KI-generiert. Sie sollten sie vor dem Versand an
@@ -112,9 +115,15 @@ in der Anwendung sichtbar.
 (b) Bewerbungen, generierte Dokumente, hochgeladene Lebenslaeufe:
     bis zur Loeschung des Kontos oder bis Sie den Datensatz manuell
     entfernen.
-(c) Aktivitaetsprotokoll mit IP-Adresse: 90 Tage rollierend.
-(d) Backup-Kopien (verschluesselt): bis zu 30 Tage nach Loeschung
-    werden Ihre Daten in inkrementellen Backup-Snapshots ueberschrieben.
+(c) Aktivitaetsprotokoll mit IP-Adresse: 90 Tage rollierend (geplant
+    fuer den Pilotbetrieb; aktuell ohne automatischen Cleanup-Job —
+    der Loeschauftrag wird bis zur Pilot-Aufnahme automatisiert).
+(d) Backup-Kopien: solange der Pilotbetrieb noch nicht gestartet ist,
+    werden noch keine automatischen Datensicherungen mit Verschluesselung
+    im Ruhezustand erstellt. Vor Aufnahme echter Pilot-Nutzer wird ein
+    taegliches Backup mit AES-Verschluesselung eingerichtet; Backup-
+    Snapshots werden nach 30 Tagen ueberschrieben. Bis dahin erfolgt
+    eine manuelle Sicherung beim Deploy.
 
 6. EMPFAENGER
 
@@ -142,7 +151,8 @@ Wir setzen technische und organisatorische Schutzmassnahmen ein:
     Tokens).
   - Account-Lockout nach mehrfacher Fehlanmeldung.
   - Rate-Limits auf saemtlichen Schreib-Endpunkten.
-  - Tagesbackups mit Verschluesselung im Ruhezustand.
+  - Backup-Strategie: siehe Abschnitt 5(d). Tagesbackups mit Verschluesselung
+    werden bis zur Pilot-Aufnahme eingerichtet.
 
 Eine ABSOLUTE Sicherheit gibt es nicht — Sie sollten besonders sensible
 Informationen (z.B. Sozialversicherungsnummern, Bankdaten) NICHT in Ihren
@@ -173,7 +183,8 @@ Sie haben gemaess revDSG / DSGVO das Recht auf:
   (c) Loeschung (Art. 32 Abs. 2 lit. c revDSG / Art. 17 DSGVO):
       Konto-Menue → "Konto loeschen". Loescht Ihr Konto und alle
       verknuepften Datensaetze hart aus der Datenbank. Backup-Kopien
-      werden im Lauf von 30 Tagen ueberschrieben.
+      werden gemaess der in Abschnitt 5(d) beschriebenen Backup-
+      Strategie ueberschrieben (Ziel: 30 Tage nach Pilot-Aufnahme).
 
   (d) Einschraenkung (Art. 18 DSGVO) und Widerspruch (Art. 21 DSGVO):
       per E-Mail an die in Abschnitt 1 genannte Adresse.
