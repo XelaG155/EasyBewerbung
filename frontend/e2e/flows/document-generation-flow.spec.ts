@@ -1,317 +1,56 @@
 import { test, expect } from '@playwright/test';
-import { waitForPageLoad, mockAPIResponse } from '../utils/helpers';
 
 /**
  * End-to-End User Flow: Document Generation Process
  *
- * Tests the complete document generation flow including progress tracking.
- *
- * STATUS (2026-04-26 — Iteration 2 of the re-review): MARKED fixme.
- * The previous incarnation of this suite contained ~30 sites of
+ * STATUS (2026-04-26): the previous incarnation contained ~30 sites of
  * ``if (await x.count() > 0) { ... }`` guards with no ``expect()``
- * after them, so the whole suite passed green even when the UI was
- * broken. The Iteration-1 testing audit flagged this as a P0 — false-
- * positive coverage is worse than no coverage. Until the assertions
- * are rewritten with hard ``await expect(...)`` calls and stable
- * data-testid hooks added to the dashboard's generate button / credit
- * chip / error banner, this suite is honest-broken via test.fixme()
- * rather than pretending to pass. Tracked in CLAUDE-2026.04.md.
+ * afterwards, so it passed green even when the UI was broken. The
+ * Iteration-1 testing audit flagged this as a P0 — false-positive
+ * coverage is worse than no coverage. Iteration-2 marked the suite
+ * fixme but kept the bodies; Iteration-5 deletes the bodies entirely
+ * to remove the latent regression risk.
+ *
+ * Each test below is a placeholder shell: it ``test.fixme``-skips with
+ * a TODO so Playwright reports them as "fixme" not as "passing". When
+ * we add real coverage we will:
+ *
+ *   1. Add stable ``data-testid`` hooks to the dashboard:
+ *      - data-testid="generate-button"
+ *      - data-testid="credit-chip"
+ *      - data-testid="generation-error"
+ *   2. Replace each placeholder with a real test that uses
+ *      ``await expect(page.getByTestId('...')).toBeVisible()`` etc.,
+ *      and only THEN remove the test.fixme() marker.
  */
-test.describe.fixme('Document Generation Flow', () => {
-  const mockApplication = {
-    id: 1,
-    job_title: 'Software Engineer',
-    company: 'Test Company',
-    description: 'Looking for a talented software engineer...',
-    applied: false,
-    created_at: new Date().toISOString(),
-  };
 
-  test.beforeEach(async ({ page }) => {
-    // Mock authentication
-    await page.goto('/');
-    await page.evaluate(() => {
-      const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock';
-      localStorage.setItem('token', mockToken);
-      localStorage.setItem('user', JSON.stringify({
-        id: 1,
-        email: 'test@example.com',
-        full_name: 'Test User',
-      }));
+test.describe('Document Generation Flow', () => {
+    test.fixme('generate cover letter and CV (TODO: real assertions)', async ({ page }) => {
+        // Implementation gated on data-testid hooks landing in dashboard/page.tsx.
+        await expect(page).toHaveURL(/.*/);
     });
 
-    await mockAPIResponse(page, '**/users/me', {
-      id: 1,
-      email: 'test@example.com',
-      full_name: 'Test User',
-      credits: 10,
+    test.fixme('track generation progress on dashboard (TODO)', async ({ page }) => {
+        await expect(page).toHaveURL(/.*/);
     });
 
-    await mockAPIResponse(page, '**/documents', [
-      { id: 1, filename: 'cv.pdf', doc_type: 'CV', created_at: new Date().toISOString() },
-    ]);
-
-    await mockAPIResponse(page, '**/applications/1', mockApplication);
-    await mockAPIResponse(page, '**/applications/1/documents', []);
-  });
-
-  test('generate cover letter and CV', async ({ page }) => {
-    await page.goto('/applications/1');
-    await waitForPageLoad(page);
-
-    // Mock generation start
-    await page.route('**/applications/1/generate', (route) => {
-      route.fulfill({
-        status: 200,
-        body: JSON.stringify({
-          task_id: 'task-123',
-          status: 'processing',
-        }),
-      });
+    test.fixme('view generated documents (TODO)', async ({ page }) => {
+        await expect(page).toHaveURL(/.*/);
     });
 
-    // Mock progress updates
-    let progressCall = 0;
-    await page.route('**/applications/1/generation-status/task-123', (route) => {
-      progressCall++;
-      if (progressCall === 1) {
-        route.fulfill({
-          status: 200,
-          body: JSON.stringify({
-            status: 'processing',
-            completed_docs: 1,
-            total_docs: 2,
-          }),
-        });
-      } else {
-        route.fulfill({
-          status: 200,
-          body: JSON.stringify({
-            status: 'completed',
-            completed_docs: 2,
-            total_docs: 2,
-          }),
-        });
-      }
+    test.fixme('download generated document (TODO)', async ({ page }) => {
+        await expect(page).toHaveURL(/.*/);
     });
 
-    // Select documents to generate
-    const coverLetterCheckbox = page.locator('input[type="checkbox"][value*="cover"], input[type="checkbox"]:near(:text("Cover Letter"))').first();
-    const cvCheckbox = page.locator('input[type="checkbox"][value*="cv"], input[type="checkbox"]:near(:text("CV"))').first();
-
-    if (await coverLetterCheckbox.count() > 0) {
-      await coverLetterCheckbox.check();
-    }
-    if (await cvCheckbox.count() > 0) {
-      await cvCheckbox.check();
-    }
-
-    // Click generate button
-    const generateButton = page.locator('button:has-text("Generate"), button:has-text("Generieren")').first();
-    if (await generateButton.count() > 0) {
-      await generateButton.click();
-
-      // Wait for progress
-      await page.waitForTimeout(3000);
-    }
-  });
-
-  test('track generation progress on dashboard', async ({ page }) => {
-    // Simulate ongoing generation
-    await page.evaluate(() => {
-      localStorage.setItem('generatingApplications', JSON.stringify({
-        '1': { taskId: 'task-123', startedAt: Date.now() }
-      }));
+    test.fixme('generate matching score (TODO)', async ({ page }) => {
+        await expect(page).toHaveURL(/.*/);
     });
 
-    await mockAPIResponse(page, '**/applications/history*', [
-      {
-        ...mockApplication,
-        has_pending_generation: true,
-      },
-    ]);
-
-    await page.route('**/applications/1/generation-status/task-123', (route) => {
-      route.fulfill({
-        status: 200,
-        body: JSON.stringify({
-          status: 'processing',
-          completed_docs: 1,
-          total_docs: 3,
-        }),
-      });
+    test.fixme('insufficient credits error (TODO)', async ({ page }) => {
+        await expect(page).toHaveURL(/.*/);
     });
 
-    await page.goto('/dashboard');
-    await waitForPageLoad(page);
-
-    // Look for progress indicator
-    const progressIndicator = page.locator('[class*="progress"], [class*="spinner"], :has-text("generating")');
-    // Progress indicator may or may not be visible
-  });
-
-  test('view generated documents', async ({ page }) => {
-    await mockAPIResponse(page, '**/applications/1/documents', [
-      {
-        id: 1,
-        doc_type: 'COVER_LETTER',
-        format: 'PDF',
-        content: 'Dear Hiring Manager...',
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: 2,
-        doc_type: 'CV',
-        format: 'PDF',
-        content: 'Professional Experience...',
-        created_at: new Date().toISOString(),
-      },
-    ]);
-
-    await page.goto('/applications/1');
-    await waitForPageLoad(page);
-
-    // Verify documents are displayed
-    const coverLetter = page.locator(':has-text("Cover Letter"), :has-text("Anschreiben")');
-    const cv = page.locator(':has-text("CV"), :has-text("Lebenslauf")');
-
-    const hasCoverLetter = await coverLetter.count() > 0;
-    const hasCV = await cv.count() > 0;
-
-    expect(hasCoverLetter || hasCV).toBeTruthy();
-  });
-
-  test('download generated document', async ({ page }) => {
-    await mockAPIResponse(page, '**/applications/1/documents', [
-      {
-        id: 1,
-        doc_type: 'COVER_LETTER',
-        format: 'PDF',
-        storage_path: '/path/to/cover_letter.pdf',
-        created_at: new Date().toISOString(),
-      },
-    ]);
-
-    await page.goto('/applications/1');
-    await waitForPageLoad(page);
-
-    // Find download button
-    const downloadButton = page.locator('a[download], button:has-text("Download"), button:has-text("Herunterladen")').first();
-
-    if (await downloadButton.count() > 0) {
-      // Set up download listener
-      const downloadPromise = page.waitForEvent('download', { timeout: 5000 }).catch(() => null);
-      await downloadButton.click();
-      // Download may or may not occur depending on mock setup
-    }
-  });
-
-  test('generate matching score', async ({ page }) => {
-    await mockAPIResponse(page, '**/applications/1/matching-score', {
-      overall_score: 78,
-      strengths: [
-        'Strong JavaScript experience',
-        'React expertise matches requirements',
-      ],
-      gaps: [
-        'Limited cloud experience',
-      ],
-      recommendations: [
-        'Highlight any AWS or GCP projects',
-        'Mention relevant certifications',
-      ],
-      story: 'You are a good match for this position with strong frontend skills.',
+    test.fixme('generation failure handling (TODO)', async ({ page }) => {
+        await expect(page).toHaveURL(/.*/);
     });
-
-    await page.goto('/applications/1');
-    await waitForPageLoad(page);
-
-    // Find matching score button
-    const matchingButton = page.locator('button:has-text("Matching"), button:has-text("Score"), button:has-text("Analyse")').first();
-
-    if (await matchingButton.count() > 0) {
-      await matchingButton.click();
-      await page.waitForTimeout(2000);
-
-      // Verify score is displayed
-      const scoreDisplay = page.locator(':has-text("78"), :has-text("78%")');
-      const strengthsDisplay = page.locator(':has-text("JavaScript")');
-
-      // Score or strengths should be visible
-    }
-  });
-
-  test('insufficient credits error', async ({ page }) => {
-    await mockAPIResponse(page, '**/users/me', {
-      id: 1,
-      email: 'test@example.com',
-      full_name: 'Test User',
-      credits: 0, // No credits
-    });
-
-    await page.route('**/applications/1/generate', (route) => {
-      route.fulfill({
-        status: 400,
-        body: JSON.stringify({
-          detail: 'Insufficient credits',
-        }),
-      });
-    });
-
-    await page.goto('/applications/1');
-    await waitForPageLoad(page);
-
-    const checkboxes = page.locator('input[type="checkbox"]');
-    if (await checkboxes.count() > 0) {
-      await checkboxes.first().check();
-    }
-
-    const generateButton = page.locator('button:has-text("Generate"), button:has-text("Generieren")').first();
-    if (await generateButton.count() > 0) {
-      await generateButton.click();
-      await page.waitForTimeout(1000);
-
-      // Error message should appear
-      const errorMessage = page.locator('[class*="error"], :has-text("credit"), :has-text("Kredit")');
-      // Error may or may not be displayed depending on implementation
-    }
-  });
-
-  test('generation failure handling', async ({ page }) => {
-    await page.route('**/applications/1/generate', (route) => {
-      route.fulfill({
-        status: 200,
-        body: JSON.stringify({
-          task_id: 'task-fail',
-          status: 'processing',
-        }),
-      });
-    });
-
-    await page.route('**/applications/1/generation-status/task-fail', (route) => {
-      route.fulfill({
-        status: 200,
-        body: JSON.stringify({
-          status: 'failed',
-          error: 'LLM service unavailable',
-        }),
-      });
-    });
-
-    await page.goto('/applications/1');
-    await waitForPageLoad(page);
-
-    const checkboxes = page.locator('input[type="checkbox"]');
-    if (await checkboxes.count() > 0) {
-      await checkboxes.first().check();
-    }
-
-    const generateButton = page.locator('button:has-text("Generate"), button:has-text("Generieren")').first();
-    if (await generateButton.count() > 0) {
-      await generateButton.click();
-      await page.waitForTimeout(3000);
-
-      // Error should be displayed
-    }
-  });
 });
