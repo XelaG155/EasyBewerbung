@@ -260,7 +260,7 @@ async def create_application(
         if user_for_update.credits <= 0:
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                detail="Not enough credits to start a generation",
+                detail="Nicht genug Credits, um die Generierung zu starten.",
             )
 
         user_for_update.credits -= 1
@@ -338,7 +338,7 @@ async def update_application(
         .first()
     )
     if not application:
-        raise HTTPException(status_code=404, detail="Application not found")
+        raise HTTPException(status_code=404, detail="Bewerbung nicht gefunden.")
 
     if payload.applied is not None:
         application.applied = payload.applied
@@ -373,7 +373,7 @@ async def attach_generated_documents(
         .first()
     )
     if not application:
-        raise HTTPException(status_code=404, detail="Application not found")
+        raise HTTPException(status_code=404, detail="Bewerbung nicht gefunden.")
 
     allowed_doc_types = get_allowed_generated_doc_types(db)
     for doc in payload.documents:
@@ -422,7 +422,7 @@ async def delete_generated_documents(
         .first()
     )
     if not application:
-        raise HTTPException(status_code=404, detail="Application not found")
+        raise HTTPException(status_code=404, detail="Bewerbung nicht gefunden.")
 
     # Queue Celery task for deletion
     delete_documents_task.delay(
@@ -574,7 +574,7 @@ async def get_application(
         .first()
     )
     if not application:
-        raise HTTPException(status_code=404, detail="Application not found")
+        raise HTTPException(status_code=404, detail="Bewerbung nicht gefunden.")
     return serialize_application(application, db)
 
 
@@ -593,7 +593,7 @@ async def delete_application(
         .first()
     )
     if not application:
-        raise HTTPException(status_code=404, detail="Application not found")
+        raise HTTPException(status_code=404, detail="Bewerbung nicht gefunden.")
 
     # Delete associated matching score tasks
     db.query(MatchingScoreTask).filter(MatchingScoreTask.application_id == application_id).delete()
@@ -631,7 +631,7 @@ async def get_matching_score(
         .first()
     )
     if not application:
-        raise HTTPException(status_code=404, detail="Application not found")
+        raise HTTPException(status_code=404, detail="Bewerbung nicht gefunden.")
 
     # Check if we already have a matching score
     existing_score = (
@@ -679,7 +679,7 @@ async def calculate_matching_score(
         .first()
     )
     if not application:
-        raise HTTPException(status_code=404, detail="Application not found")
+        raise HTTPException(status_code=404, detail="Bewerbung nicht gefunden.")
 
     # Check if score already exists and not recalculating
     if not recalculate:
@@ -704,7 +704,7 @@ async def calculate_matching_score(
         .first()
     )
     if not cv_doc or not cv_doc.content_text:
-        raise HTTPException(status_code=400, detail="No CV found with text content")
+        raise HTTPException(status_code=400, detail="Kein Lebenslauf mit Textinhalt gefunden.")
 
     # Create task
     task = MatchingScoreTask(
@@ -806,14 +806,17 @@ async def generate_documents(
         .first()
     )
     if not application:
-        raise HTTPException(status_code=404, detail="Application not found")
+        raise HTTPException(status_code=404, detail="Bewerbung nicht gefunden.")
 
     # Validate every requested doc_type against the active template catalog.
     # Without this guard the worker silently skips unknown types (tasks.py
     # `continue` branch) — the user pays nothing for them but also gets no
     # error response telling them their request was partially malformed.
     if not doc_types:
-        raise HTTPException(status_code=400, detail="doc_types must not be empty")
+        raise HTTPException(
+            status_code=400,
+            detail="Bitte mindestens einen Dokumenttyp auswaehlen.",
+        )
     templates = db.query(DocumentTemplate).filter(
         DocumentTemplate.doc_type.in_(doc_types),
         DocumentTemplate.is_active == True
@@ -845,7 +848,13 @@ async def generate_documents(
         .first()
     )
     if not cv_doc or not cv_doc.content_text:
-        raise HTTPException(status_code=400, detail="No CV found with text content")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Kein Lebenslauf mit Textinhalt gefunden. "
+                "Bitte zuerst Ihren CV im Bereich Dokumente hochladen einreichen."
+            ),
+        )
 
     # Atomic credit deduction with row-level lock to prevent the
     # double-spend race documented in CLAUDE-2026.04.md (Iteration 1
@@ -866,7 +875,10 @@ async def generate_documents(
     if user_locked.credits < total_cost:
         raise HTTPException(
             status_code=402,
-            detail=f"Insufficient credits. Need {total_cost}, have {user_locked.credits}",
+            detail=(
+                f"Nicht genug Credits. Benoetigt: {total_cost}, vorhanden: "
+                f"{user_locked.credits}. Bitte einen Admin um Aufstockung bitten."
+            ),
         )
     user_locked.credits -= total_cost
 
@@ -992,7 +1004,7 @@ async def download_job_description_pdf(
         .first()
     )
     if not application:
-        raise HTTPException(status_code=404, detail="Application not found")
+        raise HTTPException(status_code=404, detail="Bewerbung nicht gefunden.")
 
     # Get job offer details
     job_offer = None
@@ -1110,7 +1122,7 @@ async def list_generation_tasks(
         .first()
     )
     if not application:
-        raise HTTPException(status_code=404, detail="Application not found")
+        raise HTTPException(status_code=404, detail="Bewerbung nicht gefunden.")
 
     tasks = (
         db.query(GenerationTask)
