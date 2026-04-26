@@ -426,6 +426,26 @@ async def login(request: Request, user_data: UserLogin, db: Session = Depends(ge
     return TokenResponse(access_token=access_token, token_type="bearer", user=serialize_user(user))
 
 
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("30/minute")
+async def logout(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Revoke all currently outstanding JWTs for the calling user.
+
+    Bumps ``users.tokens_invalidated_after`` to "now". Subsequent requests
+    presenting any pre-logout token are rejected with 401 even though the
+    JWT itself has not expired. This is the server-side complement to the
+    client deleting its localStorage copy.
+    """
+    current_user.tokens_invalidated_after = datetime.now(timezone.utc)
+    db.commit()
+    record_activity(db, current_user, "logout", request)
+    return None
+
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user information."""

@@ -270,6 +270,10 @@ async def toggle_active(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user.is_active = payload.is_active
+    # Deactivating a user must invalidate their outstanding JWTs — otherwise
+    # the deactivated user keeps full access for up to 7 days.
+    if not user.is_active:
+        user.tokens_invalidated_after = datetime.now(timezone.utc)
     db.commit()
     record_activity(db, user, "unlock" if user.is_active else "lock", request=request)
     return await get_user_detail(user_id, request, db, admin)
@@ -292,7 +296,13 @@ async def toggle_admin(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    was_admin = bool(user.is_admin)
     user.is_admin = payload.is_admin
+    # Demoting an admin must invalidate any admin-level JWTs they hold.
+    # Promotion does not need revocation — the new privilege takes effect on
+    # the next request because get_current_admin_user reads is_admin from DB.
+    if was_admin and not user.is_admin:
+        user.tokens_invalidated_after = datetime.now(timezone.utc)
     db.commit()
     record_activity(db, user, "grant_admin" if user.is_admin else "revoke_admin", request=request)
     return await get_user_detail(user_id, request, db, admin)

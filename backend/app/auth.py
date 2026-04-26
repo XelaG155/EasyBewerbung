@@ -71,13 +71,19 @@ def get_password_hash(password: str) -> str:
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Create a JWT access token."""
+    """Create a JWT access token with explicit issued-at (iat).
+
+    The ``iat`` claim is checked against ``user.tokens_invalidated_after``
+    on decode so /logout, password change and admin demote can revoke
+    all outstanding tokens for a user without a server-side token store.
+    """
     to_encode = data.copy()
+    now = datetime.now(timezone.utc)
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = now + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
+        expire = now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire, "iat": now})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -131,6 +137,39 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
         )
+
+    # Reject tokens issued before the user's revocation timestamp.
+    # tokens_invalidated_after is bumped by /logout, password change,
+    # admin demote and admin deactivate. Legacy NULL values mean
+    # "no revocation set" and are treated as 0.
+    revocation_cutoff = getattr(user, "tokens_invalidated_after", None)
+    if revocation_cutoff is not None:
+        iat_raw = payload.get("iat")
+        if iat_raw is None:
+            # Pre-iat token issued by an older code version. Force re-login
+            # so the new contract is upheld.
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token revoked, please sign in again",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        try:
+            iat = datetime.fromtimestamp(int(iat_raw), tz=timezone.utc)
+        except (TypeError, ValueError, OverflowError):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token issued-at",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        cutoff = revocation_cutoff
+        if cutoff.tzinfo is None:
+            cutoff = cutoff.replace(tzinfo=timezone.utc)
+        if iat < cutoff:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token revoked, please sign in again",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
     return user
 
