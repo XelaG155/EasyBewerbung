@@ -53,6 +53,7 @@ services:
     container_name: easybewerbung-backend
     mem_limit: 512m
     environment:
+      ENVIRONMENT: ${ENVIRONMENT:-production}
       DATABASE_URL: postgresql://easybewerbung:${POSTGRES_PASSWORD:-localdev123}@db:5432/easybewerbung
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY}
@@ -80,6 +81,7 @@ services:
     # No container_name to allow scaling with replicas
     command: celery -A app.celery_app worker --loglevel=info --concurrency=2 -Q celery,matching,generation
     environment:
+      ENVIRONMENT: ${ENVIRONMENT:-production}
       DATABASE_URL: postgresql://easybewerbung:${POSTGRES_PASSWORD:-localdev123}@db:5432/easybewerbung
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY}

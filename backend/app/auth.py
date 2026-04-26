@@ -18,18 +18,33 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # Security configuration
+#
+# SECRET_KEY MUST be set explicitly outside development. The previous
+# behaviour ("generate a random key when ENVIRONMENT != production")
+# silently invalidated every user session on every container restart
+# because the bigvmcontrol auto-deploy pipeline did not set ENVIRONMENT
+# at all. We now fail fast unless ENVIRONMENT is one of the dev/test
+# whitelist.
+_DEV_ENVIRONMENTS = {"dev", "development", "test", "testing", "ci", "local"}
 _default_secret = "your-secret-key-change-this-in-production"
+
+_environment = (os.getenv("ENVIRONMENT") or "").strip().lower()
 SECRET_KEY = os.getenv("SECRET_KEY", _default_secret)
 
-if SECRET_KEY == _default_secret:
-    if os.getenv("ENVIRONMENT") == "production":
-        raise ValueError("SECRET_KEY must be set in production! Generate with: openssl rand -hex 32")
-    # Generate a random key for development to prevent using known default
-    SECRET_KEY = secrets.token_hex(32)
-    logger.warning(
-        "⚠️  SECRET_KEY not configured - generated ephemeral key. "
-        "Sessions will not persist across restarts. Set SECRET_KEY in .env file!"
-    )
+if SECRET_KEY == _default_secret or not SECRET_KEY:
+    if _environment in _DEV_ENVIRONMENTS:
+        SECRET_KEY = secrets.token_hex(32)
+        logger.warning(
+            "SECRET_KEY not configured (ENVIRONMENT=%s) — generated ephemeral key. "
+            "Sessions will not persist across restarts. Set SECRET_KEY in .env file.",
+            _environment or "<unset>",
+        )
+    else:
+        raise RuntimeError(
+            "SECRET_KEY must be set explicitly when ENVIRONMENT is not one of "
+            f"{sorted(_DEV_ENVIRONMENTS)}. Current ENVIRONMENT={_environment or '<unset>'!r}. "
+            "Generate one with: openssl rand -hex 32, then add SECRET_KEY=... to .env."
+        )
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
