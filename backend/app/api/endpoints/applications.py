@@ -12,7 +12,6 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session, joinedload
-from openai import OpenAI
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
@@ -55,69 +54,15 @@ def get_language_from_user(user: User, language_source: str) -> str:
         return getattr(user, "documentation_language", None) or DEFAULT_LANGUAGE
 
 
-def get_llm_client(provider: str, model: str):
-    """Get the appropriate LLM client based on the provider."""
-    if provider == "openai":
-        return OpenAI(api_key=os.getenv("OPENAI_API_KEY")), model
-    elif provider == "anthropic":
-        # Import anthropic client if needed
-        try:
-            import anthropic
-            return anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY")), model
-        except ImportError:
-            logging.warning("Anthropic client not installed, falling back to OpenAI")
-            return OpenAI(api_key=os.getenv("OPENAI_API_KEY")), "gpt-4"
-    elif provider == "google":
-        # Import google client if needed
-        try:
-            import google.generativeai as genai
-            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-            return genai, model
-        except ImportError:
-            logging.warning("Google GenAI client not installed, falling back to OpenAI")
-            return OpenAI(api_key=os.getenv("OPENAI_API_KEY")), "gpt-4"
-    else:
-        # Default to OpenAI
-        return OpenAI(api_key=os.getenv("OPENAI_API_KEY")), model
-
-
-def generate_with_llm(client, model: str, provider: str, prompt: str) -> str:
-    """Generate text using the specified LLM provider."""
-    if provider == "openai":
-        response = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return response.choices[0].message.content
-    elif provider == "anthropic":
-        response = client.messages.create(
-            model=model,
-            max_tokens=4096,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return response.content[0].text
-    elif provider == "google":
-        model_instance = client.GenerativeModel(model)
-        response = model_instance.generate_content(prompt)
-        return response.text
-    else:
-        # Default to OpenAI-style API
-        response = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return response.choices[0].message.content
-
-
-# NOTE: The legacy prompt builders `generate_document_prompt` and
-# `generate_document_prompt_from_template` used to live here but were never
-# imported from outside this module — the real generation path is in
-# `app/tasks.py::generate_document_prompt_from_template`, which uses
-# `_resolve_prompt_components` to pull role/task/instructions from
-# `document_prompts.json`. The duplicate copies carried a stale
-# `cv_text[:2000]` truncation and a bug where `reference_letters = cv_text`,
-# so they were removed on 2026-04-05 (commit after 6991e9c) to prevent
-# drift between two prompt-building code paths.
+# Two LLM helpers (``get_llm_client``, ``generate_with_llm``) used to live
+# here as a near-duplicate of the same functions in ``app.tasks``. The local
+# copies silently swallowed ImportError for the anthropic/google SDKs and
+# fell back to OpenAI ``gpt-4`` — so a template configured for Anthropic
+# would silently produce a wrong-provider, wrong-model document, with no
+# admin-visible error. They were never imported from outside this module
+# and were removed on 2026-04-26. The real path is
+# ``app.tasks.get_llm_client`` / ``app.tasks.generate_with_llm``, which
+# raise ``LlmProviderUnavailable`` on missing SDK or missing API key.
 
 
 class ApplicationCreate(BaseModel):
