@@ -1,0 +1,114 @@
+name: Test Suite
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-unit:
+    name: Backend unit + integration (pytest)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: easybewerbung
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: easybewerbung_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U easybewerbung -d easybewerbung_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      # SQLite is the default for the unit suite — fast, no DB needed.
+      # The integration suite gates on EASYBEWERBUNG_TEST_POSTGRES_URL and
+      # only runs when set (see backend/tests/integration/test_postgres_migration.py).
+      DATABASE_URL: sqlite:///./test.db
+      EASYBEWERBUNG_TEST_POSTGRES_URL: postgresql://easybewerbung:testpass@localhost:5432/easybewerbung_test
+      REDIS_URL: redis://localhost:6379/0
+      SECRET_KEY: ci-test-secret-key-32chars-minimum-please
+      ENVIRONMENT: test
+      # LLM keys intentionally absent — LlmProviderUnavailable tests rely on this.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system deps for weasyprint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 libffi-dev libmagic1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run unit + integration tests with coverage
+        run: |
+          pytest -v \
+            --cov=app \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            tests/
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: backend/coverage.xml
+          retention-days: 14
+
+  frontend-check:
+    name: Frontend lint + type check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      # ESLint is informational for now: the codebase has ~52 pre-existing errors
+      # (mostly react-hooks/set-state-in-effect and @typescript-eslint/no-explicit-any).
+      # Tighten to required once those are cleaned up in a dedicated PR — track
+      # P1 items in CLAUDE-2026.04.md.
+      - name: ESLint (non-blocking)
+        run: npm run lint
+        continue-on-error: true
