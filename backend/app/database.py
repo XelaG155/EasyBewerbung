@@ -13,7 +13,29 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL environment variable is required")
 
-engine = create_engine(DATABASE_URL)
+# SQLite in-memory cannot share state across threads, so we keep its tiny
+# default pool. For Postgres we tune pool_size / max_overflow / pool_pre_ping
+# to survive the production worker fleet (2 backend uvicorn × ~10 sessions
+# + 4 celery worker slots × peak ~5 sessions each); the default pool_size=5
+# was getting saturated under load and producing connection-timeout spikes.
+_is_sqlite = DATABASE_URL.startswith("sqlite")
+if _is_sqlite:
+    engine = create_engine(DATABASE_URL)
+else:
+    engine = create_engine(
+        DATABASE_URL,
+        # 10 long-lived connections per process, 20 burst overflow for spikes.
+        pool_size=10,
+        max_overflow=20,
+        # Recycle connections older than 30 minutes — Postgres idle-in-tx
+        # timeouts and PgBouncer in transaction-pooling mode both prefer
+        # short-lived connections.
+        pool_recycle=1800,
+        # Cheap SELECT 1 before each checkout: catches connections killed
+        # by Postgres restart, idle timeouts, or network blips so the worker
+        # doesn't surface a confusing "server closed the connection" 500.
+        pool_pre_ping=True,
+    )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
