@@ -43,7 +43,14 @@ jobs:
       DATABASE_URL: sqlite:///./test.db
       EASYBEWERBUNG_TEST_POSTGRES_URL: postgresql://easybewerbung:testpass@localhost:5432/easybewerbung_test
       REDIS_URL: redis://localhost:6379/0
-      SECRET_KEY: ci-test-secret-key-32chars-minimum-please
+      # ⚠️ THIS IS A PLACEHOLDER, NOT A REAL SECRET ⚠️
+      # The real production SECRET_KEY lives only in the host's .env file
+      # (see ~/EasyBewerbung/.env on the deploy box) and is NEVER committed.
+      # This literal value is used only when ENVIRONMENT=test (set below),
+      # which disables the production guard in app/auth.py. Tokens signed
+      # with this string would be rejected by the production process even
+      # if leaked, because production uses a different secret entirely.
+      SECRET_KEY: easybewerbung-ci-test-only-not-a-real-secret
       ENVIRONMENT: test
       # LLM keys intentionally absent — LlmProviderUnavailable tests rely on this.
 

@@ -60,12 +60,16 @@ class TestProductionBootstrap:
             )
 
     def test_production_with_explicit_secret_succeeds(self, monkeypatch):
+        # Synthetic test value — anything that is not the literal placeholder
+        # works. Length is unconstrained at the auth-layer; we just need a
+        # non-default value to verify the happy path.
+        explicit = "test-prod-fixture-not-a-real-secret"
         auth = _reload_auth(
             monkeypatch,
             environment="production",
-            secret="explicit-prod-key-32chars-minimum-please",
+            secret=explicit,
         )
-        assert auth.SECRET_KEY == "explicit-prod-key-32chars-minimum-please"
+        assert auth.SECRET_KEY == explicit
 
 
 class TestDevBootstrap:
@@ -79,9 +83,10 @@ class TestDevBootstrap:
         assert len(auth.SECRET_KEY) >= 32
 
     def test_dev_with_explicit_key_uses_it(self, monkeypatch):
+        explicit = "test-dev-fixture-not-a-real-secret"
         auth = _reload_auth(
             monkeypatch,
             environment="dev",
-            secret="my-explicit-dev-key-32chars-minimum",
+            secret=explicit,
         )
-        assert auth.SECRET_KEY == "my-explicit-dev-key-32chars-minimum"
+        assert auth.SECRET_KEY == explicit

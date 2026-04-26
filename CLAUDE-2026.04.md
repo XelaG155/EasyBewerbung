@@ -314,7 +314,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://easybewerbung:testpass@localhost:5432/easybewerbung_e2e
           REDIS_URL: redis://localhost:6379/0
-          SECRET_KEY: ci-e2e-secret-32chars-minimum-please
+          SECRET_KEY: easybewerbung-ci-e2e-only-not-a-real-secret
           OPENAI_API_KEY: sk-dummy
           CORS_ORIGINS: http://localhost:3001
           ENVIRONMENT: test
