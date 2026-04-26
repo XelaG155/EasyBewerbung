@@ -8,7 +8,7 @@ tatsaechlichen Datenfluss; sie ist keine Rechtsberatung. Konkrete Verantwortlich
 Daten werden zur Inbetriebnahme durch den Betreiber befuellt.
 """
 
-PRIVACY_POLICY_VERSION = "2026.04.26-honest"
+PRIVACY_POLICY_VERSION = "2026.04.26-honest-2"
 
 PRIVACY_POLICY_TEXT = """
 DATENSCHUTZERKLAERUNG — EasyBewerbung
@@ -115,15 +115,18 @@ in der Anwendung sichtbar.
 (b) Bewerbungen, generierte Dokumente, hochgeladene Lebenslaeufe:
     bis zur Loeschung des Kontos oder bis Sie den Datensatz manuell
     entfernen.
-(c) Aktivitaetsprotokoll mit IP-Adresse: 90 Tage rollierend (geplant
-    fuer den Pilotbetrieb; aktuell ohne automatischen Cleanup-Job —
-    der Loeschauftrag wird bis zur Pilot-Aufnahme automatisiert).
-(d) Backup-Kopien: solange der Pilotbetrieb noch nicht gestartet ist,
-    werden noch keine automatischen Datensicherungen mit Verschluesselung
-    im Ruhezustand erstellt. Vor Aufnahme echter Pilot-Nutzer wird ein
-    taegliches Backup mit AES-Verschluesselung eingerichtet; Backup-
-    Snapshots werden nach 30 Tagen ueberschrieben. Bis dahin erfolgt
-    eine manuelle Sicherung beim Deploy.
+(c) Aktivitaetsprotokoll mit IP-Adresse: aktuell unbegrenzt gespeichert.
+    Wir arbeiten an einem rollierenden 90-Tage-Cleanup; bis dahin
+    koennen Sie eine vorzeitige Loeschung ueber den in Abschnitt 11
+    genannten Kontakt anfordern.
+(d) Backup-Kopien: aktuell werden keine automatisierten Backups mit
+    Verschluesselung im Ruhezustand erstellt. Wir fuehren manuelle
+    Sicherungen vor jedem Deploy durch (entschluesselt im Ruhezustand;
+    Zugriff nur fuer den Betreiber). Vor Aufnahme echter Pilot-Nutzer
+    aktivieren wir ein taegliches AES-verschluesseltes Backup mit
+    30-Tage-Rotation; bis dieser Schritt im Status-Dokument als
+    aktiv markiert ist, sollten Sie KEINE besonders sensiblen
+    Personendaten in Ihren Lebenslauf aufnehmen.
 
 6. EMPFAENGER
 
