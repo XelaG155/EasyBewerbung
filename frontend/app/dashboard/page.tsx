@@ -79,7 +79,7 @@ const ensureOptionList = (userLanguageValues: (string | undefined | null)[]): La
 
 export default function DashboardPage() {
   const { user, loading: authLoading, logout, refreshUser } = useAuth();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
 
@@ -420,13 +420,16 @@ export default function DashboardPage() {
   };
 
   const handleDeleteApplication = async (id: number, jobTitle: string) => {
-    if (!confirm(`Are you sure you want to delete the application "${jobTitle}"? This will also delete all generated documents for this application.`)) return;
+    const tmpl = t("dashboard.deleteApplicationConfirm")
+      || `Wollen Sie die Bewerbung "{title}" wirklich loeschen? Alle dafuer generierten Dokumente werden ebenfalls entfernt.`;
+    const msg = tmpl.replace("{title}", jobTitle);
+    if (!confirm(msg)) return;
 
     try {
       await api.deleteApplication(id);
       await loadData();
     } catch (error: any) {
-      alert("Failed to delete application: " + error.message);
+      alert((t("dashboard.deleteApplicationFailed") || "Bewerbung konnte nicht geloescht werden") + ": " + error.message);
     }
   };
 
@@ -575,8 +578,10 @@ export default function DashboardPage() {
                     >
                       <title>
                         {generationProgress
-                          ? `Generating documents: ${generationProgress.completed} of ${generationProgress.total} completed`
-                          : "Generating documents..."}
+                          ? (t("dashboard.generatingProgress") || "Dokumente werden erstellt: {done} von {total}")
+                              .replace("{done}", String(generationProgress.completed))
+                              .replace("{total}", String(generationProgress.total))
+                          : (t("dashboard.generating") || "Dokumente werden erstellt...")}
                       </title>
                       <circle
                         className="opacity-25"
@@ -595,27 +600,32 @@ export default function DashboardPage() {
                   )}
                 </span>
                 <span className="px-2 sm:px-3 py-1 rounded bg-slate-800 text-xs sm:text-sm text-emerald-300 border border-emerald-700 whitespace-nowrap">
-                  Credits: {user.credits}
+                  {t("common.credits") || "Credits"}: {user.credits}
                 </span>
                 <button
                   type="button"
                   onClick={toggleTheme}
                   className="btn-base btn-secondary flex items-center gap-2 text-sm px-2 sm:px-3 py-1.5 flex-shrink-0"
                   aria-pressed={theme === "light"}
-                  title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+                  aria-label={theme === "light"
+                    ? (t("common.switchToDarkMode") || "Zu Dunkelmodus wechseln")
+                    : (t("common.switchToLightMode") || "Zu Hellmodus wechseln")}
+                  title={theme === "light"
+                    ? (t("common.switchToDarkMode") || "Zu Dunkelmodus wechseln")
+                    : (t("common.switchToLightMode") || "Zu Hellmodus wechseln")}
                 >
                   <span aria-hidden>{theme === "light" ? "🌙" : "☀️"}</span>
                 </button>
                 {user.is_admin && (
                   <Button onClick={() => router.push("/admin")} variant="outline" className="hidden sm:inline-flex">
-                    Admin
+                    {t("common.admin") || "Admin"}
                   </Button>
                 )}
                 <Button onClick={() => router.push("/settings")} variant="outline" className="hidden sm:inline-flex">
-                  Settings
+                  {t("common.settings") || "Einstellungen"}
                 </Button>
                 <Button onClick={handleLogout} variant="outline" className="hidden sm:inline-flex">
-                  Log Out
+                  {t("common.logout") || "Abmelden"}
                 </Button>
               </div>
             </div>
@@ -625,31 +635,30 @@ export default function DashboardPage() {
         <main className="container mx-auto px-4 sm:px-6 py-8 space-y-8 overflow-x-hidden">
           {/* Upload Section */}
           <section>
-            <h2 className="text-2xl font-bold mb-4">Upload Documents</h2>
+            <h2 className="text-2xl font-bold mb-4">{t("dashboard.uploadDocuments") || "Dokumente hochladen"}</h2>
             <Card>
               <div className="space-y-4">
                 <div>
                   <label htmlFor="doc-type" className="block text-sm font-medium input-label mb-2">
-                    Document Type
+                    {t("dashboard.documentType") || "Dokumenttyp"}
                   </label>
                   <select
                     id="doc-type"
                     value={docType}
                     onChange={(e) => setDocType(e.target.value)}
                     className="input-base"
-                    aria-label="Select document type"
                   >
-                    <option value="CV">CV / Resume</option>
-                    <option value="REFERENCE">Reference Letter</option>
-                    <option value="DIPLOMA">Diploma / Certificate</option>
-                    <option value="COVER_LETTER">Cover Letter</option>
-                    <option value="OTHER">Other</option>
+                    <option value="CV">{t("dashboard.docTypeCV") || "Lebenslauf"}</option>
+                    <option value="REFERENCE">{t("dashboard.docTypeReference") || "Referenzschreiben"}</option>
+                    <option value="DIPLOMA">{t("dashboard.docTypeDiploma") || "Diplom / Zeugnis"}</option>
+                    <option value="COVER_LETTER">{t("dashboard.docTypeCoverLetter") || "Anschreiben"}</option>
+                    <option value="OTHER">{t("dashboard.docTypeOther") || "Sonstiges"}</option>
                   </select>
                 </div>
 
                 <div>
                   <label htmlFor="file-input" className="block text-sm font-medium input-label mb-2">
-                    Select File (PDF, DOC, DOCX, TXT - Max 25MB)
+                    {t("dashboard.selectFile") || "Datei auswaehlen (PDF, DOC, DOCX, TXT — max. 25 MB)"}
                   </label>
                   <input
                     id="file-input"
@@ -657,7 +666,6 @@ export default function DashboardPage() {
                     onChange={handleFileChange}
                     accept=".pdf,.doc,.docx,.txt"
                     className="block w-full text-muted file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 file:cursor-pointer"
-                    aria-label="Upload document file"
                   />
                 </div>
 
@@ -683,11 +691,11 @@ export default function DashboardPage() {
 
           {/* Documents List */}
           <section>
-            <h2 className="text-2xl font-bold mb-4">Your Documents</h2>
+            <h2 className="text-2xl font-bold mb-4">{t("dashboard.yourDocuments") || "Ihre Dokumente"}</h2>
             {documents.length === 0 ? (
               <Card>
                 <p className="text-muted text-center py-8">
-                  No documents uploaded yet. Upload your CV to get started!
+                  {t("dashboard.noDocuments") || "Noch keine Dokumente hochgeladen. Laden Sie Ihren Lebenslauf hoch, um zu starten."}
                 </p>
               </Card>
             ) : (
@@ -700,7 +708,7 @@ export default function DashboardPage() {
                         <p className="text-sm text-muted">{doc.doc_type}</p>
                         {doc.has_text && (
                           <p className="text-xs text-emerald-400 mt-1">
-                            ✓ Text extracted
+                            {t("dashboard.textExtracted") || "✓ Text extrahiert"}
                           </p>
                         )}
                         <p className="text-xs text-muted mt-1">
@@ -710,9 +718,12 @@ export default function DashboardPage() {
                       <button
                         onClick={() => handleDeleteDocument(doc.id)}
                         className="text-red-400 hover:text-red-300 text-sm"
-                        aria-label={`Delete document ${doc.filename}`}
+                        aria-label={
+                          (t("dashboard.deleteDocumentAria") || "Dokument {name} loeschen")
+                            .replace("{name}", doc.filename)
+                        }
                       >
-                        Delete
+                        {t("common.delete") || "Loeschen"}
                       </button>
                     </div>
                   </Card>
@@ -724,8 +735,10 @@ export default function DashboardPage() {
           {/* Spontaneous Applications */}
           <section>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-2xl font-bold">Spontaneous Outreach</h2>
-              <span className="text-sm text-muted">Apply proactively without a job posting</span>
+              <h2 className="text-2xl font-bold">{t("dashboard.spontaneousOutreach") || "Spontane Bewerbung"}</h2>
+              <span className="text-sm text-muted">
+                {t("dashboard.spontaneousSubtitle") || "Bewerben Sie sich proaktiv ohne Stelleninserat"}
+              </span>
             </div>
             <Card>
               <form onSubmit={handleCreateSpontaneous} className="space-y-4">
@@ -749,9 +762,10 @@ export default function DashboardPage() {
 
                 <div>
                   <label className="block text-sm font-medium input-label mb-2">
-                    Context & value proposition
+                    {t("dashboard.contextLabel") || "Kontext und Mehrwert"}
                     <span className="block text-xs text-muted">
-                      What makes you relevant? Mention business unit, pain points you solve, or projects to pitch.
+                      {t("dashboard.contextHint")
+                        || "Was macht Sie passend? Nennen Sie Abteilung, Probleme die Sie loesen, oder Projekte, die Sie pitchen wollen."}
                     </span>
                   </label>
                   <textarea
@@ -759,7 +773,10 @@ export default function DashboardPage() {
                     onChange={(e) => setOpportunityContext(e.target.value)}
                     className="input-base"
                     rows={4}
-                    placeholder="I can help the data platform team modernize analytics pipelines and lead stakeholder workshops."
+                    placeholder={
+                      t("dashboard.contextPlaceholder")
+                      || "Ich kann das Daten-Team beim Modernisieren der Analytics-Pipelines unterstuetzen und Stakeholder-Workshops leiten."
+                    }
                   />
                 </div>
 
@@ -785,7 +802,7 @@ export default function DashboardPage() {
                   </label>
 
                   <label className="text-sm input-label">
-                    <span className="block mb-2">Language for generated documents</span>
+                    <span className="block mb-2">{t("dashboard.languageDocs") || "Sprache der generierten Dokumente"}</span>
                     <select
                       value={documentationLanguage}
                       onChange={(e) => setDocumentationLanguage(e.target.value)}
@@ -800,7 +817,7 @@ export default function DashboardPage() {
                   </label>
 
                   <label className="text-sm input-label">
-                    <span className="block mb-2">Language for company profile</span>
+                    <span className="block mb-2">{t("dashboard.languageProfile") || "Sprache des Firmenportraits"}</span>
                     <select
                       value={companyProfileLanguage}
                       onChange={(e) => setCompanyProfileLanguage(e.target.value)}
@@ -828,7 +845,7 @@ export default function DashboardPage() {
 
           {/* Job Analysis */}
           <section>
-            <h2 className="text-2xl font-bold mb-4">Add Job Offer</h2>
+            <h2 className="text-2xl font-bold mb-4">{t("dashboard.addJobOffer") || "Stellenangebot hinzufuegen"}</h2>
             <Card>
               <form onSubmit={handleAnalyzeJob} className="space-y-4">
                 <Input
@@ -855,7 +872,7 @@ export default function DashboardPage() {
                   </label>
 
                   <label className="text-sm input-label">
-                    <span className="block mb-2">Language for generated documents</span>
+                    <span className="block mb-2">{t("dashboard.languageDocs") || "Sprache der generierten Dokumente"}</span>
                     <select
                       value={documentationLanguage}
                       onChange={(e) => setDocumentationLanguage(e.target.value)}
@@ -870,7 +887,7 @@ export default function DashboardPage() {
                   </label>
 
                   <label className="text-sm input-label">
-                    <span className="block mb-2">Language for company profile</span>
+                    <span className="block mb-2">{t("dashboard.languageProfile") || "Sprache des Firmenportraits"}</span>
                     <select
                       value={companyProfileLanguage}
                       onChange={(e) => setCompanyProfileLanguage(e.target.value)}
@@ -903,10 +920,10 @@ export default function DashboardPage() {
           {/* Applications */}
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">Your Applications</h2>
+              <h2 className="text-2xl font-bold">{t("dashboard.yourApplications") || "Ihre Bewerbungen"}</h2>
               {applications.length > 0 && (
                 <Button onClick={handleDownloadRAV} variant="outline">
-                  🇨🇭 Download RAV Report
+                  {t("dashboard.downloadRAV") || "🇨🇭 RAV-Report herunterladen"}
                 </Button>
               )}
             </div>
@@ -914,7 +931,7 @@ export default function DashboardPage() {
             {applications.length === 0 ? (
               <Card>
                 <p className="text-muted text-center py-8">
-                  No applications yet. Add a job offer to get started!
+                  {t("dashboard.noApplications") || "Noch keine Bewerbungen. Fuegen Sie ein Stellenangebot hinzu, um zu starten."}
                 </p>
               </Card>
             ) : (
@@ -924,32 +941,32 @@ export default function DashboardPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium input-label mb-2">
-                        Filter by Status
+                        {t("dashboard.filterByStatus") || "Nach Status filtern"}
                       </label>
                       <select
                         value={filterApplied}
                         onChange={(e) => setFilterApplied(e.target.value)}
                         className="input-base"
                       >
-                        <option value="all">All Applications</option>
-                        <option value="applied">Applied Only</option>
-                        <option value="not-applied">Not Applied</option>
+                        <option value="all">{t("dashboard.allApplications") || "Alle Bewerbungen"}</option>
+                        <option value="applied">{t("dashboard.appliedOnly") || "Nur beworben"}</option>
+                        <option value="not-applied">{t("dashboard.notAppliedOnly") || "Nicht beworben"}</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium input-label mb-2">
-                        Filter by Month
+                        {t("dashboard.filterByMonth") || "Nach Monat filtern"}
                       </label>
                       <select
                         value={filterMonth}
                         onChange={(e) => setFilterMonth(e.target.value)}
                         className="input-base"
                       >
-                        <option value="all">All Months</option>
+                        <option value="all">{t("dashboard.allMonths") || "Alle Monate"}</option>
                         {availableMonths.map((month) => (
                           <option key={month} value={month}>
-                            {new Date(month + "-01").toLocaleDateString(undefined, {
+                            {new Date(month + "-01").toLocaleDateString(locale, {
                               year: "numeric",
                               month: "long",
                             })}
@@ -960,15 +977,15 @@ export default function DashboardPage() {
 
                     <div>
                       <label className="block text-sm font-medium input-label mb-2">
-                        Sort by Date
+                        {t("dashboard.sortByDate") || "Nach Datum sortieren"}
                       </label>
                       <select
                         value={sortOrder}
                         onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
                         className="input-base"
                       >
-                        <option value="desc">Newest First</option>
-                        <option value="asc">Oldest First</option>
+                        <option value="desc">{t("dashboard.newestFirst") || "Neueste zuerst"}</option>
+                        <option value="asc">{t("dashboard.oldestFirst") || "Aelteste zuerst"}</option>
                       </select>
                     </div>
                   </div>
@@ -977,7 +994,7 @@ export default function DashboardPage() {
                 {filteredAndSortedApplications.length === 0 ? (
                   <Card>
                     <p className="text-muted text-center py-8">
-                      No applications match your filters.
+                      {t("dashboard.noFilterMatch") || "Keine Bewerbungen entsprechen Ihren Filtern."}
                     </p>
                   </Card>
                 ) : (
@@ -991,7 +1008,9 @@ export default function DashboardPage() {
                             <button
                               onClick={() => toggleJobExpanded(app.id)}
                               className="text-muted hover:text-foreground transition-colors mt-1 flex-shrink-0"
-                              aria-label={expandedJobs.includes(app.id) ? "Collapse details" : "Expand details"}
+                              aria-label={expandedJobs.includes(app.id)
+                                ? (t("dashboard.collapseDetails") || "Details einklappen")
+                                : (t("dashboard.expandDetails") || "Details ausklappen")}
                               aria-expanded={expandedJobs.includes(app.id)}
                             >
                               <svg
@@ -1018,17 +1037,17 @@ export default function DashboardPage() {
                           <div className="flex gap-2 flex-wrap">
                             {app.is_spontaneous && (
                               <span className="inline-block px-2 py-1 text-xs rounded bg-amber-900/50 text-amber-200 border border-amber-700">
-                                Spontaneous outreach
+                                {t("dashboard.spontaneousBadge") || "Spontanbewerbung"}
                               </span>
                             )}
                             {app.application_type === "internship" && (
                               <span className="inline-block px-2 py-1 text-xs rounded bg-purple-900/50 text-purple-200 border border-purple-700">
-                                Internship (Praktikum)
+                                {t("dashboard.internshipBadge") || "Praktikum"}
                               </span>
                             )}
                             {app.application_type === "apprenticeship" && (
                               <span className="inline-block px-2 py-1 text-xs rounded bg-blue-900/50 text-blue-200 border border-blue-700">
-                                Apprenticeship (Lehrstelle)
+                                {t("dashboard.apprenticeshipBadge") || "Lehrstelle"}
                               </span>
                             )}
                           </div>
@@ -1039,7 +1058,7 @@ export default function DashboardPage() {
                               rel="noopener noreferrer"
                               className="text-sm text-indigo-400 hover:text-indigo-300 break-all block"
                             >
-                              View Job Posting →
+                              {t("dashboard.viewJobPosting") || "Stelleninserat ansehen"} →
                             </a>
                           )}
 
@@ -1095,7 +1114,9 @@ export default function DashboardPage() {
                             : "chip"
                             }`}
                         >
-                          {app.applied ? "✓ Applied" : t("dashboard.notApplied")}
+                          {app.applied
+                            ? `✓ ${t("dashboard.applied") || "Beworben"}`
+                            : (t("dashboard.notApplied") || "Nicht beworben")}
                         </span>
 
                         {app.result && (
@@ -1106,7 +1127,8 @@ export default function DashboardPage() {
 
                         {app.created_at && (
                           <span className="text-muted">
-                            Added {new Date(app.created_at).toLocaleString(undefined, {
+                            {t("dashboard.addedOn") || "Hinzugefuegt"}{" "}
+                            {new Date(app.created_at).toLocaleString(locale, {
                               year: "numeric",
                               month: "2-digit",
                               day: "2-digit",
@@ -1127,7 +1149,7 @@ export default function DashboardPage() {
                           }}
                           className="text-sm px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white"
                         >
-                          View Details →
+                          {t("dashboard.viewDetails") || "Details ansehen"} →
                         </button>
 
                         {!app.applied && (
@@ -1135,7 +1157,7 @@ export default function DashboardPage() {
                             onClick={() => handleUpdateApplicationStatus(app.id, true)}
                             className="text-sm px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white"
                           >
-                            Mark as Applied
+                            {t("dashboard.markAsApplied") || "Als beworben markieren"}
                           </button>
                         )}
 
@@ -1143,7 +1165,7 @@ export default function DashboardPage() {
                           onClick={() => openStatusModal(app.id, app.result ?? null)}
                           className="text-sm px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white"
                         >
-                          Update Status
+                          {t("dashboard.updateStatus") || "Status aktualisieren"}
                         </button>
 
                         {app.job_offer_url && (
@@ -1152,26 +1174,26 @@ export default function DashboardPage() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-sm px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white inline-block"
-                            title="View original job posting"
+                            title={t("dashboard.viewOriginalPosting") || "Original-Inserat ansehen"}
                           >
-                            🔗 View Original Posting
+                            🔗 {t("dashboard.viewOriginalPosting") || "Original-Inserat ansehen"}
                           </a>
                         )}
                         {app.job_offer_id && (
                           <button
                             onClick={() => handleDownloadOriginalJobPDF(app.job_offer_id!, app.job_title, app.company)}
                             className="text-sm px-3 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white inline-block"
-                            title="Download original job posting PDF"
+                            title={t("dashboard.downloadJobPdfTitle") || "Original-Stelleninserat als PDF herunterladen"}
                           >
-                            📄 Download Job PDF
+                            📄 {t("dashboard.downloadJobPdf") || "Stelleninserat (PDF)"}
                           </button>
                         )}
                         <button
                           onClick={() => handleDeleteApplication(app.id, app.job_title)}
                           className="text-sm px-3 py-1 rounded bg-red-700 hover:bg-red-600 text-white"
-                          title="Delete this application"
+                          title={t("dashboard.deleteThisApplication") || "Diese Bewerbung loeschen"}
                         >
-                          🗑️ Delete
+                          🗑️ {t("common.delete") || "Loeschen"}
                         </button>
                       </div>
                     </div>
@@ -1194,14 +1216,14 @@ export default function DashboardPage() {
               label={t("dashboard.newStatus")}
               value={newStatus}
               onChange={setNewStatus}
-              placeholder="e.g. Interview, Rejected, Offer"
+              placeholder={t("dashboard.statusPlaceholder") || "z.B. Interview, Abgesagt, Angebot"}
             />
             <div className="flex justify-end gap-2 mt-4">
               <Button variant="outline" onClick={() => setStatusModalOpen(false)}>
-                Cancel
+                {t("common.cancel") || "Abbrechen"}
               </Button>
               <Button variant="primary" onClick={submitStatusUpdate}>
-                Update Status
+                {t("dashboard.updateStatus") || "Status aktualisieren"}
               </Button>
             </div>
           </div>
