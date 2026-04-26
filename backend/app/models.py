@@ -138,10 +138,16 @@ class GenerationTask(Base):
     id = Column(Integer, primary_key=True, index=True)
     application_id = Column(Integer, ForeignKey("applications.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    status = Column(String, nullable=False, default="pending")  # pending, processing, completed, failed
+    # Status values: pending, processing, completed, partial_failure, failed
+    status = Column(String, nullable=False, default="pending")
     progress = Column(Integer, nullable=False, default=0)  # 0-100
     total_docs = Column(Integer, nullable=False, default=0)
     completed_docs = Column(Integer, nullable=False, default=0)
+    failed_docs = Column(Integer, nullable=False, default=0)
+    # Credits deducted upfront when the task was queued. Refunded
+    # proportionally for any failed_docs when the task settles.
+    credits_held = Column(Integer, nullable=False, default=0)
+    credits_refunded = Column(Integer, nullable=False, default=0)
     error_message = Column(Text, nullable=True)  # Error details if failed
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
