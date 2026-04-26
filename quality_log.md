@@ -132,6 +132,29 @@ Adressiert: alle DA-P0 sowie alle UX/UI- und QA-P1 aus Iteration 3.
 
 **Tests-Stand:** 180 passed, 5 skipped (vorher 159). Coverage 59% (vorher 56%). Coverage-Gate bei 55%.
 
+### Iteration 5 — 2026-04-26 (commits c99f143..7209e25, 4 Commits)
+
+Adressiert: alle in Iteration 4 gefundenen Restpunkte.
+
+**QA:**
+- ✅ ESLint blocking mit Warning-Baseline ceiling 95 (gegen 89 aktuell). 0 errors.
+- ✅ Coverage-Gate-Ratchet 55 → 58.
+- ✅ admin.py negative-balance Error-Message auf Deutsch.
+- ✅ 3 neue Tests fuer GET /documents/catalog.
+
+**Testing:**
+- ✅ Vacuous-Bodies aus 3 fixme-Specs komplett ENTFERNT (1026 Zeilen Code geloescht, durch ehrliche `test.fixme()`-Shells ersetzt mit TODO-Kommentar zu `data-testid`-Hooks).
+
+**UX/UI:**
+- ✅ Credits-Chip auf `.chip` + CSS-vars (kein dark-mode-only).
+- ✅ Application-Badges (Spontanbewerbung / Praktikum / Lehrstelle) auf `.chip`.
+- ✅ Status-Update- und Original-Inserat-Buttons auf `btn-base btn-secondary` / `btn-base btn-primary`.
+- ✅ `de-CH.json` letzte englische Zeile (`downloadPdfFailed`) übersetzt.
+- ✅ Status-Update Modal mit `<datalist>` (6 Schweizer Status-Vorschlaege) + `aria-describedby`-Hint.
+- ✅ loadData()-Error jetzt sichtbar (Action-Banner mit Reload-Hinweis statt silent console.error).
+
+**Tests-Stand:** 183 passed, 5 skipped (vorher 180). Coverage 59% bei Gate 58.
+
 
 
 
