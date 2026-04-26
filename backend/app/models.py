@@ -20,6 +20,11 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     last_login_at = Column(DateTime, nullable=True)
     password_changed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    # JWTs issued before this timestamp are rejected at decode time.
+    # Bumped on /logout and on admin-side privilege changes (demote, deactivate)
+    # so revoked sessions cannot be replayed for the remainder of the 7-day
+    # token lifetime. Also bumped via password change as a defence-in-depth.
+    tokens_invalidated_after = Column(DateTime, nullable=True)
     privacy_policy_accepted_at = Column(DateTime, nullable=True)
 
     # Account security fields
