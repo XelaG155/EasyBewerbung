@@ -11,6 +11,7 @@
     "save": "Speichern",
     "cancel": "Abbrechen",
     "delete": "Löschen",
+    "deleting": "Wird gelöscht…",
     "credits": "Credits",
     "settings": "Einstellungen",
     "backToDashboard": "Zurück zum Dashboard",
@@ -166,7 +167,13 @@
     "downloadJobPdf": "Stelleninserat (PDF)",
     "downloadJobPdfTitle": "Original-Stelleninserat als PDF herunterladen",
     "generating": "Dokumente werden erstellt…",
-    "generatingProgress": "Dokumente werden erstellt: {done} von {total}"
+    "generatingProgress": "Dokumente werden erstellt: {done} von {total}",
+    "confirmDeleteApplicationTitle": "Bewerbung löschen?",
+    "confirmDeleteApplicationLead": "Sie sind dabei, die Bewerbung «{title}» dauerhaft zu löschen.",
+    "confirmDeleteApplicationConsequence": "Alle dafür generierten Dokumente werden ebenfalls entfernt. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "confirmDeleteDocumentTitle": "Dokument löschen?",
+    "confirmDeleteDocumentLead": "Sie sind dabei, das Dokument «{name}» dauerhaft zu löschen.",
+    "confirmDeleteDocumentConsequence": "Diese Aktion kann nicht rückgängig gemacht werden."
   },
   "settings": {
     "title": "Einstellungen",

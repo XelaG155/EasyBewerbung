@@ -11,6 +11,7 @@
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
+    "deleting": "Deleting…",
     "credits": "Credits",
     "settings": "Settings",
     "backToDashboard": "Back to Dashboard",
@@ -166,7 +167,13 @@
     "downloadJobPdf": "Job posting (PDF)",
     "downloadJobPdfTitle": "Download original job posting PDF",
     "generating": "Generating documents…",
-    "generatingProgress": "Generating documents: {done} of {total}"
+    "generatingProgress": "Generating documents: {done} of {total}",
+    "confirmDeleteApplicationTitle": "Delete application?",
+    "confirmDeleteApplicationLead": "You are about to permanently delete the application \"{title}\".",
+    "confirmDeleteApplicationConsequence": "All documents generated for it will also be removed. This action cannot be undone.",
+    "confirmDeleteDocumentTitle": "Delete document?",
+    "confirmDeleteDocumentLead": "You are about to permanently delete the document \"{name}\".",
+    "confirmDeleteDocumentConsequence": "This action cannot be undone."
   },
   "settings": {
     "title": "Settings",

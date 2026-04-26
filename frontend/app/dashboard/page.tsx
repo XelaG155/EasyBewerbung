@@ -7,6 +7,7 @@ import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Modal } from "@/components/Modal";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/i18n-context";
 import { useTheme } from "@/lib/theme-context";
@@ -123,6 +124,13 @@ export default function DashboardPage() {
 
   // Expanded job details tracking
   const [expandedJobs, setExpandedJobs] = useState<number[]>([]);
+
+  // Destructive-action confirmation dialogs (replaces window.confirm()).
+  type PendingDelete =
+    | { kind: "document"; id: number; filename: string }
+    | { kind: "application"; id: number; jobTitle: string };
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const [confirmProcessing, setConfirmProcessing] = useState(false);
 
   const toggleJobExpanded = (appId: number) => {
     setExpandedJobs(prev => {
@@ -408,28 +416,43 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDeleteDocument = async (id: number) => {
-    if (!confirm(t("dashboard.deleteConfirm"))) return;
-
-    try {
-      await api.deleteDocument(id);
-      await loadData();
-    } catch (error: any) {
-      alert(t("dashboard.deleteFailed") + ": " + error.message);
-    }
+  const requestDeleteDocument = (id: number, filename: string) => {
+    setPendingDelete({ kind: "document", id, filename });
   };
 
-  const handleDeleteApplication = async (id: number, jobTitle: string) => {
-    const tmpl = t("dashboard.deleteApplicationConfirm")
-      || `Wollen Sie die Bewerbung "{title}" wirklich loeschen? Alle dafuer generierten Dokumente werden ebenfalls entfernt.`;
-    const msg = tmpl.replace("{title}", jobTitle);
-    if (!confirm(msg)) return;
+  const requestDeleteApplication = (id: number, jobTitle: string) => {
+    setPendingDelete({ kind: "application", id, jobTitle });
+  };
 
+  const cancelPendingDelete = () => setPendingDelete(null);
+
+  const performPendingDelete = async () => {
+    if (!pendingDelete) return;
+    setConfirmProcessing(true);
     try {
-      await api.deleteApplication(id);
+      if (pendingDelete.kind === "document") {
+        await api.deleteDocument(pendingDelete.id);
+      } else {
+        await api.deleteApplication(pendingDelete.id);
+      }
       await loadData();
+      setPendingDelete(null);
     } catch (error: any) {
-      alert((t("dashboard.deleteApplicationFailed") || "Bewerbung konnte nicht geloescht werden") + ": " + error.message);
+      const fallback =
+        pendingDelete.kind === "document"
+          ? (t("dashboard.deleteFailed") || "Dokument konnte nicht geloescht werden")
+          : (t("dashboard.deleteApplicationFailed") || "Bewerbung konnte nicht geloescht werden");
+      // Surface the failure to the existing error region instead of alert().
+      // We reuse uploadError so the user sees it in the upload section header
+      // for document deletes, and analysisError for application deletes.
+      if (pendingDelete.kind === "document") {
+        setUploadError(`${fallback}: ${error.message}`);
+      } else {
+        setAnalysisError(`${fallback}: ${error.message}`);
+      }
+      setPendingDelete(null);
+    } finally {
+      setConfirmProcessing(false);
     }
   };
 
@@ -716,7 +739,8 @@ export default function DashboardPage() {
                         </p>
                       </div>
                       <button
-                        onClick={() => handleDeleteDocument(doc.id)}
+                        type="button"
+                        onClick={() => requestDeleteDocument(doc.id, doc.filename)}
                         className="text-red-400 hover:text-red-300 text-sm"
                         aria-label={
                           (t("dashboard.deleteDocumentAria") || "Dokument {name} loeschen")
@@ -1189,7 +1213,8 @@ export default function DashboardPage() {
                           </button>
                         )}
                         <button
-                          onClick={() => handleDeleteApplication(app.id, app.job_title)}
+                          type="button"
+                          onClick={() => requestDeleteApplication(app.id, app.job_title)}
                           className="text-sm px-3 py-1 rounded bg-red-700 hover:bg-red-600 text-white"
                           title={t("dashboard.deleteThisApplication") || "Diese Bewerbung loeschen"}
                         >
@@ -1228,6 +1253,52 @@ export default function DashboardPage() {
             </div>
           </div>
         </Modal>
+
+        <ConfirmDialog
+          isOpen={!!pendingDelete}
+          title={
+            pendingDelete?.kind === "application"
+              ? (t("dashboard.confirmDeleteApplicationTitle") || "Bewerbung loeschen?")
+              : (t("dashboard.confirmDeleteDocumentTitle") || "Dokument loeschen?")
+          }
+          description={
+            pendingDelete?.kind === "application" ? (
+              <>
+                <p className="font-medium mb-2">
+                  {(t("dashboard.confirmDeleteApplicationLead")
+                    || "Sie sind dabei, die Bewerbung «{title}» dauerhaft zu loeschen.")
+                    .replace("{title}", pendingDelete?.jobTitle ?? "")}
+                </p>
+                <p className="text-muted">
+                  {t("dashboard.confirmDeleteApplicationConsequence")
+                    || "Alle dafuer generierten Dokumente werden ebenfalls entfernt. Diese Aktion kann nicht rueckgaengig gemacht werden."}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-medium mb-2">
+                  {(t("dashboard.confirmDeleteDocumentLead")
+                    || "Sie sind dabei, das Dokument «{name}» dauerhaft zu loeschen.")
+                    .replace("{name}", pendingDelete?.kind === "document" ? pendingDelete.filename : "")}
+                </p>
+                <p className="text-muted">
+                  {t("dashboard.confirmDeleteDocumentConsequence")
+                    || "Diese Aktion kann nicht rueckgaengig gemacht werden."}
+                </p>
+              </>
+            )
+          }
+          confirmLabel={
+            confirmProcessing
+              ? (t("common.deleting") || "Wird geloescht…")
+              : (t("common.delete") || "Loeschen")
+          }
+          cancelLabel={t("common.cancel") || "Abbrechen"}
+          variant="danger"
+          isProcessing={confirmProcessing}
+          onConfirm={performPendingDelete}
+          onCancel={cancelPendingDelete}
+        />
       </div>
     </ErrorBoundary>
   );
