@@ -480,14 +480,15 @@ export default function DashboardPage() {
         pendingDelete.kind === "document"
           ? (t("dashboard.deleteFailed") || "Dokument konnte nicht geloescht werden")
           : (t("dashboard.deleteApplicationFailed") || "Bewerbung konnte nicht geloescht werden");
-      // Surface the failure to the existing error region instead of alert().
-      // We reuse uploadError so the user sees it in the upload section header
-      // for document deletes, and analysisError for application deletes.
-      if (pendingDelete.kind === "document") {
-        setUploadError(`${fallback}: ${error.message}`);
-      } else {
-        setAnalysisError(`${fallback}: ${error.message}`);
-      }
+      // Surface the failure via the central action banner (its own
+      // role="alert" region) instead of polluting the upload/analysis
+      // error states with cross-cut delete errors. Closes the
+      // "stale text leaks across error sources" finding from the
+      // Iteration-5 UX review.
+      setActionBanner({
+        kind: "error",
+        message: `${fallback}: ${error.message}`,
+      });
       setPendingDelete(null);
     } finally {
       setConfirmProcessing(false);
@@ -1288,7 +1289,7 @@ export default function DashboardPage() {
                             sessionStorage.setItem('dashboardScrollPosition', window.scrollY.toString());
                             router.push(`/applications/${app.id}`);
                           }}
-                          className="text-sm px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white"
+                          className="btn-base btn-primary text-sm px-3 py-1"
                         >
                           {t("dashboard.viewDetails") || "Details ansehen"} →
                         </button>
@@ -1296,7 +1297,7 @@ export default function DashboardPage() {
                         {!app.applied && (
                           <button
                             onClick={() => handleUpdateApplicationStatus(app.id, true)}
-                            className="text-sm px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white"
+                            className="btn-base btn-success text-sm px-3 py-1"
                           >
                             {t("dashboard.markAsApplied") || "Als beworben markieren"}
                           </button>
@@ -1333,7 +1334,7 @@ export default function DashboardPage() {
                         <button
                           type="button"
                           onClick={() => requestDeleteApplication(app.id, app.job_title)}
-                          className="text-sm px-3 py-1 rounded bg-red-700 hover:bg-red-600 text-white"
+                          className="btn-base btn-danger text-sm px-3 py-1"
                           title={t("dashboard.deleteThisApplication") || "Diese Bewerbung loeschen"}
                         >
                           🗑️ {t("common.delete") || "Loeschen"}

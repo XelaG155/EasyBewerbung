@@ -226,6 +226,34 @@ select:focus-visible {
   cursor: not-allowed;
 }
 
+.btn-success {
+  background: var(--success);
+  color: var(--button-text-on-primary);
+}
+
+.btn-success:hover {
+  filter: brightness(1.1);
+}
+
+.btn-success:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-danger {
+  background: var(--error-color);
+  color: var(--button-text-on-primary);
+}
+
+.btn-danger:hover {
+  filter: brightness(1.1);
+}
+
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 @keyframes marquee {
   0% {
     transform: translateX(0);
