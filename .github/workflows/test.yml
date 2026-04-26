@@ -75,10 +75,19 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run unit + integration tests with coverage
-        # Coverage gate ratchet: 55 → 60 (now) → 65 → 75 over follow-up
-        # PRs. Current actual coverage is 59% on a 180-test suite. The
-        # gate sits at 60 to give the suite a tiny ratchet — anything
-        # added without coverage will trip the floor on the next CI run.
+        # Coverage gate ratchet plan (each step is a deliberate PR):
+        #
+        #   - 2026-04-26: gate raised 55 → 58 (current; actual 59%).
+        #   - 2026-05-15: gate → 60 once tasks.py orphan paths
+        #     (``calculate_matching_score_task`` settle path,
+        #     ``generate_documents_task`` happy path) get smoke tests.
+        #   - 2026-06-15: gate → 65 once admin.py LLM-sync round-trip
+        #     and document_templates routes have HTTP-layer tests.
+        #   - 2026-07-15: gate → 75 (pilot-readiness target).
+        #
+        # The dates and step sizes are dated commitments, not aspirations.
+        # If a step slips, document the new date in quality_log.md and
+        # in this comment in the same PR.
         run: |
           pytest -v \
             --cov=app \
@@ -117,11 +126,19 @@ jobs:
       - name: TypeScript type check
         run: npx tsc --noEmit
 
-      # ESLint is now blocking. Pre-existing rule violations were
-      # downgraded to warnings via eslint.config.mjs so the suite runs
-      # at zero errors. ``--max-warnings 95`` accepts the ~89 warnings
-      # currently in the codebase but fails CI if NEW warnings push the
-      # total above that ceiling — preventing silent regression while
-      # the legacy backlog is swept.
+      # ESLint is blocking. Pre-existing rule violations were downgraded
+      # to warnings via eslint.config.mjs so the suite runs at zero
+      # errors. The warning ceiling is the ratchet:
+      #
+      #   - 2026-04-26: ceiling 95 (current; actual ~78–89 across runs).
+      #   - 2026-05-15: ceiling 80 once react-hooks/set-state-in-effect
+      #     refactor lands in dashboard/page.tsx + admin/documents.
+      #   - 2026-06-15: ceiling 50 once @typescript-eslint/no-explicit-any
+      #     gets removed from lib/api.ts and i18n-context.tsx.
+      #   - 2026-07-15: ceiling 0 — full sweep, override-block in
+      #     eslint.config.mjs removed.
+      #
+      # Each step is a dated commitment. If slipped, update the dates in
+      # this comment and quality_log.md in the same PR.
       - name: ESLint (blocking, with warning ceiling)
         run: npm run lint -- --max-warnings 95
