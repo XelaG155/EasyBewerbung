@@ -76,12 +76,61 @@ Adressiert: alle 7 P0 + 4 P1 aus Iteration 1.
 - ✅ Coverage-Gate `--cov-fail-under=55` mit Ratchet-Plan auf 75.
 - ✅ Test-Suite: 159 passed (vorher 151) + 8 neue End-to-End-Tests fuer `/generate`-Endpunkt (test_generate_endpoint.py).
 
-**Verbleibend fuer Iteration 3 falls Score < 9.5:**
-- Tests fuer admin.py HTTP-Layer (Credit-Grant, Toggle-Active, Toggle-Admin)
-- Tests fuer applications.py HTTP-Layer (Create/List/Patch/Delete)
-- Inline-Error `<p>`-Elemente auf `role="alert"` umstellen (UX/UI P1-A)
-- `border-slate-700` -> `border-muted` in dashboard/page.tsx (UX/UI P1-B)
-- Mobile-Nav-Hamburger fuer Settings/Logout unter 640px (UX/UI P1-F)
+### Iteration 3 — 2026-04-26 (Re-Review)
+
+| Agent | Score | Delta vs Iteration 1 |
+|---|---|---|
+| QA | 8.6 | +0.5 |
+| Devil's Advocate | 7.2 | +1.1 |
+| UX/UI | 7.5 | +0.1 (marginal) |
+| Testing | 7.5 | +1.0 |
+
+**Neue P0:**
+
+1. **DA**: `default_client = OpenAI(...)` in `tasks.py:895/919` (no-template-Fallback-Pfad) ohne Timeout, hardcoded `gpt-4`. Wurde in Iteration 2 NICHT umgestellt; nur der Template-Pfad und der Matching-Score gehen jetzt durch `get_llm_client`. Crashes wenn `OPENAI_API_KEY` fehlt.
+2. **QA**: HTTP-Layer-Test fuer `POST /applications` fehlt (nur `create_application` direkt, ohne TestClient).
+3. **QA**: Englische Error-Messages im `/generate`-Endpoint („Insufficient credits..." statt Deutsch).
+
+**Verbleibende P1:**
+
+UX/UI:
+- 4 residual `alert()`-Calls in `handleUpdateApplicationStatus`, `handleDownloadRAV`, `handleDownloadJobPDF`, `handleDownloadOriginalJobPDF`.
+- Inline `<p>`-Errors ohne `role="alert"` an 3 Stellen (uploadError, analysisError, spontaneousError).
+- Mobile-Nav-Luecke: Settings/Logout `hidden sm:inline-flex` ohne Fallback.
+- `border-slate-700` hardcoded in `dashboard/page.tsx:1167`.
+- `Modal.tsx:104` nutzt `dark:` statt CSS-Vars.
+- Kein Success-Toast nach Upload / Spontane-Bewerbung-Save.
+
+Testing:
+- Vacuous-Assertion-Bodies in fixme'd Specs noch da (latentes Risiko bei `fixme`-Entfernung).
+- Coverage-Gate auf 55% — Ratchet auf 65 noch nicht enforced.
+- Admin- + Applications-HTTP-Tests fehlen.
+- ESLint `continue-on-error: true` ohne Baseline.
+
+DA:
+- Empty-Reference-Letter-Edge-Case (`tasks.py:536-546`): leerer `content_text` produziert "No text content"-Prompt-Fragment, LLM erfindet Inhalt.
+- Privacy-Policy Future-Tense-Versprechen ("vor Aufnahme des Pilotbetriebs") als Live-Text fragwuerdig.
+
+### Iteration 4 — 2026-04-26 (commits 6b89c02..f4457dc, 7 Commits)
+
+Adressiert: alle DA-P0 sowie alle UX/UI- und QA-P1 aus Iteration 3.
+
+**P0:**
+- ✅ `default_client`-Fallback in `tasks.py` durch `get_llm_client` ersetzt (Env-konfigurierbar via `DEFAULT_LLM_PROVIDER` + `DEFAULT_LLM_MODEL`).
+- ✅ Empty-Reference-Letter-Guard: Filter auf `content_text.strip()`, kein "No text content"-Fragment im Prompt mehr.
+- ✅ German Error-Messages in `/generate` (5 Strings: 404 Bewerbung, 400 leere doc_types, 400 unbekannter Typ, 400 kein CV, 402 nicht genug Credits).
+- ✅ HTTP-Layer-Tests fuer `applications.py` (8 Tests, `tests/test_applications_http.py`).
+
+**P1:**
+- ✅ HTTP-Layer-Tests fuer `admin.py` (12 Tests, `tests/test_admin_http.py` — Credit-Adjust, Toggle-Active, Toggle-Admin, Auth-Gate).
+- ✅ 4 residual `alert()`-Calls durch accessible Toast-Banner ersetzt (`role="alert"` fuer Fehler, `role="status"` fuer Success, 5s Auto-Dismiss).
+- ✅ Success-Toast nach Upload, Stelleninserat-Analyse, Spontane-Bewerbung.
+- ✅ `role="alert"` auf 3 inline Error-`<p>`-Elemente (uploadError, analysisError, spontaneousError).
+- ✅ Mobile-Nav-Fallback-Reihe fuer Settings/Logout/Admin unter 640px.
+- ✅ `border-slate-700` -> `border-muted` in dashboard.
+- ✅ `Modal.tsx` von `dark:`-Literals auf CSS-Variablen migriert.
+
+**Tests-Stand:** 180 passed, 5 skipped (vorher 159). Coverage 59% (vorher 56%). Coverage-Gate bei 55%.
 
 
 
