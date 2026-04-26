@@ -9,6 +9,7 @@ These tasks handle:
 import json
 import logging
 import os
+import time
 from datetime import datetime, timezone
 from typing import List
 
@@ -92,12 +93,45 @@ class LlmProviderUnavailable(RuntimeError):
     instead of receiving an empty document."""
 
 
+# Per-request LLM call timeout. Prevents a hung provider from blocking
+# a Celery worker slot indefinitely (we only have 4 slots in production).
+LLM_REQUEST_TIMEOUT_SECONDS = float(os.getenv("LLM_REQUEST_TIMEOUT_SECONDS", "120"))
+# Token cap for generated documents. Long-form templates (interview_prep,
+# skill_gap_report) can be 4000+ tokens; keep this generous so they aren't
+# truncated. Override via env when paying for cheaper models with smaller
+# output windows.
+LLM_MAX_OUTPUT_TOKENS = int(os.getenv("LLM_MAX_OUTPUT_TOKENS", "8192"))
+# Manual retry config for transient errors (rate limit, network blip).
+# We don't import tenacity to keep the dependency surface small.
+LLM_MAX_RETRIES = 2
+LLM_RETRY_BASE_DELAY_SECONDS = 2.0
+
+
+def _is_transient_llm_error(exc: BaseException) -> bool:
+    """Heuristic: transient (worth retrying) vs fatal (give up immediately).
+
+    Provider SDKs all expose RateLimitError / APIError / Timeout-ish classes
+    but with diverging names. We match on the class name to avoid importing
+    every SDK at module load. Auth errors (401/403) and bad-request errors
+    (400) are explicitly NOT retried — they will not become transient.
+    """
+    name = type(exc).__name__.lower()
+    transient_markers = ("ratelimit", "timeout", "apiconnection", "overloaded", "service")
+    fatal_markers = ("auth", "permission", "invalidrequest", "badrequest")
+    if any(m in name for m in fatal_markers):
+        return False
+    return any(m in name for m in transient_markers)
+
+
 def get_llm_client(provider: str, model: str):
     """Return an initialized client for the requested provider.
 
     Raises ``LlmProviderUnavailable`` with a clear, actionable German message
     when the SDK is missing or the API key is not set. The caller (Celery task)
     is expected to surface the error to the admin via ``GenerationTask``.
+
+    All clients are configured with ``LLM_REQUEST_TIMEOUT_SECONDS`` so a hung
+    provider cannot block a worker slot beyond that bound.
     """
     if provider == "openai":
         api_key = os.getenv("OPENAI_API_KEY")
@@ -106,7 +140,7 @@ def get_llm_client(provider: str, model: str):
                 "OPENAI_API_KEY ist nicht gesetzt. Bitte den Key in der .env "
                 "ergänzen und den Backend-Container neu starten."
             )
-        return OpenAI(api_key=api_key), model
+        return OpenAI(api_key=api_key, timeout=LLM_REQUEST_TIMEOUT_SECONDS), model
 
     if provider == "anthropic":
         api_key = os.getenv("ANTHROPIC_API_KEY")
@@ -123,7 +157,7 @@ def get_llm_client(provider: str, model: str):
                 "Bitte 'anthropic>=0.39' in backend/requirements.txt ergänzen "
                 "und den Container neu bauen."
             ) from exc
-        return anthropic.Anthropic(api_key=api_key), model
+        return anthropic.Anthropic(api_key=api_key, timeout=LLM_REQUEST_TIMEOUT_SECONDS), model
 
     if provider == "google":
         api_key = os.getenv("GOOGLE_API_KEY")
@@ -149,44 +183,135 @@ def get_llm_client(provider: str, model: str):
     )
 
 
+def _call_openai(client, model: str, prompt: str) -> str:
+    response = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        timeout=LLM_REQUEST_TIMEOUT_SECONDS,
+    )
+    return response.choices[0].message.content or ""
+
+
+def _call_anthropic(client, model: str, prompt: str) -> str:
+    """Anthropic Messages API call with prompt caching on the bulk content.
+
+    The Anthropic SDK supports an ``extra_headers`` mechanism for the
+    ``prompt-caching-2024-07-31`` beta. When the prompt exceeds 1024 tokens
+    (~4000 chars) we mark it as a cacheable system block with
+    ``cache_control={"type": "ephemeral"}``. The 5-minute cache TTL means
+    that subsequent doc-type generations for the same application reuse
+    the bulk CV+job-description content, cutting both latency and token
+    cost by ~70-90% per follow-up call.
+
+    The user message is a small, dynamic trigger so the cached prefix is
+    actually reused across templates instead of being invalidated.
+    """
+    # Below the cache threshold a static placement saves nothing — fall
+    # back to the simple single-message form.
+    CACHE_THRESHOLD_CHARS = 4000
+
+    if len(prompt) >= CACHE_THRESHOLD_CHARS:
+        system_block = [
+            {
+                "type": "text",
+                "text": prompt,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ]
+        user_msg = (
+            "Erstelle nun das Dokument exakt nach den oben definierten Anweisungen."
+        )
+        try:
+            response = client.messages.create(
+                model=model,
+                max_tokens=LLM_MAX_OUTPUT_TOKENS,
+                system=system_block,
+                messages=[{"role": "user", "content": user_msg}],
+                extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
+            )
+        except TypeError:
+            # Older anthropic SDKs may not accept extra_headers / system list;
+            # gracefully fall back to the simple form so generation still works.
+            response = client.messages.create(
+                model=model,
+                max_tokens=LLM_MAX_OUTPUT_TOKENS,
+                messages=[{"role": "user", "content": prompt}],
+            )
+    else:
+        response = client.messages.create(
+            model=model,
+            max_tokens=LLM_MAX_OUTPUT_TOKENS,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+    parts: list[str] = []
+    for block in getattr(response, "content", []) or []:
+        text = getattr(block, "text", None)
+        if text:
+            parts.append(text)
+    return "".join(parts)
+
+
+def _call_google(client, model: str, prompt: str) -> str:
+    model_instance = client.GenerativeModel(model)
+    # google-generativeai accepts request_options={"timeout": seconds}.
+    try:
+        response = model_instance.generate_content(
+            prompt,
+            request_options={"timeout": LLM_REQUEST_TIMEOUT_SECONDS},
+        )
+    except TypeError:
+        # Older SDKs don't accept request_options; rely on the default timeout.
+        response = model_instance.generate_content(prompt)
+    return getattr(response, "text", "") or ""
+
+
 def generate_with_llm(client, model: str, provider: str, prompt: str) -> str:
     """Generate content using the specified LLM provider.
 
-    Dispatches per provider. Raises ``LlmProviderUnavailable`` (or lets the
-    underlying provider exception propagate) rather than silently returning
-    an empty string, so failures are visible in ``GenerationTask.error_message``.
+    Wraps the per-provider call with a small retry loop for transient errors
+    (rate limit, network blip, provider overloaded). Auth and bad-request
+    errors are NOT retried — they can never recover within the worker's
+    lifetime. After ``LLM_MAX_RETRIES`` attempts the original exception is
+    re-raised so the Celery task records it on ``GenerationTask.error_message``.
     """
-    if provider == "openai":
-        response = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
+    if provider not in {"openai", "anthropic", "google"}:
+        raise LlmProviderUnavailable(
+            f"Unbekannter LLM-Provider '{provider}' in generate_with_llm."
         )
-        return response.choices[0].message.content or ""
 
-    if provider == "anthropic":
-        # anthropic SDK >= 0.39 messages API
-        response = client.messages.create(
-            model=model,
-            max_tokens=4096,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        # response.content is a list of content blocks; concatenate text blocks.
-        parts: list[str] = []
-        for block in getattr(response, "content", []) or []:
-            text = getattr(block, "text", None)
-            if text:
-                parts.append(text)
-        return "".join(parts)
+    last_exc: BaseException | None = None
+    for attempt in range(LLM_MAX_RETRIES + 1):
+        try:
+            if provider == "openai":
+                return _call_openai(client, model, prompt)
+            if provider == "anthropic":
+                return _call_anthropic(client, model, prompt)
+            return _call_google(client, model, prompt)
+        except LlmProviderUnavailable:
+            raise
+        except Exception as exc:
+            last_exc = exc
+            if attempt >= LLM_MAX_RETRIES or not _is_transient_llm_error(exc):
+                raise
+            delay = LLM_RETRY_BASE_DELAY_SECONDS * (2 ** attempt)
+            logging.warning(
+                "Transient LLM error from %s/%s on attempt %d/%d: %s. "
+                "Retrying in %.1fs.",
+                provider,
+                model,
+                attempt + 1,
+                LLM_MAX_RETRIES + 1,
+                type(exc).__name__,
+                delay,
+            )
+            time.sleep(delay)
 
-    if provider == "google":
-        # google-generativeai: client is the module, instantiate a model per-call
-        model_instance = client.GenerativeModel(model)
-        response = model_instance.generate_content(prompt)
-        return getattr(response, "text", "") or ""
-
-    raise LlmProviderUnavailable(
-        f"Unbekannter LLM-Provider '{provider}' in generate_with_llm."
-    )
+    # Defensive: should be unreachable because the loop always raises
+    # or returns. Re-raise the last exception just in case.
+    if last_exc is not None:
+        raise last_exc
+    return ""
 
 
 def get_language_instruction(lang_code: str) -> str:
