@@ -177,7 +177,9 @@
     "uploadSuccess": "Dokument erfolgreich hochgeladen.",
     "analyzeSuccess": "Stelleninserat analysiert und als Bewerbung erfasst.",
     "spontaneousSuccess": "Spontane Bewerbung gespeichert.",
-    "spontaneousFailed": "Spontanbewerbung konnte nicht gespeichert werden."
+    "spontaneousFailed": "Spontanbewerbung konnte nicht gespeichert werden.",
+    "loadFailed": "Daten konnten nicht geladen werden. Bitte Seite neu laden.",
+    "statusSuggestionsHint": "Üblich: Interview, Wartet, Abgesagt, Angebot, Eingestellt"
   },
   "settings": {
     "title": "Einstellungen",

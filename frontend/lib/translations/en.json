@@ -177,7 +177,9 @@
     "uploadSuccess": "Document uploaded successfully.",
     "analyzeSuccess": "Job offer analysed and recorded as an application.",
     "spontaneousSuccess": "Spontaneous application saved.",
-    "spontaneousFailed": "Could not save the spontaneous application."
+    "spontaneousFailed": "Could not save the spontaneous application.",
+    "loadFailed": "Could not load dashboard data. Please reload the page.",
+    "statusSuggestionsHint": "Common: Interview, Waiting, Rejected, Offer, Hired"
   },
   "settings": {
     "title": "Settings",

@@ -21,6 +21,8 @@ interface InputProps {
   /** Native autocomplete hint — e.g. "email", "current-password",
    * "new-password", "name". */
   autoComplete?: string;
+  /** id of a sibling <datalist> for type-ahead suggestions. */
+  list?: string;
 }
 
 /**
@@ -43,6 +45,7 @@ export function Input({
   id,
   describedById,
   autoComplete,
+  list,
 }: InputProps) {
   const reactId = useId();
   const inputId = id ?? `input-${reactId}`;
@@ -75,6 +78,7 @@ export function Input({
         disabled={disabled}
         autoFocus={autoFocus}
         autoComplete={autoComplete}
+        list={list}
         className={`input-base ${error ? "input-error" : ""}`}
       />
       {error && (

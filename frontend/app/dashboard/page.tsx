@@ -309,7 +309,15 @@ export default function DashboardPage() {
       setDocuments(docs);
       setApplications(apps);
     } catch (error: any) {
+      // Surface the failure to the user instead of silently leaving the
+      // dashboard empty. Next-step hint + the underlying error message
+      // are both shown via the action banner so the user can decide
+      // whether to retry or contact support.
       console.error("Error loading data:", error);
+      setActionBanner({
+        kind: "error",
+        message: `${t("dashboard.loadFailed") || "Daten konnten nicht geladen werden. Bitte Seite neu laden."}: ${error?.message ?? ""}`.trim().replace(/:\s*$/, ""),
+      });
     } finally {
       setLoading(false);
     }
@@ -694,7 +702,15 @@ export default function DashboardPage() {
                     </svg>
                   )}
                 </span>
-                <span className="px-2 sm:px-3 py-1 rounded bg-slate-800 text-xs sm:text-sm text-emerald-300 border border-emerald-700 whitespace-nowrap">
+                <span
+                  className="chip px-2 sm:px-3 py-1 rounded text-xs sm:text-sm whitespace-nowrap"
+                  style={{
+                    color: "var(--success)",
+                    borderColor: "var(--success)",
+                    borderWidth: "1px",
+                    borderStyle: "solid",
+                  }}
+                >
                   {t("common.credits") || "Credits"}: {user.credits}
                 </span>
                 <button
@@ -1161,17 +1177,17 @@ export default function DashboardPage() {
                         <div className="space-y-3 pl-7">
                           <div className="flex gap-2 flex-wrap">
                             {app.is_spontaneous && (
-                              <span className="inline-block px-2 py-1 text-xs rounded bg-amber-900/50 text-amber-200 border border-amber-700">
+                              <span className="chip inline-block px-2 py-1 text-xs rounded">
                                 {t("dashboard.spontaneousBadge") || "Spontanbewerbung"}
                               </span>
                             )}
                             {app.application_type === "internship" && (
-                              <span className="inline-block px-2 py-1 text-xs rounded bg-purple-900/50 text-purple-200 border border-purple-700">
+                              <span className="chip inline-block px-2 py-1 text-xs rounded">
                                 {t("dashboard.internshipBadge") || "Praktikum"}
                               </span>
                             )}
                             {app.application_type === "apprenticeship" && (
-                              <span className="inline-block px-2 py-1 text-xs rounded bg-blue-900/50 text-blue-200 border border-blue-700">
+                              <span className="chip inline-block px-2 py-1 text-xs rounded">
                                 {t("dashboard.apprenticeshipBadge") || "Lehrstelle"}
                               </span>
                             )}
@@ -1288,7 +1304,7 @@ export default function DashboardPage() {
 
                         <button
                           onClick={() => openStatusModal(app.id, app.result ?? null)}
-                          className="text-sm px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white"
+                          className="btn-base btn-secondary text-sm px-3 py-1"
                         >
                           {t("dashboard.updateStatus") || "Status aktualisieren"}
                         </button>
@@ -1298,7 +1314,7 @@ export default function DashboardPage() {
                             href={app.job_offer_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white inline-block"
+                            className="btn-base btn-secondary text-sm px-3 py-1 inline-flex"
                             title={t("dashboard.viewOriginalPosting") || "Original-Inserat ansehen"}
                           >
                             🔗 {t("dashboard.viewOriginalPosting") || "Original-Inserat ansehen"}
@@ -1306,8 +1322,9 @@ export default function DashboardPage() {
                         )}
                         {app.job_offer_id && (
                           <button
+                            type="button"
                             onClick={() => handleDownloadOriginalJobPDF(app.job_offer_id!, app.job_title, app.company)}
-                            className="text-sm px-3 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white inline-block"
+                            className="btn-base btn-primary text-sm px-3 py-1"
                             title={t("dashboard.downloadJobPdfTitle") || "Original-Stelleninserat als PDF herunterladen"}
                           >
                             📄 {t("dashboard.downloadJobPdf") || "Stelleninserat (PDF)"}
@@ -1343,7 +1360,24 @@ export default function DashboardPage() {
               value={newStatus}
               onChange={setNewStatus}
               placeholder={t("dashboard.statusPlaceholder") || "z.B. Interview, Abgesagt, Angebot"}
+              id="status-input"
+              describedById="status-suggestions-hint"
+              list="status-suggestions"
             />
+            <p
+              id="status-suggestions-hint"
+              className="text-xs text-muted -mt-2"
+            >
+              {t("dashboard.statusSuggestionsHint") || "Üblich: Interview, Wartet, Abgesagt, Angebot, Eingestellt"}
+            </p>
+            <datalist id="status-suggestions">
+              <option value="Interview" />
+              <option value="Wartet" />
+              <option value="Abgesagt" />
+              <option value="Angebot" />
+              <option value="Eingestellt" />
+              <option value="Zurückgezogen" />
+            </datalist>
             <div className="flex justify-end gap-2 mt-4">
               <Button variant="outline" onClick={() => setStatusModalOpen(false)}>
                 {t("common.cancel") || "Abbrechen"}
