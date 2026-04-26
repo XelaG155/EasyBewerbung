@@ -137,7 +137,8 @@ class TestCreditAdjust:
             json={"amount": -10},
         )
         assert resp.status_code == 400
-        assert "negative balance" in resp.json()["detail"].lower()
+        # Detail now in German per Iteration-4 polish.
+        assert "negatives Guthaben" in resp.json()["detail"]
         session.expire_all()
         # Balance unchanged
         assert session.query(User).filter(User.id == target.id).first().credits == 2

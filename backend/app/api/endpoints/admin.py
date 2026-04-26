@@ -235,14 +235,17 @@ async def adjust_credits(
 ):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Benutzer/-in nicht gefunden.")
 
     # Validate that credits won't go negative
     new_credits = user.credits + payload.amount
     if new_credits < 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Credit adjustment would result in negative balance ({new_credits})"
+            detail=(
+                f"Anpassung wuerde negatives Guthaben ergeben ({new_credits}). "
+                "Bitte den Betrag korrigieren."
+            ),
         )
 
     user.credits = new_credits
