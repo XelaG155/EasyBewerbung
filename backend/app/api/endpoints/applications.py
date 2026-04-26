@@ -23,6 +23,7 @@ from app.models import Application, GeneratedDocument, User, Document, JobOffer,
 from app.auth import get_current_user
 from app.language_catalog import DEFAULT_LANGUAGE, normalize_language
 from app.tasks import calculate_matching_score_task, generate_documents_task, delete_documents_task, get_doc_type_display
+from app.api.endpoints.users import record_activity
 from app.limiter import limiter
 
 logger = logging.getLogger(__name__)
@@ -797,27 +798,36 @@ async def generate_documents(
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
 
-    # Calculate total cost based on template configurations
+    # Validate every requested doc_type against the active template catalog.
+    # Without this guard the worker silently skips unknown types (tasks.py
+    # `continue` branch) — the user pays nothing for them but also gets no
+    # error response telling them their request was partially malformed.
+    if not doc_types:
+        raise HTTPException(status_code=400, detail="doc_types must not be empty")
     templates = db.query(DocumentTemplate).filter(
         DocumentTemplate.doc_type.in_(doc_types),
         DocumentTemplate.is_active == True
     ).all()
     templates_map = {t.doc_type: t for t in templates}
+    unknown = [d for d in doc_types if d not in templates_map]
+    if unknown:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Unbekannte Dokumenttyp(en): "
+                + ", ".join(sorted(set(unknown)))
+                + ". Im Admin-Bereich aktivieren oder als Tippfehler korrigieren."
+            ),
+        )
 
     total_cost = 0
     for doc_type in doc_types:
         template = templates_map.get(doc_type)
         if template:
             total_cost += template.credit_cost
-        else:
-            # Default cost if no template found
-            total_cost += 1
 
-    # Check credits
-    if current_user.credits < total_cost:
-        raise HTTPException(status_code=402, detail=f"Insufficient credits. Need {total_cost}, have {current_user.credits}")
-
-    # Verify CV exists
+    # Verify CV exists before we touch credits — fail fast on misconfigured
+    # accounts.
     cv_doc = (
         db.query(Document)
         .filter(Document.user_id == current_user.id, Document.doc_type == "CV")
@@ -827,9 +837,28 @@ async def generate_documents(
     if not cv_doc or not cv_doc.content_text:
         raise HTTPException(status_code=400, detail="No CV found with text content")
 
-    # Deduct credits upfront, but record the amount on the task so the
-    # worker can refund proportionally for any docs that ultimately fail.
-    current_user.credits -= total_cost
+    # Atomic credit deduction with row-level lock to prevent the
+    # double-spend race documented in CLAUDE-2026.04.md (Iteration 1
+    # P0-B). Without ``with_for_update`` two concurrent calls can both
+    # read the user's credit balance from the SQLAlchemy identity cache,
+    # both pass the check, and both commit a deduction — leaving credits
+    # negative. SQLite ignores the FOR UPDATE clause silently which is
+    # safe; the test suite runs against SQLite and exercises the same
+    # code path.
+    user_dialect = getattr(getattr(db.bind, "dialect", None), "name", "")
+    user_query = db.query(User).filter(User.id == current_user.id)
+    if user_dialect != "sqlite":
+        user_query = user_query.with_for_update()
+    user_locked = user_query.first()
+    if user_locked is None:
+        # Should be impossible — get_current_user just resolved the row.
+        raise HTTPException(status_code=401, detail="User not found")
+    if user_locked.credits < total_cost:
+        raise HTTPException(
+            status_code=402,
+            detail=f"Insufficient credits. Need {total_cost}, have {user_locked.credits}",
+        )
+    user_locked.credits -= total_cost
 
     task = GenerationTask(
         application_id=application_id,
@@ -845,6 +874,19 @@ async def generate_documents(
     db.add(task)
     db.commit()
     db.refresh(task)
+    # Audit trail — credits are a financial path, every spend MUST be
+    # recorded. Stored as id-only metadata; no PII.
+    record_activity(
+        db,
+        current_user,
+        "generate_documents",
+        request,
+        metadata=f"app={application_id} cost={total_cost} types={','.join(sorted(set(doc_types)))}",
+    )
+
+    # current_user is the unlocked snapshot — refresh it from the locked
+    # row so the response reports the post-deduction balance accurately.
+    remaining_credits = user_locked.credits
 
     # Queue Celery task
     generate_documents_task.delay(
@@ -861,7 +903,7 @@ async def generate_documents(
         "application_id": application_id,
         "total_documents": len(doc_types),
         "credits_used": total_cost,
-        "remaining_credits": current_user.credits,
+        "remaining_credits": remaining_credits,
     }
 
 
