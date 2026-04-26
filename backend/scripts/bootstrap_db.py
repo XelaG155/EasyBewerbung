@@ -87,7 +87,14 @@ def _acquire_postgres_advisory_lock(engine, lock_id: int = 0xEA5BEBE2):
 
     @contextmanager
     def _pg_lock():
+        # AUTOCOMMIT isolation makes the lock acquire/release run outside
+        # an implicit transaction, so the lock is visible to other
+        # sessions immediately and there is no chance of the unlock
+        # being rolled back if the underlying connection has an
+        # uncommitted error state. SQLAlchemy 2.x exposes this via
+        # ``execution_options``.
         with engine.connect() as conn:
+            conn = conn.execution_options(isolation_level="AUTOCOMMIT")
             conn.execute(text("SELECT pg_advisory_lock(:k)"), {"k": lock_id})
             try:
                 yield

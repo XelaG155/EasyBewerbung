@@ -254,6 +254,19 @@ select:focus-visible {
   cursor: not-allowed;
 }
 
+/* Token-backed error text. Use this instead of ``text-red-400`` so
+ * inline error messages adapt to the active theme via the
+ * ``--error-color`` variable (dark/light variants defined in :root /
+ * .light-theme / .dark-theme). */
+.text-error {
+  color: var(--error-color);
+}
+
+.text-error-muted {
+  color: var(--error-color);
+  opacity: 0.85;
+}
+
 @keyframes marquee {
   0% {
     transform: translateX(0);

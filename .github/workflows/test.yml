@@ -104,6 +104,14 @@ jobs:
           path: backend/coverage.xml
           retention-days: 14
 
+      - name: Enforce ratchet milestones
+        # Fails CI when a wall-clock milestone in .github/ratchet.yml
+        # has passed but the gate in this workflow file has not been
+        # bumped to match. Gives the testing-audit "ratchet without
+        # enforcement" finding a real teeth.
+        run: python3 .github/workflows/check-ratchet.py
+        working-directory: ${{ github.workspace }}
+
   frontend-check:
     name: Frontend lint + type check
     runs-on: ubuntu-latest

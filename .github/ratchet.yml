@@ -1,0 +1,44 @@
+# Ratchet plan — enforced by .github/workflows/check-ratchet.py
+#
+# The CI test job runs check-ratchet.py against this file. When the
+# wall-clock date passes a milestone here but the corresponding gate
+# in .github/workflows/test.yml has not been bumped, CI fails with a
+# clear error message.
+#
+# The two ways to keep CI green:
+#   (a) Land the work that justifies the ratchet step and bump the
+#       gate in test.yml.
+#   (b) Move the date here and document the slip in quality_log.md
+#       in the same PR.
+#
+# Either way the plan stays honest. The Iteration-5 testing audit
+# finding "documented plan but not self-enforcing" is closed by this
+# file.
+
+coverage:
+  - date: "2026-04-26"
+    gate: 58
+    why: "starting baseline (actual 59%)"
+  - date: "2026-05-15"
+    gate: 60
+    why: "tasks.py orphan-path smoke tests land"
+  - date: "2026-06-15"
+    gate: 65
+    why: "admin LLM-sync + document_templates HTTP tests"
+  - date: "2026-07-15"
+    gate: 75
+    why: "pilot-readiness target"
+
+lint_ceiling:
+  - date: "2026-04-26"
+    gate: 95
+    why: "starting baseline (actual ~78–89)"
+  - date: "2026-05-15"
+    gate: 80
+    why: "react-hooks set-state-in-effect refactor"
+  - date: "2026-06-15"
+    gate: 50
+    why: "no-explicit-any sweep on api.ts + i18n"
+  - date: "2026-07-15"
+    gate: 0
+    why: "full sweep, eslint.config override block removed"

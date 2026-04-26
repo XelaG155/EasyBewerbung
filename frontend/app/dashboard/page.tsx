@@ -824,7 +824,7 @@ export default function DashboardPage() {
                 )}
 
                 {uploadError && (
-                  <p role="alert" className="text-red-400 text-sm">{uploadError}</p>
+                  <p role="alert" className="text-error text-sm">{uploadError}</p>
                 )}
               </div>
             </Card>
@@ -859,7 +859,7 @@ export default function DashboardPage() {
                       <button
                         type="button"
                         onClick={() => requestDeleteDocument(doc.id, doc.filename)}
-                        className="text-red-400 hover:text-red-300 text-sm"
+                        className="text-error hover:text-error-muted text-sm"
                         aria-label={
                           (t("dashboard.deleteDocumentAria") || "Dokument {name} loeschen")
                             .replace("{name}", doc.filename)
@@ -979,7 +979,7 @@ export default function DashboardPage() {
                 </Button>
 
                 {spontaneousError && (
-                  <p role="alert" className="text-red-400 text-sm">{spontaneousError}</p>
+                  <p role="alert" className="text-error text-sm">{spontaneousError}</p>
                 )}
               </form>
             </Card>
@@ -1053,7 +1053,7 @@ export default function DashboardPage() {
                 </Button>
 
                 {analysisError && (
-                  <p role="alert" className="text-red-400 text-sm">{analysisError}</p>
+                  <p role="alert" className="text-error text-sm">{analysisError}</p>
                 )}
               </form>
             </Card>
