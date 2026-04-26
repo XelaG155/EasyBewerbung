@@ -44,19 +44,6 @@ export default function AdminPage() {
 
   const isAdmin = user?.is_admin;
 
-  useEffect(() => {
-    if (!isAdmin) return;
-    searchUsers("");
-  }, [isAdmin]);
-
-  // Auto-dismiss toast after 5s (8s for errors)
-  useEffect(() => {
-    if (!status) return;
-    const ms = status.kind === "error" ? 8000 : 5000;
-    const handle = setTimeout(() => setStatus(null), ms);
-    return () => clearTimeout(handle);
-  }, [status]);
-
   const searchUsers = async (value: string) => {
     try {
       const data = await api.adminSearchUsers(value);
@@ -66,6 +53,20 @@ export default function AdminPage() {
       setStatus({ kind: "error", text: "Fehler bei der Benutzersuche." });
     }
   };
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    searchUsers("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
+
+  // Auto-dismiss toast after 5s (8s for errors)
+  useEffect(() => {
+    if (!status) return;
+    const ms = status.kind === "error" ? 8000 : 5000;
+    const handle = setTimeout(() => setStatus(null), ms);
+    return () => clearTimeout(handle);
+  }, [status]);
 
   const selectUser = async (userId: number) => {
     try {
