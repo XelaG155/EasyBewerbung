@@ -439,7 +439,9 @@ async def delete_generated_documents(
 
 
 @router.get("/history", response_model=List[ApplicationResponse])
+@limiter.limit("60/minute")
 async def list_application_history(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -513,7 +515,9 @@ async def list_application_history(
 
 
 @router.get("/rav-report", response_model=dict)
+@limiter.limit("20/minute")
 async def rav_report(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -555,7 +559,9 @@ async def rav_report(
 
 
 @router.get("/{application_id}", response_model=ApplicationResponse)
+@limiter.limit("60/minute")
 async def get_application(
+    request: Request,
     application_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -610,7 +616,9 @@ async def delete_application(
     return {"message": "Application deleted successfully", "id": application_id}
 
 @router.get("/{application_id}/matching-score")
+@limiter.limit("60/minute")
 async def get_matching_score(
+    request: Request,
     application_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -725,7 +733,9 @@ async def calculate_matching_score(
 
 
 @router.get("/{application_id}/matching-score-status/{task_id}")
+@limiter.limit("120/minute")
 async def get_matching_score_status(
+    request: Request,
     application_id: int,
     task_id: int,
     current_user: User = Depends(get_current_user),
@@ -908,7 +918,9 @@ async def generate_documents(
 
 
 @router.get("/{application_id}/generation-status/{task_id}")
+@limiter.limit("120/minute")
 async def get_generation_status(
+    request: Request,
     application_id: int,
     task_id: int,
     current_user: User = Depends(get_current_user),
@@ -965,7 +977,9 @@ async def get_generation_status(
 
 
 @router.get("/{application_id}/job-description-pdf")
+@limiter.limit("20/minute")
 async def download_job_description_pdf(
+    request: Request,
     application_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -1081,7 +1095,9 @@ async def download_job_description_pdf(
 
 
 @router.get("/{application_id}/generation-tasks")
+@limiter.limit("60/minute")
 async def list_generation_tasks(
+    request: Request,
     application_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

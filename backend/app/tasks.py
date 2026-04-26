@@ -680,8 +680,16 @@ def calculate_matching_score_task(self, task_id: int, application_id: int, user_
         if application.is_spontaneous:
             job_description += "\nThis is a spontaneous application without a specific posting."
 
-        # Use OpenAI to calculate matching score
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        # Provider/model are configurable via the matching_score_* env vars
+        # so an admin can swap the matching task to Anthropic or Google
+        # without a redeploy. Defaults match the previous hard-coded
+        # behaviour (OpenAI gpt-4o-mini) so this is a no-op for existing
+        # installs. Routes through ``get_llm_client`` and
+        # ``generate_with_llm``, so it inherits the per-call timeout, the
+        # transient-retry helper and (for Anthropic) prompt caching.
+        match_provider = os.getenv("MATCHING_SCORE_PROVIDER", "openai").lower()
+        match_model = os.getenv("MATCHING_SCORE_MODEL", "gpt-4o-mini")
+        client, resolved_model = get_llm_client(match_provider, match_model)
 
         prompt = f"""Analyze how well this CV matches the job requirements. Provide a detailed matching analysis.
 
@@ -702,12 +710,7 @@ IMPORTANT: Read the ENTIRE CV carefully before identifying gaps.
 
 Format your response as valid JSON only, no additional text."""
 
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-        )
-
-        content = response.choices[0].message.content
+        content = generate_with_llm(client, resolved_model, match_provider, prompt)
 
         # Parse JSON response
         if content.startswith("```json"):
