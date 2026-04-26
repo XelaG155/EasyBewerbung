@@ -155,6 +155,27 @@ Adressiert: alle in Iteration 4 gefundenen Restpunkte.
 
 **Tests-Stand:** 183 passed, 5 skipped (vorher 180). Coverage 59% bei Gate 58.
 
+### Iteration 6 — 2026-04-26 (commits c324fe0..40f0b9e, 4 Commits)
+
+Adressiert: konkrete Findings aus Iteration 5.
+
+**UX/UI 8.4 → ?**
+- ✅ 18 englische Strings in `de-CH.json` Lines 106-126 uebersetzt (uploadFailed, deleteFailed, saveSpontaneous, viewDetails, allApplications, etc.).
+- ✅ Letzte 3 hardcoded Action-Buttons (View Details, Mark as Applied, Delete) auf neue `.btn-success` / `.btn-danger` / `.btn-primary` Token-Utilities migriert.
+- ✅ Delete-Errors gehen jetzt durch zentralen `actionBanner` statt durch `setUploadError`/`setAnalysisError` (kein State-Cross-Pollution mehr).
+
+**Testing 8.5 → ?**
+- ✅ Fixme-Shells haben jetzt _wirklich_ leere Bodies (vorher `await expect(page).toHaveURL(/.*/)` was Mini-Vacuous).
+- ✅ Coverage-Gate-Ratchet jetzt mit 4 datierten Meilensteinen im CI-Kommentar (58 → 60 am 15.5. → 65 am 15.6. → 75 am 15.7.).
+- ✅ ESLint-Warning-Ceiling-Decrement-Plan gleicher Stil (95 → 80 → 50 → 0).
+
+**DA 8.7 → ?**
+- ✅ Postgres-Advisory-Lock im Bootstrap (`pg_advisory_lock(0xEA5BEBE2)`) — verhindert Race wenn zwei Worker-Replicas gleichzeitig starten.
+- ✅ `reference_summary`-Pre-Flight-Gate im /generate-Endpunkt: 400 wenn keine REFERENCE-Doc mit Text vorhanden, BEVOR Credits abgezogen werden.
+- ✅ Privacy-Policy 5(c) und 5(d) auf present-tense umgeschrieben — keine Future-Tense-Versprechen mehr. Plus Warnung an Pilot-Nutzer, "sensitive Daten nicht hochladen bis Backup-Strategie aktiv".
+
+**Tests-Stand:** 183 passed, 5 skipped (unveraendert).
+
 
 
 
