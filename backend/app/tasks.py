@@ -532,17 +532,24 @@ def generate_document_prompt_from_template(
         doc_type_key = getattr(template, "doc_type", "")
         role, task, instructions = _resolve_prompt_components(doc_type_key)
 
-        # Get reference letters if user has any
+        # Get reference letters if user has any. Empty / OCR-failed
+        # documents are filtered out so the LLM never sees a "Reference
+        # Letter — No text content" placeholder and fabricates one (DA
+        # Iteration-3 P1: dishonest-output failure mode).
         reference_letters = "No reference letters provided."
         if db and user:
             ref_docs = db.query(Document).filter(
                 Document.user_id == user.id,
                 Document.doc_type == "REFERENCE"
             ).all()
-            if ref_docs:
+            usable_refs = [
+                d for d in ref_docs
+                if d.content_text and d.content_text.strip()
+            ]
+            if usable_refs:
                 reference_letters = "\n\n".join([
-                    f"--- Reference Letter {i+1} ---\n{doc.content_text or 'No text content'}"
-                    for i, doc in enumerate(ref_docs)
+                    f"--- Reference Letter {i+1} ---\n{doc.content_text.strip()}"
+                    for i, doc in enumerate(usable_refs)
                 ])
 
         # CV summary is the first ~2000 chars of CV (for templates that need a brief version)
@@ -892,7 +899,14 @@ def generate_documents_task(self, task_id: int, application_id: int, doc_types: 
         for t in db_templates:
             templates_map[t.doc_type] = t
 
-        default_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        # Default provider/model for the no-template fallback path. Env-
+        # overridable for parity with calculate_matching_score_task; goes
+        # through get_llm_client / generate_with_llm so it inherits the
+        # timeout, retry-on-transient and Anthropic prompt-caching glue.
+        # Replaces a previous bare OpenAI(timeout-less) client that bypassed
+        # all the resilience work in tasks.py.
+        default_provider = os.getenv("DEFAULT_LLM_PROVIDER", "openai").lower()
+        default_model = os.getenv("DEFAULT_LLM_MODEL", "gpt-4o-mini")
 
         for idx, doc_type in enumerate(doc_types):
             try:
@@ -916,11 +930,10 @@ def generate_documents_task(self, task_id: int, application_id: int, doc_types: 
                     if not prompt:
                         continue
 
-                    response = default_client.chat.completions.create(
-                        model="gpt-4",
-                        messages=[{"role": "user", "content": prompt}],
+                    fallback_client, fallback_model = get_llm_client(default_provider, default_model)
+                    content = generate_with_llm(
+                        fallback_client, fallback_model, default_provider, prompt
                     )
-                    content = response.choices[0].message.content
 
                 # Persist to disk
                 storage_dir = os.path.join("generated", str(user_id))
