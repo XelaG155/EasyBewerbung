@@ -63,6 +63,40 @@ def _alembic_version_is_empty(engine) -> bool:
         return row is None
 
 
+def _acquire_postgres_advisory_lock(engine, lock_id: int = 0xEA5BEBE2):
+    """Take a session-scoped Postgres advisory lock for the bootstrap step.
+
+    Without this lock two containers booting simultaneously can both
+    observe ``alembic_version`` empty, both call ``command.stamp``, and
+    both then ``command.upgrade`` — the second loses with an Alembic
+    exception, the container restarts, the operator sees a flap. The
+    advisory lock serialises bootstrap so only one container runs the
+    stamp+upgrade at a time. SQLite (used by tests) silently skips this.
+
+    Returns a context-manager-like object: caller must call ``release()``
+    when done. Designed as a no-op fallback on non-Postgres engines.
+    """
+    from contextlib import contextmanager
+
+    @contextmanager
+    def _noop():
+        yield
+
+    if not str(engine.url).startswith("postgresql"):
+        return _noop()
+
+    @contextmanager
+    def _pg_lock():
+        with engine.connect() as conn:
+            conn.execute(text("SELECT pg_advisory_lock(:k)"), {"k": lock_id})
+            try:
+                yield
+            finally:
+                conn.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": lock_id})
+
+    return _pg_lock()
+
+
 def main() -> None:
     # Lazy-imported so SECRET_KEY / DATABASE_URL guards in app.* fire here
     # too — the script is the first thing in the container's lifecycle to
@@ -70,26 +104,29 @@ def main() -> None:
     from app.database import engine  # noqa: E402
     from app.models import Base  # noqa: E402
 
-    print("[bootstrap_db] Ensuring all tables exist via create_all...", flush=True)
-    Base.metadata.create_all(bind=engine)
+    # Serialise the stamp+upgrade behind a Postgres advisory lock so two
+    # containers booting in parallel don't race each other. SQLite no-op.
+    with _acquire_postgres_advisory_lock(engine):
+        print("[bootstrap_db] Ensuring all tables exist via create_all...", flush=True)
+        Base.metadata.create_all(bind=engine)
 
-    cfg = Config(str(ALEMBIC_INI))
-    # Forward DATABASE_URL into Alembic's env.py via env var; alembic.ini
-    # uses sqlalchemy.url=${DATABASE_URL} pattern.
-    if os.getenv("DATABASE_URL"):
-        cfg.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
+        cfg = Config(str(ALEMBIC_INI))
+        # Forward DATABASE_URL into Alembic's env.py via env var; alembic.ini
+        # uses sqlalchemy.url=${DATABASE_URL} pattern.
+        if os.getenv("DATABASE_URL"):
+            cfg.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
 
-    if _alembic_version_is_empty(engine):
-        print(
-            f"[bootstrap_db] alembic_version is empty — stamping to baseline "
-            f"{BASELINE_REVISION} (DB was bootstrapped via create_all).",
-            flush=True,
-        )
-        command.stamp(cfg, BASELINE_REVISION)
+        if _alembic_version_is_empty(engine):
+            print(
+                f"[bootstrap_db] alembic_version is empty — stamping to baseline "
+                f"{BASELINE_REVISION} (DB was bootstrapped via create_all).",
+                flush=True,
+            )
+            command.stamp(cfg, BASELINE_REVISION)
 
-    print("[bootstrap_db] Running alembic upgrade head...", flush=True)
-    command.upgrade(cfg, "head")
-    print("[bootstrap_db] Schema reconciliation complete.", flush=True)
+        print("[bootstrap_db] Running alembic upgrade head...", flush=True)
+        command.upgrade(cfg, "head")
+        print("[bootstrap_db] Schema reconciliation complete.", flush=True)
 
 
 if __name__ == "__main__":

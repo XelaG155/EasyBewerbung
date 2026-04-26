@@ -856,6 +856,35 @@ async def generate_documents(
             ),
         )
 
+    # Pre-flight gate: doc-types that synthesise content from reference
+    # letters (currently only ``reference_summary``) need at least one
+    # REFERENCE doc with non-empty extracted text. Without this guard the
+    # worker still runs through the LLM call but the prompt has the
+    # honest "No reference letters provided" placeholder, so the LLM
+    # produces a near-empty summary and the user pays a credit for a
+    # blank document. (DA Iteration-3 P1 — surface to user instead of
+    # silently absorbing.)
+    REFERENCE_REQUIRED_DOC_TYPES = {"reference_summary"}
+    requested_with_refs = REFERENCE_REQUIRED_DOC_TYPES.intersection(doc_types)
+    if requested_with_refs:
+        usable_refs = (
+            db.query(Document)
+            .filter(Document.user_id == current_user.id, Document.doc_type == "REFERENCE")
+            .all()
+        )
+        usable_refs = [d for d in usable_refs if d.content_text and d.content_text.strip()]
+        if not usable_refs:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Fuer "
+                    + ", ".join(sorted(requested_with_refs))
+                    + " benoetigen wir mindestens ein hochgeladenes "
+                    "Referenzschreiben mit lesbarem Text. Bitte zuerst ein "
+                    "REFERENCE-Dokument hochladen."
+                ),
+            )
+
     # Atomic credit deduction with row-level lock to prevent the
     # double-spend race documented in CLAUDE-2026.04.md (Iteration 1
     # P0-B). Without ``with_for_update`` two concurrent calls can both
