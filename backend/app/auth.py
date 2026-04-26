@@ -52,22 +52,58 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 security = HTTPBearer(auto_error=False)  # Don't auto-raise errors for optional auth
 
 
+import hashlib
+
+
+def _prepare_password_bytes(password: str) -> bytes:
+    """SHA256-prehash the password before bcrypt to bypass the 72-byte limit.
+
+    bcrypt silently truncates inputs at 72 bytes. Pydantic permits passwords
+    up to 100 chars (UserRegister.password), so a user with an 80-char
+    password could authenticate with any 72-char prefix of it — significant
+    effective-entropy loss. Prehashing with SHA256 produces a fixed
+    32-byte digest that bcrypt processes in full. We base64-encode the
+    digest so it stays printable and well within bcrypt's limit (44 bytes).
+
+    Existing hashes were created without the prehash step, so verify_password
+    must support both code paths. We try the new (prehashed) form first,
+    then fall back to the legacy raw form. New hashes always use the
+    prehashed form.
+    """
+    import base64
+
+    digest = hashlib.sha256(password.encode("utf-8")).digest()
+    return base64.b64encode(digest)
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against a hash using bcrypt directly."""
+    """Verify a password against a bcrypt hash.
+
+    Tries the SHA256-prehash form first (current scheme), falls back to
+    the raw-password form (legacy hashes from before 2026-04-26).
+    """
     try:
-        # bcrypt handles encoding internally
-        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
-    except Exception as e:
-        print(f"Password verification error: {e}")
+        prehashed = _prepare_password_bytes(plain_password)
+        if bcrypt.checkpw(prehashed, hashed_password.encode("utf-8")):
+            return True
+        # Fallback for legacy hashes created without prehashing.
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except Exception:
+        logger.exception("Password verification raised")
         return False
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password using bcrypt directly."""
-    # bcrypt.hashpw automatically handles the 72 byte limit
+    """Hash a password using bcrypt with SHA256 prehashing.
+
+    Prehashing avoids bcrypt's 72-byte truncation, which was an effective
+    entropy ceiling for any password longer than 72 bytes. New hashes use
+    the prehashed scheme; legacy hashes are still accepted by
+    verify_password via a fallback path.
+    """
     salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
-    return hashed.decode('utf-8')
+    hashed = bcrypt.hashpw(_prepare_password_bytes(password), salt)
+    return hashed.decode("utf-8")
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
