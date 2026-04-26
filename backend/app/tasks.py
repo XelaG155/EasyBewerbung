@@ -632,6 +632,47 @@ Format your response as valid JSON only, no additional text."""
         db.close()
 
 
+def settle_generation_task(task, db, user_id: int) -> None:
+    """Derive final status and refund credits proportional to failed_docs.
+
+    Idempotent: a Celery retry that re-enters this function will not
+    double-refund because already-refunded credits are tracked on the
+    task and subtracted from the owed amount.
+
+    Status rules (uses task.completed_docs and task.failed_docs):
+        failed == 0           → "completed"
+        completed == 0        → "failed"
+        otherwise             → "partial_failure"
+
+    Refund math (integer floor-division, conservative):
+        owed = credits_held * failed / total_docs
+        delta = max(0, owed - credits_refunded)
+    """
+    completed = task.completed_docs or 0
+    failed = task.failed_docs or 0
+
+    if failed == 0:
+        task.status = "completed"
+    elif completed == 0:
+        task.status = "failed"
+    else:
+        task.status = "partial_failure"
+
+    task.progress = 100
+
+    held = task.credits_held or 0
+    total = task.total_docs or 1
+    already_refunded = task.credits_refunded or 0
+    owed_refund = (held * failed) // total
+    delta = max(0, owed_refund - already_refunded)
+    if delta > 0:
+        user_row = db.query(User).filter(User.id == user_id).first()
+        if user_row is not None:
+            user_row.credits = (user_row.credits or 0) + delta
+            task.credits_refunded = already_refunded + delta
+    db.commit()
+
+
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=60)
 def generate_documents_task(self, task_id: int, application_id: int, doc_types: List[str], user_id: int):
     """
@@ -798,40 +839,13 @@ def generate_documents_task(self, task_id: int, application_id: int, doc_types: 
                 )
                 db.commit()
 
-        # Settle the task: derive final status from completed/failed counts
-        # and refund credits proportional to failed_docs. Idempotent — a
-        # Celery retry that re-enters this path will not double-refund
-        # because we read credits_refunded as the offset.
-        completed = task.completed_docs or 0
-        failed = task.failed_docs or 0
-
-        if failed == 0:
-            task.status = "completed"
-        elif completed == 0:
-            task.status = "failed"
-        else:
-            task.status = "partial_failure"
-
-        task.progress = 100
-
-        # Proportional refund: credits_held is total cost, refund failed/total.
-        # We use integer arithmetic and floor-divide to stay conservative.
-        held = task.credits_held or 0
-        total = task.total_docs or len(doc_types) or 1
-        already_refunded = task.credits_refunded or 0
-        owed_refund = (held * failed) // total
-        delta = max(0, owed_refund - already_refunded)
-        if delta > 0:
-            user_row = db.query(User).filter(User.id == user_id).first()
-            if user_row is not None:
-                user_row.credits = (user_row.credits or 0) + delta
-                task.credits_refunded = already_refunded + delta
-        db.commit()
+        # Settle the task and refund proportionally for failed docs.
+        settle_generation_task(task, db, user_id)
 
         return {
             "status": task.status,
-            "documents_generated": completed,
-            "documents_failed": failed,
+            "documents_generated": task.completed_docs or 0,
+            "documents_failed": task.failed_docs or 0,
             "credits_refunded": task.credits_refunded or 0,
         }
 
