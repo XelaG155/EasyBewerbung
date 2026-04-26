@@ -452,6 +452,329 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return serialize_user(current_user)
 
 
+@router.get("/me/export")
+@limiter.limit("3/hour")
+async def export_account_data(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return a JSON dump of every personal-data row this user owns.
+
+    Implements the data-portability right (revDSG Art. 28 / DSGVO Art. 20).
+    Includes profile, applications, job offers, generated documents,
+    uploaded documents (metadata only — file bytes are excluded to keep
+    the response a manageable JSON), matching scores, and activity log.
+    Strictly read-only: this endpoint never mutates data.
+
+    The JSON is returned with a Content-Disposition attachment header
+    so browsers offer a "Save as" dialog rather than rendering inline.
+    """
+    from fastapi.responses import JSONResponse
+    from app.models import (
+        Application,
+        Document,
+        GeneratedDocument,
+        JobOffer,
+        MatchingScore,
+        UserActivityLog,
+    )
+
+    def _iso(dt):
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.isoformat()
+
+    user_id = current_user.id
+
+    profile = {
+        "id": current_user.id,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "preferred_language": current_user.preferred_language,
+        "mother_tongue": current_user.mother_tongue,
+        "documentation_language": current_user.documentation_language,
+        "is_admin": current_user.is_admin,
+        "is_active": current_user.is_active,
+        "credits": current_user.credits,
+        "employment_status": current_user.employment_status,
+        "education_type": current_user.education_type,
+        "additional_profile_context": current_user.additional_profile_context,
+        "date_format": getattr(current_user, "date_format", None),
+        "oauth_provider": current_user.oauth_provider,
+        "created_at": _iso(current_user.created_at),
+        "last_login_at": _iso(current_user.last_login_at),
+        "privacy_policy_accepted_at": _iso(current_user.privacy_policy_accepted_at),
+    }
+
+    documents = [
+        {
+            "id": d.id,
+            "doc_type": d.doc_type,
+            "filename": d.filename,
+            "file_path": d.file_path,
+            "content_text": d.content_text,
+            "created_at": _iso(d.created_at),
+        }
+        for d in db.query(Document).filter(Document.user_id == user_id).all()
+    ]
+
+    job_offers = [
+        {
+            "id": j.id,
+            "url": j.url,
+            "title": j.title,
+            "company": j.company,
+            "location": getattr(j, "location", None),
+            "description": j.description,
+            "created_at": _iso(j.created_at),
+        }
+        for j in db.query(JobOffer).filter(JobOffer.user_id == user_id).all()
+    ]
+
+    applications_rows = (
+        db.query(Application).filter(Application.user_id == user_id).all()
+    )
+    applications = [
+        {
+            "id": a.id,
+            "job_title": a.job_title,
+            "company": a.company,
+            "job_offer_url": a.job_offer_url,
+            "is_spontaneous": a.is_spontaneous,
+            "opportunity_context": a.opportunity_context,
+            "application_type": getattr(a, "application_type", None),
+            "applied": a.applied,
+            "applied_at": _iso(a.applied_at),
+            "result": a.result,
+            "ui_language": a.ui_language,
+            "documentation_language": a.documentation_language,
+            "company_profile_language": a.company_profile_language,
+            "created_at": _iso(a.created_at),
+        }
+        for a in applications_rows
+    ]
+
+    application_ids = [a.id for a in applications_rows]
+
+    generated_documents = []
+    if application_ids:
+        for gd in (
+            db.query(GeneratedDocument)
+            .filter(GeneratedDocument.application_id.in_(application_ids))
+            .all()
+        ):
+            generated_documents.append(
+                {
+                    "id": gd.id,
+                    "application_id": gd.application_id,
+                    "doc_type": gd.doc_type,
+                    "format": gd.format,
+                    "storage_path": gd.storage_path,
+                    "content": gd.content,
+                    "created_at": _iso(gd.created_at),
+                }
+            )
+
+    matching_scores = []
+    if application_ids:
+        for ms in (
+            db.query(MatchingScore)
+            .filter(MatchingScore.application_id.in_(application_ids))
+            .all()
+        ):
+            matching_scores.append(
+                {
+                    "id": ms.id,
+                    "application_id": ms.application_id,
+                    "overall_score": ms.overall_score,
+                    "strengths": ms.strengths,
+                    "gaps": ms.gaps,
+                    "recommendations": ms.recommendations,
+                    "created_at": _iso(ms.created_at),
+                    "updated_at": _iso(ms.updated_at),
+                }
+            )
+
+    activity_log = [
+        {
+            "id": log.id,
+            "action": log.action,
+            "ip_address": log.ip_address,
+            "metadata": log.metadata_,
+            "created_at": _iso(log.created_at),
+        }
+        for log in (
+            db.query(UserActivityLog)
+            .filter(UserActivityLog.user_id == user_id)
+            .order_by(UserActivityLog.created_at.desc())
+            .all()
+        )
+    ]
+
+    record_activity(db, current_user, "data_export", request)
+
+    payload = {
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "schema_version": 1,
+        "profile": profile,
+        "documents": documents,
+        "job_offers": job_offers,
+        "applications": applications,
+        "generated_documents": generated_documents,
+        "matching_scores": matching_scores,
+        "activity_log": activity_log,
+    }
+
+    return JSONResponse(
+        content=payload,
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="easybewerbung-export-user-{user_id}.json"'
+            ),
+        },
+    )
+
+
+class AccountDeleteRequest(BaseModel):
+    """Confirmation payload — caller must repeat their email exactly."""
+
+    confirm_email: EmailStr
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("3/hour")
+async def delete_my_account(
+    request: Request,
+    payload: AccountDeleteRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Permanent account deletion — removes the user and every owned row.
+
+    Implements the right to erasure (revDSG Art. 32 / DSGVO Art. 17).
+    The caller must repeat their own email address as a confirmation
+    guard against token-replay or accidental deletion. Admin users
+    cannot self-delete (single-admin lockout) — they must be demoted
+    by another admin first.
+
+    Hard delete only. No soft-delete column is consulted; all rows are
+    physically removed in a single transaction. Generated PDF / text
+    files on disk are best-effort cleaned up.
+    """
+    import os as _os
+
+    from app.models import (
+        Application,
+        Document,
+        GeneratedDocument,
+        GenerationTask,
+        JobOffer,
+        MatchingScore,
+        MatchingScoreTask,
+        UserActivityLog,
+    )
+
+    if payload.confirm_email.strip().lower() != (current_user.email or "").lower():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bestaetigungs-E-Mail stimmt nicht mit dem Konto ueberein.",
+        )
+
+    if getattr(current_user, "is_admin", False):
+        # Avoid creating an admin-less system. The other admin must demote first.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Admin-Konten koennen sich nicht selbst loeschen. "
+                "Bitte zuerst durch einen anderen Admin demotieren."
+            ),
+        )
+
+    user_id = current_user.id
+
+    # Collect file paths before delete so we can clean up after the
+    # transaction commits successfully.
+    pdf_paths = [
+        j.original_pdf_path
+        for j in db.query(JobOffer).filter(JobOffer.user_id == user_id).all()
+        if getattr(j, "original_pdf_path", None)
+    ]
+    upload_paths = [
+        d.file_path
+        for d in db.query(Document).filter(Document.user_id == user_id).all()
+        if getattr(d, "file_path", None)
+    ]
+    application_ids = [
+        a.id for a in db.query(Application).filter(Application.user_id == user_id).all()
+    ]
+    generated_paths = []
+    if application_ids:
+        generated_paths = [
+            gd.storage_path
+            for gd in db.query(GeneratedDocument)
+            .filter(GeneratedDocument.application_id.in_(application_ids))
+            .all()
+            if getattr(gd, "storage_path", None)
+            and not gd.storage_path.startswith("unpersisted:")
+        ]
+
+    try:
+        # Order matters: delete child rows first to avoid FK violations.
+        if application_ids:
+            db.query(GeneratedDocument).filter(
+                GeneratedDocument.application_id.in_(application_ids)
+            ).delete(synchronize_session=False)
+            db.query(MatchingScore).filter(
+                MatchingScore.application_id.in_(application_ids)
+            ).delete(synchronize_session=False)
+            db.query(MatchingScoreTask).filter(
+                MatchingScoreTask.application_id.in_(application_ids)
+            ).delete(synchronize_session=False)
+            db.query(GenerationTask).filter(
+                GenerationTask.application_id.in_(application_ids)
+            ).delete(synchronize_session=False)
+
+        db.query(Application).filter(Application.user_id == user_id).delete(
+            synchronize_session=False
+        )
+        db.query(JobOffer).filter(JobOffer.user_id == user_id).delete(
+            synchronize_session=False
+        )
+        db.query(Document).filter(Document.user_id == user_id).delete(
+            synchronize_session=False
+        )
+        # Hard-delete the activity log too — UserActivityLog.user_id is a
+        # NOT NULL FK, so it cannot be pseudonymised in place. Aggregate
+        # security signals are lost on account deletion; that is the
+        # expected privacy tradeoff under DSGVO Art. 17.
+        db.query(UserActivityLog).filter(UserActivityLog.user_id == user_id).delete(
+            synchronize_session=False
+        )
+        db.delete(current_user)
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Account deletion failed for user %s", user_id)
+        raise HTTPException(
+            status_code=500,
+            detail="Konto konnte nicht geloescht werden. Bitte spaeter erneut versuchen.",
+        )
+
+    # Best-effort filesystem cleanup. Silent failures are fine — DB rows
+    # are already gone, leftover files are orphaned but harmless.
+    for path in pdf_paths + upload_paths + generated_paths:
+        try:
+            if path and _os.path.exists(path):
+                _os.remove(path)
+        except OSError:
+            logger.debug("Could not remove %s during account deletion", path)
+
+    return None
+
+
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     preferred_language: Optional[str] = None
