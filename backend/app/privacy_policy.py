@@ -1,66 +1,203 @@
+"""Privacy policy text served by GET /users/privacy-policy.
+
+Schweizer revDSG (in Kraft seit 1.9.2023) und EU-DSGVO konforme Fassung.
+Im EasyBewerbung-Pilotbetrieb verarbeitete Daten gehen an externe LLM-Anbieter
+in den USA (OpenAI, Anthropic, Google), daher sind Drittland-Transfer und
+Auftragsverarbeiter-Setup explizit ausgewiesen. Die Fassung beschreibt nur den
+tatsaechlichen Datenfluss; sie ist keine Rechtsberatung. Konkrete Verantwortlichen-
+Daten werden zur Inbetriebnahme durch den Betreiber befuellt.
 """
-Privacy Policy and Terms of Service
-"""
+
+PRIVACY_POLICY_VERSION = "2026.04.26"
 
 PRIVACY_POLICY_TEXT = """
-PRIVACY POLICY AND DATA PROCESSING NOTICE
+DATENSCHUTZERKLAERUNG — EasyBewerbung
 
-Effective Date: November 22, 2025
+Stand: 26. April 2026 (Version 2026.04.26)
 
-1. DATA COLLECTION AND PROCESSING
+1. VERANTWORTLICHE STELLE
 
-By utilizing this application system (hereinafter referred to as "the Service"), you hereby acknowledge and expressly consent to the collection, processing, and storage of certain personal data, including but not limited to:
+Verantwortlich fuer die Datenverarbeitung im Sinne von Art. 5 lit. j revDSG
+und Art. 4 Abs. 7 DSGVO ist:
 
-(a) Internet Protocol (IP) addresses
-(b) User account information and credentials
-(c) Activity logs and system interaction metadata
-(d) Authentication and session data
+  EasyBewerbung — Betreiber
+  app.easybewerbung.ch
+  Schweiz
 
-2. PURPOSE OF DATA COLLECTION
+  Kontakt fuer Datenschutzanfragen: privacy@easybewerbung.ch
 
-The collection of IP addresses and related data is undertaken for the following legitimate purposes:
+Die in dieser Erklaerung genannten Rechte koennen Sie jederzeit unter dieser
+Kontaktadresse oder ueber die Selbstbedienungs-Funktionen im Konto-Menue
+geltend machen (siehe Abschnitt 9).
 
-(a) System security and integrity protection
-(b) Prevention of unauthorized access and fraudulent activities
-(c) Compliance with legal and regulatory obligations
-(d) Service improvement and technical support
-(e) Investigation of security incidents and policy violations
+2. UMFANG DER VERARBEITUNG
 
-3. LEGAL BASIS FOR PROCESSING
+Im Rahmen der Nutzung erheben und verarbeiten wir die folgenden Kategorien
+personenbezogener Daten:
 
-The processing of your personal data, including IP addresses, is conducted pursuant to:
+(a) Konto-Daten: E-Mail-Adresse, Name, gewaehlte Sprache, Passwort-Hash,
+    OAuth-Verknuepfung (falls Anmeldung via Google), Profilbild-URL.
+(b) Bewerbungsprofil: Anstellungsstatus, Ausbildungsart, optionaler Kontext-
+    Freitext, hochgeladene Lebenslaeufe inklusive der darin enthaltenen
+    Informationen (z.B. Geburtsdatum, Adresse, beruflicher Werdegang,
+    Sprachkenntnisse, Zeugnisinhalte).
+(c) Stelleninserate, die Sie in das System einlesen, einschliesslich der
+    URL, des Originaltexts, der gespeicherten PDF-Kopie und der von uns
+    generierten Auswertungen.
+(d) Generierte Bewerbungsunterlagen (Anschreiben, Lebenslaeufe, Firmen-
+    portraits, Interview-Vorbereitungen, Match-Score-Berichte etc.).
+(e) Aktivitaetsprotokoll: Login-/Logout-Zeitpunkte, IP-Adresse,
+    Konten-Sperrungen, Aenderungen sicherheitsrelevanter Felder.
+(f) Technische Daten: Browser-Identifikation, Cookies fuer Sitzungs-
+    erhaltung, REST-API-Aufrufe.
 
-(a) Your explicit consent as manifested by acceptance of this policy
-(b) Our legitimate interest in maintaining system security and preventing abuse
-(c) Compliance with applicable legal obligations under relevant data protection regulations
+Wir erheben KEINE Tracking-Cookies und nutzen keine Werbe-Netzwerke.
 
-4. DATA RETENTION AND SECURITY
+3. ZWECKE UND RECHTSGRUNDLAGEN
 
-All collected data shall be retained for such period as is necessary to fulfill the purposes outlined herein or as required by applicable law. Appropriate technical and organizational measures are implemented to safeguard your personal data against unauthorized access, alteration, disclosure, or destruction.
+(a) Kernfunktion: Erstellung individualisierter Bewerbungsunterlagen mit
+    Hilfe von Sprachmodellen (LLMs). Rechtsgrundlage: Vertragserfuellung
+    (Art. 31 Abs. 2 lit. a revDSG / Art. 6 Abs. 1 lit. b DSGVO) sowie Ihre
+    explizite Einwilligung in den Drittland-Transfer (siehe Abschnitt 4)
+    nach Art. 31 Abs. 1 revDSG / Art. 49 Abs. 1 lit. a DSGVO.
 
-5. YOUR RIGHTS
+(b) Konto-Verwaltung, Authentifizierung, Sicherheit gegen Brute-Force-
+    Angriffe, Fehlersuche, Abwehr von Missbrauch. Rechtsgrundlage:
+    berechtigtes Interesse (Art. 31 Abs. 1 revDSG / Art. 6 Abs. 1 lit. f
+    DSGVO).
 
-In accordance with applicable data protection legislation, you possess certain rights regarding your personal data, including but not limited to:
+(c) Erfuellung gesetzlicher Pflichten (Buchhaltung, Anfragen von Behoerden):
+    Art. 6 Abs. 1 lit. c DSGVO.
 
-(a) The right to access your personal data
-(b) The right to rectification of inaccurate data
-(c) The right to erasure under certain circumstances
-(d) The right to restrict or object to processing
-(e) The right to data portability
+4. EINSATZ KUENSTLICHER INTELLIGENZ — DRITTLAND-TRANSFER
 
-6. CONSENT
+EasyBewerbung verwendet Sprachmodelle der folgenden Anbieter, die ihre
+Verarbeitung in den USA durchfuehren:
 
-BY ACCEPTING THIS PRIVACY POLICY, YOU EXPRESSLY CONSENT TO THE COLLECTION AND PROCESSING OF YOUR IP ADDRESS AND OTHER PERSONAL DATA AS DESCRIBED HEREIN FOR SECURITY AND SAFETY PURPOSES.
+  - OpenAI, L.L.C. (USA)
+  - Anthropic PBC (USA)
+  - Google LLC / Google Cloud (USA)
 
-7. MODIFICATIONS
+Bei jeder Generierung wird der Inhalt Ihres Lebenslaufs sowie das
+Stelleninserat an einen dieser Anbieter uebermittelt. Die Auswahl des
+Anbieters und des Modells erfolgt admin-seitig pro Dokumenttyp und ist
+in der Anwendung sichtbar.
 
-We reserve the right to modify this Privacy Policy at any time. Continued use of the Service following any such modifications constitutes acceptance of the revised policy.
+(a) Rechtsgrundlage des Transfers:
+    Schweiz: Art. 16 Abs. 1 revDSG i.V.m. dem Angemessenheits-Beschluss des
+    EDOEB fuer USA-Empfaenger, sofern unter dem Swiss-US Data Privacy
+    Framework zertifiziert; sonst Standardvertragsklauseln nach Art. 16
+    Abs. 2 lit. d revDSG.
+    EU: Art. 46 Abs. 2 lit. c DSGVO (Standardvertragsklauseln) bzw.
+    Art. 45 DSGVO (EU-US Data Privacy Framework, soweit anwendbar).
 
-8. CONTACT
+(b) Auftragsverarbeitung: Wir haben mit jedem dieser Anbieter einen
+    Auftragsverarbeitungsvertrag (Data Processing Addendum, DPA)
+    abgeschlossen, in dem Zweckbindung, Sicherheits-Standards und
+    Speicherfristen festgelegt sind. Soweit verfuegbar, ist die
+    Zero-Data-Retention-Option aktiviert: die Anbieter loeschen Ihre
+    Daten unmittelbar nach der Generierung und nutzen sie weder zu
+    Trainingszwecken noch zur Modellverbesserung.
 
-For inquiries regarding this Privacy Policy or the processing of your personal data, please contact the system administrator.
+(c) Hinweis nach EU-KI-VO: Saemtliche von der Plattform erstellten
+    Texte sind KI-generiert. Sie sollten sie vor dem Versand an
+    Arbeitgeber pruefen und ggf. anpassen. Diese Plattform trifft
+    KEINE eigenstaendigen Personalentscheidungen — sie erstellt nur
+    Hilfs-Dokumente fuer den Bewerbungsprozess.
 
----
+5. SPEICHERDAUER
 
-By proceeding with registration or login, you acknowledge that you have read, understood, and agree to be bound by the terms of this Privacy Policy.
+(a) Konto-Daten: bis zur Loeschung des Kontos (Sie koennen das Konto
+    jederzeit selbst loeschen, siehe Abschnitt 9).
+(b) Bewerbungen, generierte Dokumente, hochgeladene Lebenslaeufe:
+    bis zur Loeschung des Kontos oder bis Sie den Datensatz manuell
+    entfernen.
+(c) Aktivitaetsprotokoll mit IP-Adresse: 90 Tage rollierend.
+(d) Backup-Kopien (verschluesselt): bis zu 30 Tage nach Loeschung
+    werden Ihre Daten in inkrementellen Backup-Snapshots ueberschrieben.
+
+6. EMPFAENGER
+
+Innerhalb des Betreiber-Teams haben nur Personen Zugriff, die diesen fuer
+Betrieb und Wartung benoetigen. Daneben werden Daten an die folgenden
+Auftragsverarbeiter weitergegeben:
+
+  - LLM-Anbieter (siehe Abschnitt 4): zur Generierung Ihrer Dokumente.
+  - Hosting-Provider in der Schweiz: Datenbank, Worker, Backups.
+  - E-Mail-Versand-Provider: nur fuer transaktionale E-Mails (Bestaetigung,
+    Passwort-Zuruecksetzen).
+
+Eine Weitergabe Ihrer Daten zu Werbe-Zwecken oder an Datenhaendler findet
+nicht statt.
+
+7. SICHERHEIT
+
+Wir setzen technische und organisatorische Schutzmassnahmen ein:
+
+  - TLS 1.2+ fuer alle Datenuebertragungen.
+  - Bcrypt-Passwort-Hashing mit SHA256-Vorvermischung gegen die 72-Byte-
+    Truncierung.
+  - JWT-basierte Authentifizierung mit serverseitigem Revocation-Stempel
+    (Logout, Passwort-Aenderung und Admin-Demotion entwerten alle bisherigen
+    Tokens).
+  - Account-Lockout nach mehrfacher Fehlanmeldung.
+  - Rate-Limits auf saemtlichen Schreib-Endpunkten.
+  - Tagesbackups mit Verschluesselung im Ruhezustand.
+
+Eine ABSOLUTE Sicherheit gibt es nicht — Sie sollten besonders sensible
+Informationen (z.B. Sozialversicherungsnummern, Bankdaten) NICHT in Ihren
+Lebenslauf oder das Kontext-Feld eingeben.
+
+8. COOKIES UND LOKALE SPEICHERUNG
+
+Wir verwenden ausschliesslich technisch notwendige Cookies bzw.
+Local-Storage-Eintraege:
+
+  - Sitzungs-JWT (Browser-Local-Storage)
+  - Sprachpraeferenz und Theme (Local-Storage)
+
+Es findet kein Tracking via Cookies statt. Eine Einwilligung im Sinne der
+ePrivacy-Verordnung ist daher nicht erforderlich.
+
+9. IHRE RECHTE
+
+Sie haben gemaess revDSG / DSGVO das Recht auf:
+
+  (a) Auskunft (Art. 25 revDSG / Art. 15 DSGVO):
+      Konto-Menue → "Meine Daten exportieren". Liefert eine vollstaendige
+      JSON-Datei mit allen ueber Sie gespeicherten Daten.
+
+  (b) Berichtigung (Art. 32 Abs. 1 revDSG / Art. 16 DSGVO):
+      Profil-Einstellungen erlauben die Korrektur direkt in der Anwendung.
+
+  (c) Loeschung (Art. 32 Abs. 2 lit. c revDSG / Art. 17 DSGVO):
+      Konto-Menue → "Konto loeschen". Loescht Ihr Konto und alle
+      verknuepften Datensaetze hart aus der Datenbank. Backup-Kopien
+      werden im Lauf von 30 Tagen ueberschrieben.
+
+  (d) Einschraenkung (Art. 18 DSGVO) und Widerspruch (Art. 21 DSGVO):
+      per E-Mail an die in Abschnitt 1 genannte Adresse.
+
+  (e) Datenuebertragbarkeit (Art. 28 revDSG / Art. 20 DSGVO):
+      Der JSON-Export aus Ziffer (a) erfuellt diese Anforderung.
+
+  (f) Beschwerderecht bei der Aufsichtsbehoerde:
+      EDOEB (CH): https://www.edoeb.admin.ch
+      Im EU-Raum: jeweilige nationale Datenschutzbehoerde.
+
+10. AENDERUNGEN DIESER ERKLAERUNG
+
+Wir behalten uns vor, diese Datenschutzerklaerung anzupassen, wenn sich
+die Verarbeitung aendert. Bei substanziellen Aenderungen werden Sie beim
+naechsten Login informiert. Die jeweils gueltige Version-Nummer steht im
+Kopf dieses Dokuments.
+
+11. KONTAKT
+
+Datenschutzanfragen: privacy@easybewerbung.ch
+
+Mit der Registrierung bestaetigen Sie, dass Sie diese Datenschutzerklaerung
+gelesen haben und insbesondere mit dem in Abschnitt 4 beschriebenen
+Drittland-Transfer Ihrer Bewerbungsdaten an LLM-Anbieter in den USA
+einverstanden sind.
 """

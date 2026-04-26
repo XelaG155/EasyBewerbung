@@ -26,7 +26,7 @@ from app.auth import (
     get_current_admin_user,
 )
 from app.limiter import limiter
-from app.privacy_policy import PRIVACY_POLICY_TEXT
+from app.privacy_policy import PRIVACY_POLICY_TEXT, PRIVACY_POLICY_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -883,8 +883,12 @@ async def list_supported_languages(db: Session = Depends(get_db)):
 
 @router.get("/privacy-policy")
 async def get_privacy_policy():
-    """Return the privacy policy text."""
-    return {"policy": PRIVACY_POLICY_TEXT}
+    """Return the privacy policy text and its version.
+
+    The version field lets the frontend detect when the policy has
+    changed and prompt the user for a fresh acceptance.
+    """
+    return {"version": PRIVACY_POLICY_VERSION, "policy": PRIVACY_POLICY_TEXT}
 
 
 @router.post("/admin/credits", response_model=UserResponse)
