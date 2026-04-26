@@ -785,27 +785,71 @@ def generate_documents_task(self, task_id: int, application_id: int, doc_types: 
                 logging.error(
                     "LLM provider unavailable for %s: %s", doc_type, e
                 )
+                task.failed_docs = (task.failed_docs or 0) + 1
                 task.error_message = (
                     f"LLM-Provider nicht verfügbar bei Dokument '{doc_type}': {e}"
                 )
                 db.commit()
             except Exception as e:
-                logging.error(f"Error generating {doc_type}: {e}")
-                task.error_message = f"Partial failure: Error generating {doc_type}: {str(e)}"
+                logging.error("Error generating %s: %s", doc_type, e)
+                task.failed_docs = (task.failed_docs or 0) + 1
+                task.error_message = (
+                    f"Fehler bei Dokument '{doc_type}': {str(e)}"
+                )
                 db.commit()
 
-        # Mark as completed
-        task.status = "completed"
+        # Settle the task: derive final status from completed/failed counts
+        # and refund credits proportional to failed_docs. Idempotent — a
+        # Celery retry that re-enters this path will not double-refund
+        # because we read credits_refunded as the offset.
+        completed = task.completed_docs or 0
+        failed = task.failed_docs or 0
+
+        if failed == 0:
+            task.status = "completed"
+        elif completed == 0:
+            task.status = "failed"
+        else:
+            task.status = "partial_failure"
+
         task.progress = 100
+
+        # Proportional refund: credits_held is total cost, refund failed/total.
+        # We use integer arithmetic and floor-divide to stay conservative.
+        held = task.credits_held or 0
+        total = task.total_docs or len(doc_types) or 1
+        already_refunded = task.credits_refunded or 0
+        owed_refund = (held * failed) // total
+        delta = max(0, owed_refund - already_refunded)
+        if delta > 0:
+            user_row = db.query(User).filter(User.id == user_id).first()
+            if user_row is not None:
+                user_row.credits = (user_row.credits or 0) + delta
+                task.credits_refunded = already_refunded + delta
         db.commit()
 
-        return {"status": "completed", "documents_generated": len(doc_types)}
+        return {
+            "status": task.status,
+            "documents_generated": completed,
+            "documents_failed": failed,
+            "credits_refunded": task.credits_refunded or 0,
+        }
 
     except Exception as e:
-        logging.error(f"Fatal error in generate_documents_task: {e}")
+        logging.error("Fatal error in generate_documents_task: %s", e)
         if task:
             task.status = "failed"
             task.error_message = str(e)
+            # Refund any unspent credits up to credits_held minus what was
+            # already refunded. Idempotent across Celery retries.
+            held = task.credits_held or 0
+            already_refunded = task.credits_refunded or 0
+            delta = max(0, held - already_refunded)
+            if delta > 0:
+                user_row = db.query(User).filter(User.id == user_id).first()
+                if user_row is not None:
+                    user_row.credits = (user_row.credits or 0) + delta
+                    task.credits_refunded = already_refunded + delta
             db.commit()
 
         raise self.retry(exc=e)

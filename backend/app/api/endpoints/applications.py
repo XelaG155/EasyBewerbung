@@ -870,16 +870,19 @@ async def generate_documents(
     if not cv_doc or not cv_doc.content_text:
         raise HTTPException(status_code=400, detail="No CV found with text content")
 
-    # Deduct credits upfront
+    # Deduct credits upfront, but record the amount on the task so the
+    # worker can refund proportionally for any docs that ultimately fail.
     current_user.credits -= total_cost
 
-    # Create generation task
     task = GenerationTask(
         application_id=application_id,
         user_id=current_user.id,
         status="pending",
         total_docs=len(doc_types),
         completed_docs=0,
+        failed_docs=0,
+        credits_held=total_cost,
+        credits_refunded=0,
         progress=0,
     )
     db.add(task)
