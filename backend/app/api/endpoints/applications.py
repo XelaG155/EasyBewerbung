@@ -377,7 +377,9 @@ async def create_application(
 
 
 @router.patch("/{application_id}", response_model=ApplicationResponse)
+@limiter.limit("30/minute")
 async def update_application(
+    request: Request,
     application_id: int,
     payload: ApplicationUpdate,
     current_user: User = Depends(get_current_user),
@@ -409,7 +411,9 @@ async def update_application(
 
 
 @router.post("/{application_id}/documents", response_model=ApplicationResponse)
+@limiter.limit("30/minute")
 async def attach_generated_documents(
+    request: Request,
     application_id: int,
     payload: ApplicationDocumentBatch,
     current_user: User = Depends(get_current_user),
@@ -456,7 +460,9 @@ class DeleteDocumentsRequest(BaseModel):
 
 
 @router.delete("/{application_id}/documents")
+@limiter.limit("20/minute")
 async def delete_generated_documents(
+    request: Request,
     application_id: int,
     payload: DeleteDocumentsRequest,
     current_user: User = Depends(get_current_user),
@@ -619,7 +625,9 @@ async def get_application(
 
 
 @router.delete("/{application_id}")
+@limiter.limit("20/minute")
 async def delete_application(
+    request: Request,
     application_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -699,7 +707,9 @@ async def get_matching_score(
 
 
 @router.post("/{application_id}/matching-score/calculate")
+@limiter.limit("5/minute")
 async def calculate_matching_score(
+    request: Request,
     application_id: int,
     recalculate: bool = False,
     current_user: User = Depends(get_current_user),
