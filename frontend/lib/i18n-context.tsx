@@ -155,6 +155,14 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Keep <html lang> in sync with the active locale so screen readers
+  // pronounce content correctly. WCAG 3.1.1 / 3.1.2.
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = locale || "en";
+    }
+  }, [locale]);
+
   const setLocale = (newLocale: string) => {
     // Allow any locale code; fall back to English strings if we don't have translations yet
     setLocaleState(newLocale);
