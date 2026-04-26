@@ -101,7 +101,14 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
                 aria-modal="true"
                 aria-labelledby={titleId}
                 tabIndex={-1}
-                className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl w-full max-w-md p-6 shadow-xl animate-in fade-in zoom-in duration-200"
+                className="rounded-xl w-full max-w-md p-6 shadow-xl animate-in fade-in zoom-in duration-200"
+                style={{
+                    background: "var(--card-background)",
+                    color: "var(--foreground)",
+                    borderWidth: "1px",
+                    borderStyle: "solid",
+                    borderColor: "var(--border)",
+                }}
             >
                 <div className="flex justify-between items-center mb-4">
                     <h3 id={titleId} className="text-xl font-bold">
@@ -110,7 +117,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
                     <button
                         type="button"
                         onClick={onClose}
-                        className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                        className="text-muted-foreground hover:opacity-100 opacity-80 transition-opacity"
                         aria-label="Schliessen"
                     >
                         <span aria-hidden="true">✕</span>

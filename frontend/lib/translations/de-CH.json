@@ -173,7 +173,11 @@
     "confirmDeleteApplicationConsequence": "Alle dafür generierten Dokumente werden ebenfalls entfernt. Diese Aktion kann nicht rückgängig gemacht werden.",
     "confirmDeleteDocumentTitle": "Dokument löschen?",
     "confirmDeleteDocumentLead": "Sie sind dabei, das Dokument «{name}» dauerhaft zu löschen.",
-    "confirmDeleteDocumentConsequence": "Diese Aktion kann nicht rückgängig gemacht werden."
+    "confirmDeleteDocumentConsequence": "Diese Aktion kann nicht rückgängig gemacht werden.",
+    "uploadSuccess": "Dokument erfolgreich hochgeladen.",
+    "analyzeSuccess": "Stelleninserat analysiert und als Bewerbung erfasst.",
+    "spontaneousSuccess": "Spontane Bewerbung gespeichert.",
+    "spontaneousFailed": "Spontanbewerbung konnte nicht gespeichert werden."
   },
   "settings": {
     "title": "Einstellungen",

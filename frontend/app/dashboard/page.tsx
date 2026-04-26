@@ -132,6 +132,20 @@ export default function DashboardPage() {
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [confirmProcessing, setConfirmProcessing] = useState(false);
 
+  // Transient action banner — replaces native alert()/window.confirm
+  // for transient feedback (errors and successes) that aren't tied to a
+  // specific form section. Auto-dismissed after 5 seconds.
+  const [actionBanner, setActionBanner] = useState<
+    | { kind: "error" | "success"; message: string }
+    | null
+  >(null);
+
+  useEffect(() => {
+    if (!actionBanner) return;
+    const timer = setTimeout(() => setActionBanner(null), 5000);
+    return () => clearTimeout(timer);
+  }, [actionBanner]);
+
   const toggleJobExpanded = (appId: number) => {
     setExpandedJobs(prev => {
       if (prev.includes(appId)) {
@@ -322,6 +336,10 @@ export default function DashboardPage() {
       // Reset file input
       const fileInput = document.getElementById("file-input") as HTMLInputElement;
       if (fileInput) fileInput.value = "";
+      setActionBanner({
+        kind: "success",
+        message: t("dashboard.uploadSuccess") || "Dokument erfolgreich hochgeladen.",
+      });
     } catch (error: any) {
       setUploadError(error.message || t("dashboard.uploadFailed"));
     } finally {
@@ -358,6 +376,11 @@ export default function DashboardPage() {
       setJobUrl("");
       await loadData();
       await refreshUser();
+      setActionBanner({
+        kind: "success",
+        message: t("dashboard.analyzeSuccess")
+          || "Stelleninserat analysiert und als Bewerbung erfasst.",
+      });
     } catch (error: any) {
       const message = error.message || t("dashboard.analysisFailed");
       if (message.toLowerCase().includes("credit")) {
@@ -402,8 +425,15 @@ export default function DashboardPage() {
       setApplicationType("fulltime");
       await loadData();
       await refreshUser();
+      setActionBanner({
+        kind: "success",
+        message: t("dashboard.spontaneousSuccess")
+          || "Spontane Bewerbung gespeichert.",
+      });
     } catch (error: any) {
-      const message = error.message || "Could not save spontaneous application";
+      const message = error.message
+        || t("dashboard.spontaneousFailed")
+        || "Spontanbewerbung konnte nicht gespeichert werden.";
       if (message.toLowerCase().includes("credit")) {
         setSpontaneousError(
           t("dashboard.noCredits")
@@ -469,7 +499,10 @@ export default function DashboardPage() {
       });
       await loadData();
     } catch (error: any) {
-      alert(t("dashboard.updateFailed") + ": " + error.message);
+      setActionBanner({
+        kind: "error",
+        message: `${t("dashboard.updateFailed") || "Aktualisierung fehlgeschlagen"}: ${error.message}`,
+      });
     }
   };
 
@@ -498,7 +531,10 @@ export default function DashboardPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (error: any) {
-      alert(t("dashboard.downloadFailed") + ": " + error.message);
+      setActionBanner({
+        kind: "error",
+        message: `${t("dashboard.downloadFailed") || "Bericht konnte nicht erstellt werden"}: ${error.message}`,
+      });
     }
   };
 
@@ -517,7 +553,10 @@ export default function DashboardPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (error: any) {
-      alert(t("dashboard.downloadPdfFailed") + ": " + error.message);
+      setActionBanner({
+        kind: "error",
+        message: `${t("dashboard.downloadPdfFailed") || "PDF konnte nicht heruntergeladen werden"}: ${error.message}`,
+      });
     }
   };
 
@@ -531,7 +570,10 @@ export default function DashboardPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (error: any) {
-      alert(t("dashboard.downloadPdfFailed") + ": " + error.message);
+      setActionBanner({
+        kind: "error",
+        message: `${t("dashboard.downloadPdfFailed") || "PDF konnte nicht heruntergeladen werden"}: ${error.message}`,
+      });
     }
   };
 
@@ -581,6 +623,36 @@ export default function DashboardPage() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen page-shell overflow-x-hidden">
+        {/* Transient action banner — accessible toast for cross-section
+            success/error messages. Replaces the previous alert() calls
+            in the download/update handlers. Auto-dismissed via the
+            useEffect that owns the actionBanner state. */}
+        {actionBanner && (
+          <div
+            role={actionBanner.kind === "error" ? "alert" : "status"}
+            aria-live={actionBanner.kind === "error" ? "assertive" : "polite"}
+            className={`fixed top-4 right-4 z-[60] max-w-sm px-4 py-3 rounded-lg shadow-lg ${
+              actionBanner.kind === "error"
+                ? "bg-red-700 text-white"
+                : "bg-emerald-700 text-white"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <span aria-hidden className="mt-0.5">
+                {actionBanner.kind === "error" ? "⚠️" : "✓"}
+              </span>
+              <p className="text-sm flex-1">{actionBanner.message}</p>
+              <button
+                type="button"
+                onClick={() => setActionBanner(null)}
+                className="text-white/80 hover:text-white text-sm"
+                aria-label={t("common.close") || "Schliessen"}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         {/* Header */}
         <header className="border-b border-muted">
           <div className="container mx-auto px-4 sm:px-6 py-4">
@@ -652,6 +724,35 @@ export default function DashboardPage() {
                 </Button>
               </div>
             </div>
+            {/* Mobile-only fallback row for the navigation actions hidden
+              above (Admin / Settings / Logout). On screens narrower than
+              sm (640px) the user previously had no way to log out from
+              the dashboard — this row closes that gap. */}
+            <div className="flex sm:hidden items-center gap-2 mt-3 flex-wrap">
+              {user.is_admin && (
+                <button
+                  type="button"
+                  onClick={() => router.push("/admin")}
+                  className="btn-base btn-outline flex-1 min-w-[6rem] text-sm py-1.5"
+                >
+                  {t("common.admin") || "Admin"}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => router.push("/settings")}
+                className="btn-base btn-outline flex-1 min-w-[6rem] text-sm py-1.5"
+              >
+                {t("common.settings") || "Einstellungen"}
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="btn-base btn-outline flex-1 min-w-[6rem] text-sm py-1.5"
+              >
+                {t("common.logout") || "Abmelden"}
+              </button>
+            </div>
           </div>
         </header>
 
@@ -706,7 +807,7 @@ export default function DashboardPage() {
                 )}
 
                 {uploadError && (
-                  <p className="text-red-400 text-sm">{uploadError}</p>
+                  <p role="alert" className="text-red-400 text-sm">{uploadError}</p>
                 )}
               </div>
             </Card>
@@ -861,7 +962,7 @@ export default function DashboardPage() {
                 </Button>
 
                 {spontaneousError && (
-                  <p className="text-red-400 text-sm">{spontaneousError}</p>
+                  <p role="alert" className="text-red-400 text-sm">{spontaneousError}</p>
                 )}
               </form>
             </Card>
@@ -935,7 +1036,7 @@ export default function DashboardPage() {
                 </Button>
 
                 {analysisError && (
-                  <p className="text-red-400 text-sm">{analysisError}</p>
+                  <p role="alert" className="text-red-400 text-sm">{analysisError}</p>
                 )}
               </form>
             </Card>
@@ -1164,7 +1265,7 @@ export default function DashboardPage() {
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex gap-2 flex-wrap pt-2 border-t border-slate-700">
+                      <div className="flex gap-2 flex-wrap pt-2 border-t border-muted">
                         <button
                           onClick={() => {
                             // Save scroll position before navigating

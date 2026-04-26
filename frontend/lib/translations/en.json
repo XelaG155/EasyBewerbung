@@ -173,7 +173,11 @@
     "confirmDeleteApplicationConsequence": "All documents generated for it will also be removed. This action cannot be undone.",
     "confirmDeleteDocumentTitle": "Delete document?",
     "confirmDeleteDocumentLead": "You are about to permanently delete the document \"{name}\".",
-    "confirmDeleteDocumentConsequence": "This action cannot be undone."
+    "confirmDeleteDocumentConsequence": "This action cannot be undone.",
+    "uploadSuccess": "Document uploaded successfully.",
+    "analyzeSuccess": "Job offer analysed and recorded as an application.",
+    "spontaneousSuccess": "Spontaneous application saved.",
+    "spontaneousFailed": "Could not save the spontaneous application."
   },
   "settings": {
     "title": "Settings",
