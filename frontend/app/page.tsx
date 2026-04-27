@@ -6,6 +6,7 @@ import { Card } from "@/components/Card";
 import api, { LanguageOption } from "@/lib/api";
 import { useTranslation } from "@/lib/i18n-context";
 import { useTheme } from "@/lib/theme-context";
+import { APP_VERSION } from "@/lib/version";
 
 export default function Home() {
   const { t, locale, setLocale } = useTranslation();
@@ -291,8 +292,9 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-muted py-8 text-muted">
-        <div className="container mx-auto px-6 text-center">
-          <p className="break-words">© 2025 {t("common.appName")}. {t("home.footer")}</p>
+        <div className="container mx-auto px-6 text-center space-y-1">
+          <p className="break-words">© 2026 {t("common.appName")}. {t("home.footer")}</p>
+          <p className="text-xs opacity-70">v{APP_VERSION}</p>
         </div>
       </footer>
     </div>
