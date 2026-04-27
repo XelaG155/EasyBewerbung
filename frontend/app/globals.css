@@ -149,14 +149,90 @@ h1, h2, h3, h4, h5, h6, p, span, div, section, header, footer {
   color: var(--foreground);
 }
 
-.btn-base {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.75rem;
-  font-weight: 600;
-  transition: all 200ms ease;
+/* Custom button styles live in the components layer so Tailwind
+ * utilities (display, hidden, sm:hidden, etc.) win the cascade.
+ * Without @layer, .btn-base { display: inline-flex } overrode
+ * `.hidden` from utilities — visible bug: dashboard desktop-nav
+ * buttons stayed visible on mobile, duplicating the mobile fallback
+ * row for admins. */
+@layer components {
+  .btn-base {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: all 200ms ease;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--button-text-on-primary);
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-strong);
+  }
+
+  .btn-primary:disabled {
+    background: var(--accent-faint);
+    color: var(--muted-foreground);
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background: var(--card-background);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    background: var(--accent-faint);
+  }
+
+  .btn-outline {
+    border: 2px solid var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-outline:hover {
+    background: var(--accent-faint);
+  }
+
+  .btn-outline:disabled {
+    border-color: var(--accent-faint);
+    color: var(--accent-faint);
+    cursor: not-allowed;
+  }
+
+  .btn-success {
+    background: var(--success);
+    color: var(--button-text-on-primary);
+  }
+
+  .btn-success:hover {
+    filter: brightness(1.1);
+  }
+
+  .btn-success:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-danger {
+    background: var(--error-color);
+    color: var(--button-text-on-primary);
+  }
+
+  .btn-danger:hover {
+    filter: brightness(1.1);
+  }
+
+  .btn-danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 /* Visible focus ring for keyboard navigation. WCAG 2.2 SC 2.4.7 (Focus
@@ -184,74 +260,6 @@ select:focus-visible {
   .input-base {
     transition: none;
   }
-}
-
-.btn-primary {
-  background: var(--accent);
-  color: var(--button-text-on-primary);
-}
-
-.btn-primary:hover {
-  background: var(--accent-strong);
-}
-
-.btn-primary:disabled {
-  background: var(--accent-faint);
-  color: var(--muted-foreground);
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: var(--card-background);
-  color: var(--foreground);
-  border: 1px solid var(--border);
-}
-
-.btn-secondary:hover {
-  background: var(--accent-faint);
-}
-
-.btn-outline {
-  border: 2px solid var(--accent);
-  color: var(--accent);
-}
-
-.btn-outline:hover {
-  background: var(--accent-faint);
-}
-
-.btn-outline:disabled {
-  border-color: var(--accent-faint);
-  color: var(--accent-faint);
-  cursor: not-allowed;
-}
-
-.btn-success {
-  background: var(--success);
-  color: var(--button-text-on-primary);
-}
-
-.btn-success:hover {
-  filter: brightness(1.1);
-}
-
-.btn-success:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-danger {
-  background: var(--error-color);
-  color: var(--button-text-on-primary);
-}
-
-.btn-danger:hover {
-  filter: brightness(1.1);
-}
-
-.btn-danger:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* Token-backed error text. Use this instead of ``text-red-400`` so
@@ -285,37 +293,39 @@ select:focus-visible {
   }
 }
 
-.input-base {
-  width: 100%;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  background-color: var(--input-background);
-  border: 1px solid var(--input-border);
-  color: var(--input-text);
-  transition: all 200ms ease;
-}
+@layer components {
+  .input-base {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background-color: var(--input-background);
+    border: 1px solid var(--input-border);
+    color: var(--input-text);
+    transition: all 200ms ease;
+  }
 
-.input-base::placeholder {
-  color: var(--input-placeholder);
-}
+  .input-base::placeholder {
+    color: var(--input-placeholder);
+  }
 
-.input-base:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-faint);
-}
+  .input-base:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-faint);
+  }
 
-.input-base:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+  .input-base:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
-.input-error {
-  border-color: var(--error-color);
-}
+  .input-error {
+    border-color: var(--error-color);
+  }
 
-.input-label {
-  color: var(--input-label);
+  .input-label {
+    color: var(--input-label);
+  }
 }
 
 .text-error {
