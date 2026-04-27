@@ -8,6 +8,7 @@ import api, {
   AdminUserSummary,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { useTranslation } from "@/lib/i18n-context";
 import { adminBtn } from "@/lib/admin-ui";
 
 type StatusMessage = { kind: "success" | "error"; text: string };
@@ -33,6 +34,7 @@ function SectionCard({
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const [users, setUsers] = useState<AdminUserSummary[]>([]);
   const [selectedUser, setSelectedUser] = useState<AdminUserDetail | null>(
@@ -50,7 +52,7 @@ export default function AdminPage() {
       setUsers(data);
     } catch (error) {
       console.error("Failed to search users:", error);
-      setStatus({ kind: "error", text: "Fehler bei der Benutzersuche." });
+      setStatus({ kind: "error", text: t("admin.userSearchFailed") });
     }
   };
 
@@ -76,7 +78,7 @@ export default function AdminPage() {
       console.error("Failed to load user details:", error);
       setStatus({
         kind: "error",
-        text: "Fehler beim Laden der Benutzerdetails.",
+        text: t("admin.userDetailFailed"),
       });
     }
   };
@@ -84,19 +86,17 @@ export default function AdminPage() {
   const applyCreditChange = async (delta: number) => {
     if (!selectedUser) return;
     if (delta === 0) {
-      setStatus({ kind: "error", text: "Bitte eine Anzahl ungleich 0 angeben." });
+      setStatus({ kind: "error", text: t("admin.creditAmountInvalid") });
       return;
     }
     try {
       const detail = await api.adminUpdateCredits(selectedUser.user.id, delta);
       setSelectedUser(detail);
-      setStatus({
-        kind: "success",
-        text:
-          delta > 0
-            ? `${delta} Credits hinzugefügt (neu: ${detail.user.credits}).`
-            : `${Math.abs(delta)} Credits abgezogen (neu: ${detail.user.credits}).`,
-      });
+      const messageKey = delta > 0 ? "admin.creditsAdded" : "admin.creditsRemoved";
+      const message = t(messageKey)
+        .replace("{n}", String(Math.abs(delta)))
+        .replace("{total}", String(detail.user.credits));
+      setStatus({ kind: "success", text: message });
     } catch (error) {
       console.error("Failed to update credits:", error);
       setStatus({
@@ -104,7 +104,7 @@ export default function AdminPage() {
         text:
           error instanceof Error
             ? error.message
-            : "Fehler beim Aktualisieren der Credits.",
+            : t("admin.creditUpdateFailed"),
       });
     }
   };
@@ -114,7 +114,7 @@ export default function AdminPage() {
     if (Number.isNaN(parsed) || parsed <= 0) {
       setStatus({
         kind: "error",
-        text: "Bitte eine positive ganze Zahl eingeben.",
+        text: t("admin.creditAmountMustBePositive"),
       });
       return;
     }
@@ -131,13 +131,13 @@ export default function AdminPage() {
       setSelectedUser(detail);
       setStatus({
         kind: "success",
-        text: desired ? "Benutzer entsperrt." : "Benutzer gesperrt.",
+        text: desired ? t("admin.userUnsuspended") : t("admin.userSuspended"),
       });
     } catch (error) {
       console.error("Failed to toggle user active status:", error);
       setStatus({
         kind: "error",
-        text: "Fehler beim Ändern des Benutzerstatus.",
+        text: t("admin.userActiveToggleFailed"),
       });
     }
   };
@@ -149,27 +149,27 @@ export default function AdminPage() {
       setSelectedUser(detail);
       setStatus({
         kind: "success",
-        text: desired ? "Admin-Rechte erteilt." : "Admin-Rechte entzogen.",
+        text: desired ? t("admin.adminGranted") : t("admin.adminRevoked"),
       });
     } catch (error) {
       console.error("Failed to toggle user admin status:", error);
       setStatus({
         kind: "error",
-        text: "Fehler beim Ändern der Admin-Rechte.",
+        text: t("admin.adminToggleFailed"),
       });
     }
   };
 
   if (loading) {
     return (
-      <div className="p-8 text-gray-700 dark:text-gray-200">Lade...</div>
+      <div className="p-8 text-gray-700 dark:text-gray-200">{t("admin.loading")}</div>
     );
   }
 
   if (!user) {
     return (
       <div className="p-8 text-gray-700 dark:text-gray-200">
-        Bitte zuerst anmelden.
+        {t("admin.pleaseLoginFirst")}
       </div>
     );
   }
@@ -177,7 +177,7 @@ export default function AdminPage() {
   if (!isAdmin) {
     return (
       <div className="p-8 text-red-600">
-        Kein Zugriff: Administratoren vorbehalten.
+        {t("admin.noAccess")}
       </div>
     );
   }
@@ -186,50 +186,50 @@ export default function AdminPage() {
     <div className="max-w-6xl mx-auto space-y-6 p-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          Admin-Konsole
+          {t("admin.console")}
         </h1>
         <button
           onClick={() => router.push("/dashboard")}
           className={adminBtn.secondary("lg")}
-          title="Zurück zum Dashboard"
+          title={t("admin.backToDashboard")}
         >
-          <span aria-hidden="true">←</span> Zurück zum Dashboard
+          <span aria-hidden="true">←</span> {t("admin.backToDashboard")}
         </button>
       </div>
 
       {/* Navigation cards for sub-admin areas */}
       <div className="grid md:grid-cols-2 gap-4">
-        <SectionCard title="Dokument-Vorlagen">
+        <SectionCard title={t("admin.documentTemplates")}>
           <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-            Credit-Kosten, Sprachquellen, LLM-Provider, Prompts und Dokumenttypen
-            verwalten.
+            {t("admin.documentTemplatesDescription")}
           </p>
           <button
             onClick={() => router.push("/admin/documents")}
             className={adminBtn.primary("lg")}
           >
-            Dokument-Vorlagen verwalten →
+            {t("admin.manageDocumentTemplates")} →
           </button>
         </SectionCard>
 
-        <SectionCard title="Sprachen">
+        <SectionCard title={t("admin.languages")}>
           <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-            Verfügbare Oberflächensprachen aktivieren, deaktivieren und sortieren.
+            {t("admin.languagesDescription")}
           </p>
           <button
             onClick={() => router.push("/admin/languages")}
             className={adminBtn.primary("lg")}
           >
-            Sprachen verwalten →
+            {t("admin.manageLanguages")} →
           </button>
         </SectionCard>
       </div>
 
-      <SectionCard title="Benutzer suchen und verwalten">
+      <SectionCard title={t("admin.searchAndManageUsers")}>
         <div className="flex gap-2 mb-4">
           <input
             className="flex-1 rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            placeholder="E-Mail oder Name"
+            placeholder={t("admin.searchPlaceholder")}
+            aria-label={t("admin.searchPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -240,14 +240,14 @@ export default function AdminPage() {
             className={adminBtn.primary("lg")}
             onClick={() => searchUsers(query)}
           >
-            Suchen
+            {t("admin.search")}
           </button>
         </div>
 
         <div className="grid md:grid-cols-3 gap-4">
           <div className="space-y-2 md:col-span-1 max-h-[600px] overflow-y-auto">
             {users.length === 0 ? (
-              <div className="text-sm text-gray-500">Keine Benutzer gefunden.</div>
+              <div className="text-sm text-gray-500">{t("admin.noUsersFound")}</div>
             ) : (
               users.map((u) => (
                 <button
@@ -265,7 +265,7 @@ export default function AdminPage() {
                     {u.email}
                   </div>
                   <div className="text-xs text-gray-500">
-                    Credits: {u.credits} · Admin: {u.is_admin ? "Ja" : "Nein"}
+                    {t("admin.userListLineCredits")}: {u.credits} · {t("admin.userListLineAdmin")}: {u.is_admin ? t("admin.yes") : t("admin.no")}
                   </div>
                 </button>
               ))
@@ -282,7 +282,7 @@ export default function AdminPage() {
                         {selectedUser.user.email}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Aktuelle Credits:{" "}
+                        {t("admin.currentCredits")}:{" "}
                         <strong className="text-gray-900 dark:text-gray-100">
                           {selectedUser.user.credits}
                         </strong>
@@ -299,7 +299,7 @@ export default function AdminPage() {
                           toggleUserActive(!selectedUser.user.is_active)
                         }
                       >
-                        {selectedUser.user.is_active ? "Sperren" : "Entsperren"}
+                        {selectedUser.user.is_active ? t("admin.suspend") : t("admin.unsuspend")}
                       </button>
                       <button
                         className={adminBtn.warning("md")}
@@ -308,8 +308,8 @@ export default function AdminPage() {
                         }
                       >
                         {selectedUser.user.is_admin
-                          ? "Admin entziehen"
-                          : "Admin geben"}
+                          ? t("admin.revokeAdmin")
+                          : t("admin.grantAdmin")}
                       </button>
                     </div>
                   </div>
@@ -317,7 +317,7 @@ export default function AdminPage() {
                   {/* Credit management — bulk input instead of +1/-1 buttons */}
                   <div className="border-t border-gray-200 dark:border-gray-800 pt-3">
                     <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Credits anpassen
+                      {t("admin.adjustCredits")}
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <input
@@ -327,47 +327,47 @@ export default function AdminPage() {
                         value={creditInput}
                         onChange={(e) => setCreditInput(e.target.value)}
                         className="w-24 rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                        aria-label="Anzahl Credits"
+                        aria-label={t("admin.numberOfCredits")}
                       />
                       <button
                         className={adminBtn.success("md")}
                         onClick={() => handleCreditSubmit("add")}
                       >
-                        + hinzufügen
+                        {t("admin.addCredits")}
                       </button>
                       <button
                         className={adminBtn.secondary("md")}
                         onClick={() => handleCreditSubmit("subtract")}
                       >
-                        − abziehen
+                        {t("admin.subtractCredits")}
                       </button>
                       <span className="text-xs text-gray-500 ml-1">
-                        z.B. 20 für 20 gekaufte Credits
+                        {t("admin.creditsExampleHint")}
                       </span>
                     </div>
                   </div>
 
                   <div className="border-t border-gray-200 dark:border-gray-800 pt-3 grid grid-cols-2 gap-2 text-sm text-gray-700 dark:text-gray-200">
                     <div>
-                      Letzter Login:{" "}
+                      {t("admin.lastLogin")}:{" "}
                       <span className="text-gray-500">
                         {selectedUser.user.last_login_at || "—"}
                       </span>
                     </div>
                     <div>
-                      Passwort geändert:{" "}
+                      {t("admin.passwordChanged")}:{" "}
                       <span className="text-gray-500">
                         {selectedUser.user.password_changed_at || "—"}
                       </span>
                     </div>
                     <div>
-                      Erstellt am:{" "}
+                      {t("admin.createdAt")}:{" "}
                       <span className="text-gray-500">
                         {selectedUser.user.created_at}
                       </span>
                     </div>
                     <div>
-                      Status:{" "}
+                      {t("admin.status")}:{" "}
                       <span
                         className={
                           selectedUser.user.is_active
@@ -375,7 +375,7 @@ export default function AdminPage() {
                             : "text-red-700 dark:text-red-400"
                         }
                       >
-                        {selectedUser.user.is_active ? "Aktiv" : "Gesperrt"}
+                        {selectedUser.user.is_active ? t("admin.active") : t("admin.suspended")}
                       </span>
                     </div>
                   </div>
@@ -383,12 +383,12 @@ export default function AdminPage() {
 
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                    Aktivitäten
+                    {t("admin.activities")}
                   </h3>
                   <div className="max-h-60 overflow-auto space-y-2 text-sm">
                     {selectedUser.activity.length === 0 && (
                       <div className="text-gray-500">
-                        Noch keine Aktivitätslogs.
+                        {t("admin.noActivityLogs")}
                       </div>
                     )}
                     {selectedUser.activity.map(
@@ -419,7 +419,7 @@ export default function AdminPage() {
               </>
             ) : (
               <div className="text-gray-500 text-sm">
-                Bitte einen Benutzer aus der Liste wählen.
+                {t("admin.selectUser")}
               </div>
             )}
           </div>
@@ -446,7 +446,7 @@ export default function AdminPage() {
           <button
             onClick={() => setStatus(null)}
             className="flex-shrink-0 text-current opacity-70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current rounded"
-            aria-label="Meldung schliessen"
+            aria-label={t("admin.dismissMessage")}
           >
             &times;
           </button>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import api, { AdminLanguageSetting } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { useTranslation } from "@/lib/i18n-context";
 import { adminBtn } from "@/lib/admin-ui";
 
 type StatusMessage = { kind: "success" | "error"; text: string };
@@ -18,6 +19,7 @@ type StatusMessage = { kind: "success" | "error"; text: string };
  */
 export default function AdminLanguagesPage() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
 
   const [languages, setLanguages] = useState<AdminLanguageSetting[]>([]);
@@ -42,11 +44,11 @@ export default function AdminLanguagesPage() {
       setLanguages(data);
     } catch (error) {
       console.error(error);
-      setStatus({ kind: "error", text: "Fehler beim Laden der Sprachen." });
+      setStatus({ kind: "error", text: t("admin.languagesLoadFailed") });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (user?.is_admin) {
@@ -72,12 +74,12 @@ export default function AdminLanguagesPage() {
           sort_order: lang.sort_order,
         }))
       );
-      setStatus({ kind: "success", text: "Spracheinstellungen gespeichert." });
+      setStatus({ kind: "success", text: t("admin.languagesSaved") });
     } catch (error) {
       console.error(error);
       setStatus({
         kind: "error",
-        text: "Fehler beim Speichern. Änderung wurde zurückgesetzt.",
+        text: t("admin.languagesSaveFailed"),
       });
       setLanguages(previous);
     }
@@ -116,26 +118,24 @@ export default function AdminLanguagesPage() {
     <div className="max-w-4xl mx-auto space-y-6 p-6">
       <header className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          Sprachen verwalten
+          {t("admin.languagesPageTitle")}
         </h1>
         <button
           onClick={() => router.push("/admin")}
           className={adminBtn.secondary("lg")}
         >
-          <span aria-hidden="true">←</span> Zurück zur Admin-Konsole
+          <span aria-hidden="true">←</span> {t("admin.backToConsole")}
         </button>
       </header>
 
       <section className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-800">
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Steuern Sie, welche Oberflächensprachen Benutzern zur Verfügung stehen
-          und in welcher Reihenfolge sie im Sprachwähler erscheinen. Änderungen
-          werden sofort gespeichert.
+          {t("admin.languagesPageDescription")}
         </p>
 
         {sortedLanguages.length === 0 ? (
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Keine Sprachen konfiguriert.
+            {t("admin.languagesPageEmpty")}
           </p>
         ) : (
           <div className="space-y-2">
@@ -162,7 +162,7 @@ export default function AdminLanguagesPage() {
                     className={adminBtn.secondary("sm")}
                     onClick={() => moveLanguage(lang.code, -1)}
                     disabled={idx === 0}
-                    aria-label={`${lang.label} nach oben verschieben`}
+                    aria-label={t("admin.languageMoveUp").replace("{label}", lang.label)}
                   >
                     ↑
                   </button>
@@ -170,7 +170,7 @@ export default function AdminLanguagesPage() {
                     className={adminBtn.secondary("sm")}
                     onClick={() => moveLanguage(lang.code, 1)}
                     disabled={idx === sortedLanguages.length - 1}
-                    aria-label={`${lang.label} nach unten verschieben`}
+                    aria-label={t("admin.languageMoveDown").replace("{label}", lang.label)}
                   >
                     ↓
                   </button>
@@ -181,7 +181,7 @@ export default function AdminLanguagesPage() {
                       onChange={() => toggleLanguage(lang.code)}
                       className="h-4 w-4"
                     />
-                    Aktiv
+                    {t("admin.languageActiveLabel")}
                   </label>
                 </div>
               </div>
@@ -209,7 +209,7 @@ export default function AdminLanguagesPage() {
           <button
             onClick={() => setStatus(null)}
             className="flex-shrink-0 text-current opacity-70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current rounded"
-            aria-label="Meldung schliessen"
+            aria-label={t("admin.dismissMessage")}
           >
             &times;
           </button>

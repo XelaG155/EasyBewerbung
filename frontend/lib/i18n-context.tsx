@@ -139,7 +139,7 @@ const translations: Record<string, any> = {
 interface I18nContextType {
   locale: string;
   setLocale: (locale: string) => void;
-  t: (key: string) => string;
+  t: (key: string, fallback?: string) => string;
 }
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
@@ -169,7 +169,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("preferred_language", newLocale);
   };
 
-  const t = (key: string): string => {
+  const t = (key: string, fallback?: string): string => {
     const keys = key.split(".");
     // Use English as a safe fallback for unknown locales
     let value: any = translations[locale] || translations.en;
@@ -182,14 +182,18 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         for (const fk of keys) {
           value = value?.[fk];
           if (value === undefined) {
-            return key; // Return key if not found even in English
+            // Missing in both active locale and English. Return the
+            // explicit fallback if the caller provided one (preferred —
+            // user gets readable text), otherwise the key itself as a
+            // visible signal that translation is missing.
+            return fallback ?? key;
           }
         }
         break;
       }
     }
 
-    return typeof value === "string" ? value : key;
+    return typeof value === "string" ? value : (fallback ?? key);
   };
 
   return (

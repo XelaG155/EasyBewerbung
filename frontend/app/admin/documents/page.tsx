@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/lib/auth-context";
+import { useTranslation } from "@/lib/i18n-context";
 import api, {
   DocumentCategory,
   DocumentTemplate,
@@ -35,6 +36,7 @@ const PROVIDER_LABELS: Record<LlmProvider, string> = {
 
 export default function AdminDocumentsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
 
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
@@ -84,11 +86,11 @@ export default function AdminDocumentsPage() {
       setLlmModels(lm);
     } catch (error) {
       console.error(error);
-      setStatus({ kind: "error", text: "Fehler beim Laden der Daten." });
+      setStatus({ kind: "error", text: t("admin.documentsLoadFailed") });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!authLoading && (!user || !user.is_admin)) {
@@ -134,7 +136,7 @@ export default function AdminDocumentsPage() {
       await loadAll();
     } catch (error) {
       console.error(error);
-      setStatus({ kind: "error", text: "Initial-Seed fehlgeschlagen." });
+      setStatus({ kind: "error", text: t("admin.documentsInitialSeedFailed") });
     } finally {
       setSeeding(false);
     }
@@ -179,7 +181,7 @@ export default function AdminDocumentsPage() {
     await api.updateDocumentTemplate(editorTemplate.id, updates);
     await loadAll();
     setEditorTemplateId(null);
-    setStatus({ kind: "success", text: "Template gespeichert." });
+    setStatus({ kind: "success", text: t("admin.documentsTemplateSaved") });
   };
 
   if (authLoading || loading) {
@@ -204,13 +206,13 @@ export default function AdminDocumentsPage() {
     <div className="max-w-7xl mx-auto space-y-6 p-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          Dokument-Vorlagen verwalten
+          {t("admin.documentsPageTitle")}
         </h1>
         <button
           onClick={() => router.push("/admin")}
           className={adminBtn.secondary("lg")}
         >
-          <span aria-hidden="true">←</span> Zurück zur Admin-Konsole
+          <span aria-hidden="true">←</span> {t("admin.backToConsole")}
         </button>
       </header>
 
@@ -219,11 +221,10 @@ export default function AdminDocumentsPage() {
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-              Vorlagen
+              {t("admin.documentsTemplatesHeading")}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-              Klicken Sie auf <em>Bearbeiten</em>, um Credits, Sprachquelle, LLM-Modell
-              und Prompt in einem fokussierten Editor anzupassen.
+              {t("admin.documentsTemplatesIntro")}
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -231,9 +232,9 @@ export default function AdminDocumentsPage() {
               onClick={handleInitialSeed}
               disabled={seeding}
               className={adminBtn.primary("lg")}
-              title="Lädt alle Dokumenttypen, LLM-Modelle und Prompts aus dem Standardkatalog. Idempotent — sicher wiederholbar."
+              title={t("admin.documentsLoadDefaultsTitle")}
             >
-              {seeding ? "Wird geladen..." : "Standardvorlagen laden"}
+              {seeding ? t("admin.documentsLoadDefaultsLoading") : t("admin.documentsLoadDefaults")}
             </button>
             <button
               type="button"
@@ -241,7 +242,7 @@ export default function AdminDocumentsPage() {
               className="text-xs text-gray-600 dark:text-gray-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1"
               aria-expanded={advancedSeedOpen}
             >
-              {advancedSeedOpen ? "Erweitert ausblenden" : "Erweitert…"}
+              {advancedSeedOpen ? t("admin.documentsAdvancedToggleHide") : t("admin.documentsAdvancedToggleShow")}
             </button>
             {advancedSeedOpen && (
               <div className="flex flex-wrap gap-2 justify-end">
@@ -249,17 +250,17 @@ export default function AdminDocumentsPage() {
                   onClick={() => handleSeedCatalog(true)}
                   disabled={seeding}
                   className={adminBtn.warning("md")}
-                  title="Überschreibt bestehende Dokumenttypen und LLM-Modelle mit den Code-Werten (destruktiv)."
+                  title={t("admin.documentsForceCatalogTitle")}
                 >
-                  Katalog force-update
+                  {t("admin.documentsForceCatalog")}
                 </button>
                 <button
                   onClick={() => handleSeedLegacyTemplates(true)}
                   disabled={seeding}
                   className={adminBtn.warning("md")}
-                  title="Überschreibt bestehende Prompts mit document_prompts.json (destruktiv)."
+                  title={t("admin.documentsForcePromptsTitle")}
                 >
-                  Prompts force-update
+                  {t("admin.documentsForcePrompts")}
                 </button>
               </div>
             )}
@@ -268,11 +269,9 @@ export default function AdminDocumentsPage() {
 
         {templates.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            <p>Keine Vorlagen gefunden.</p>
+            <p>{t("admin.documentsEmptyTitle")}</p>
             <p className="text-sm mt-2">
-              Klicken Sie oben rechts auf <strong>„Standardvorlagen laden"</strong>,
-              um die Dokumenttypen, LLM-Modelle und Prompts aus dem
-              Standardkatalog zu importieren.
+              {t("admin.documentsEmptyHint")}
             </p>
           </div>
         ) : (
@@ -281,22 +280,22 @@ export default function AdminDocumentsPage() {
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-800 text-left">
                   <th className="p-3 font-semibold text-gray-900 dark:text-gray-100">
-                    Dokumenttyp
+                    {t("admin.documentsTableType")}
                   </th>
                   <th className="p-3 font-semibold text-gray-900 dark:text-gray-100">
-                    Kategorie
+                    {t("admin.documentsTableCategory")}
                   </th>
                   <th className="p-3 font-semibold text-gray-900 dark:text-gray-100">
-                    Credits
+                    {t("admin.documentsTableCredits")}
                   </th>
                   <th className="p-3 font-semibold text-gray-900 dark:text-gray-100">
-                    LLM
+                    {t("admin.documentsTableLlm")}
                   </th>
                   <th className="p-3 font-semibold text-gray-900 dark:text-gray-100">
-                    Aktiv
+                    {t("admin.documentsTableActive")}
                   </th>
                   <th className="p-3 font-semibold text-gray-900 dark:text-gray-100">
-                    Aktion
+                    {t("admin.documentsTableAction")}
                   </th>
                 </tr>
               </thead>
@@ -340,7 +339,7 @@ export default function AdminDocumentsPage() {
                           <span aria-hidden="true">
                             {template.is_active ? "●" : "○"}
                           </span>
-                          {template.is_active ? "Aktiv" : "Inaktiv"}
+                          {template.is_active ? t("admin.documentsRowActive") : t("admin.documentsRowInactive")}
                         </span>
                       </td>
                       <td className="p-3">
@@ -348,7 +347,7 @@ export default function AdminDocumentsPage() {
                           onClick={() => setEditorTemplateId(template.id)}
                           className={adminBtn.primary("md")}
                         >
-                          Bearbeiten
+                          {t("admin.documentsRowEdit")}
                         </button>
                       </td>
                     </tr>
@@ -411,7 +410,7 @@ export default function AdminDocumentsPage() {
           <button
             onClick={() => setStatus(null)}
             className="flex-shrink-0 text-current opacity-70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current rounded"
-            aria-label="Meldung schliessen"
+            aria-label={t("admin.dismissMessage")}
           >
             &times;
           </button>
