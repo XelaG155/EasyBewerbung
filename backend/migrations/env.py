@@ -1,3 +1,4 @@
+import os
 import sys
 from logging.config import fileConfig
 
@@ -8,10 +9,22 @@ from alembic import context
 sys.path.append(str((__file__).rsplit('/migrations/', 1)[0]))
 
 from app.models import Base  # noqa: E402
-from app.database import DATABASE_URL  # noqa: E402
+from app.database import DATABASE_URL as _APP_DATABASE_URL  # noqa: E402
 
 config = context.config
-config.set_main_option("sqlalchemy.url", DATABASE_URL)
+
+# Resolve the migration target URL at runtime so callers (e.g. integration
+# tests that point Alembic at a real Postgres via `cfg.set_main_option` or
+# `os.environ["DATABASE_URL"] = ...`) actually take effect. Previously this
+# unconditionally pinned the URL to the value `app.database` cached at
+# module-import time, which silently sent migrations to the cached SQLite URL
+# even when the caller had switched DATABASE_URL to Postgres.
+_runtime_url = (
+    config.get_main_option("sqlalchemy.url")
+    if config.get_main_option("sqlalchemy.url") not in (None, "", "postgresql://localhost/easybewerbung")
+    else os.environ.get("DATABASE_URL") or _APP_DATABASE_URL
+)
+config.set_main_option("sqlalchemy.url", _runtime_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
